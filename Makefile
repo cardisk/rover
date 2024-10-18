@@ -4,4 +4,4 @@ sources = src/*
 
 build: src
 	mkdir -p build
-	c3c compile -o build/rover $(sources)
+	c3c compile -l ncurses -o build/rover $(sources)
