@@ -455,4 +455,146 @@ extern fn bool is_syncok(Window *);
 extern fn CInt wgetdelay(Window *);
 extern fn CInt wgetscrreg(Window *, CInt *, CInt *);
 
-// continue from line 1006.
+/*
+ * Extra extension-functions, which pass a SCREEN pointer rather than using
+ * a global variable SP.
+ */
+const SP_FUNCS = 20240427;
+
+/* Define the sp-funcs helper function */
+def OutC_Sp = fn CInt(Screen *, CInt);
+
+extern fn Screen *new_prescr();
+
+extern fn CInt baudrate_sp(Screen *);
+extern fn CInt beep_sp(Screen *);
+extern fn bool can_change_color_sp(Screen *);
+extern fn CInt cbreak_sp(Screen *);
+extern fn CInt curs_set_sp(Screen *, CInt);
+extern fn CInt color_content_sp(Screen *, CShort, CShort *, CShort *, CShort *);
+extern fn CInt def_prog_mode_sp(Screen *);
+extern fn CInt def_shell_mode_sp(Screen *);
+extern fn CInt delay_output_sp(Screen *, CInt);
+extern fn CInt doupdate_sp(Screen *);
+extern fn CInt echo_sp(Screen *);
+extern fn CInt endwin_sp(Screen *);
+extern fn char erasechar_sp(Screen *);
+extern fn void filter_sp(Screen *);
+extern fn CInt flash_sp(Screen *);
+extern fn CInt flushinp_sp(Screen *);
+extern fn Window *getwin_sp(Screen *, File *);
+extern fn CInt halfdelay_sp(Screen *, CInt);
+extern fn bool has_colors_sp(Screen *);
+extern fn bool has_ic_sp(Screen *);
+extern fn bool has_il_sp(Screen *);
+extern fn CInt init_color_sp(Screen *, CShort, CShort, CShort, CShort);
+extern fn CInt init_pair_sp(Screen *, CShort, CShort, CShort);
+extern fn CInt intrflush_sp(Screen *, Window *, bool);
+extern fn bool isendwin_sp(Screen *);
+extern fn ZString keyname_sp(Screen *, CInt);
+extern fn char killchar_sp(Screen *);
+extern fn ZString longname_sp(Screen *);
+extern fn CInt mvcur_sp(Screen *, CInt, CInt, CInt, CInt);
+extern fn CInt napms_sp(Screen *, CInt);
+extern fn Window *newpad_sp(Screen *, CInt, CInt);
+extern fn Screen * newterm_sp(Screen *, ZString, File *, File *);
+extern fn Window *newwin_sp(Screen *, CInt, CInt, CInt, CInt);
+extern fn CInt nl_sp(Screen *);
+extern fn CInt nocbreak_sp(Screen *);
+extern fn CInt noecho_sp(Screen *);
+extern fn CInt nonl_sp(Screen *);
+extern fn void noqiflush_sp(Screen *);
+extern fn CInt noraw_sp(Screen *);
+extern fn CInt pair_content_sp(Screen *, CShort, CShort *, CShort *);
+extern fn void qiflush_sp(Screen *);
+extern fn CInt raw_sp(Screen *);
+extern fn CInt reset_prog_mode_sp(Screen *);
+extern fn CInt reset_shell_mode_sp(Screen *);
+extern fn CInt resetty_sp(Screen *);
+// ---
+// Callback for this specific function already defined.
+extern fn CInt ripoffline_sp(Screen *, CInt, RipOffline_CB);
+// ---
+extern fn CInt savetty_sp(Screen *);
+extern fn CInt scr_init_sp(Screen *, ZString);
+extern fn CInt scr_restore_sp(Screen *, ZString);
+extern fn CInt scr_set_sp(Screen *, ZString);
+extern fn CInt slk_attroff_sp(Screen *, Chtype);
+extern fn CInt slk_attron_sp(Screen *, Chtype);
+extern fn CInt slk_attrset_sp(Screen *, Chtype);
+extern fn Attr_t slk_attr_sp(Screen *);
+extern fn CInt slk_attr_set_sp(Screen *, Attr_t, CShort, void *);
+extern fn CInt slk_clear_sp(Screen *);
+extern fn CInt slk_color_sp(Screen *, CShort);
+extern fn CInt slk_init_sp(Screen *, CInt);
+extern fn ZString slk_label_sp(Screen *, CInt);
+extern fn CInt slk_noutrefresh_sp(Screen *);
+extern fn CInt slk_refresh_sp(Screen *);
+extern fn CInt slk_restore_sp(Screen *);
+extern fn CInt slk_set_sp(Screen *, CInt, ZString, CInt);
+extern fn CInt slk_touch_sp(Screen *);
+extern fn CInt start_color_sp(Screen *);
+extern fn Chtype termattrs_sp(Screen *);
+extern fn ZString termname_sp(Screen *);
+extern fn CInt typeahead_sp(Screen *, CInt);
+extern fn CInt ungetch_sp(Screen *, CInt);
+extern fn void use_env_sp(Screen *, bool);
+extern fn void use_tioctl_sp(Screen *, bool);
+extern fn CInt vidattr_sp(Screen *, Chtype);
+extern fn CInt vidputs_sp(Screen *, Chtype, OutC_Sp);
+extern fn CInt alloc_pair_sp(Screen *, CInt, CInt);
+extern fn CInt assume_default_colors_sp(Screen *, CInt, CInt);
+extern fn CInt define_key_sp(Screen *, ZString, CInt);
+extern fn CInt extended_color_content_sp(Screen *, CInt, CInt *, CInt *, CInt *);
+extern fn CInt extended_pair_content_sp(Screen *, CInt, CInt *, CInt *);
+extern fn CInt extended_slk_color_sp(Screen *, CInt);
+extern fn CInt find_pair_sp(Screen *, CInt, CInt);
+extern fn CInt free_pair_sp(Screen *, CInt);
+extern fn CInt get_escdelay_sp(Screen *);
+extern fn CInt init_extended_color_sp(Screen *, CInt, CInt, CInt, CInt);
+extern fn CInt init_extended_pair_sp(Screen *, CInt, CInt, CInt);
+extern fn CInt is_cbreak_sp(Screen *);
+extern fn CInt is_echo_sp(Screen *);
+extern fn CInt is_nl_sp(Screen *);
+extern fn CInt is_raw_sp(Screen *);
+extern fn bool is_term_resized_sp(Screen *, CInt, CInt);
+extern fn CInt key_defined_sp(Screen *, ZString);
+extern fn ZString keybound_sp(Screen *, CInt, CInt);
+extern fn CInt keyok_sp(Screen *, CInt, bool);
+extern fn void nofilter_sp(Screen *);
+extern fn void reset_color_pairs_sp(Screen *);
+extern fn CInt resize_term_sp(Screen *, CInt, CInt);
+extern fn CInt resizeterm_sp(Screen *, CInt, CInt);
+extern fn CInt set_escdelay_sp(Screen *, CInt);
+extern fn CInt set_tabsize_sp(Screen *, CInt);
+extern fn CInt use_default_colors_sp(Screen *);
+extern fn CInt use_legacy_coding_sp(Screen *, CInt);
+
+
+/* attributes */
+
+const ATTR_SHIFT = 8;
+macro @bits($mask, $shift) => ((Chtype)$mask << ($shift + ATTR_SHIFT));
+
+const A_NORMAL     = (1U - 1U);
+const A_ATTRIBUTES = @bits(~(1U - 1U), 0);
+const A_CHARTEXT   = (@bits(1U,0) - 1U);
+const A_COLOR      = @bits(((1U) << 8) - 1U, 0);
+const A_STANDOUT   = @bits(1U, 8);
+const A_UNDERLINE  = @bits(1U, 9);
+const A_REVERSE    = @bits(1U, 10);
+const A_BLINK      = @bits(1U, 11);
+const A_DIM        = @bits(1U, 12);
+const A_BOLD       = @bits(1U, 13);
+const A_ALTCHARSET = @bits(1U, 14);
+const A_INVIS      = @bits(1U, 15);
+const A_PROTECT    = @bits(1U, 16);
+const A_HORIZONTAL = @bits(1U, 17);
+const A_LEFT       = @bits(1U, 18);
+const A_LOW        = @bits(1U, 19);
+const A_RIGHT      = @bits(1U, 20);
+const A_TOP        = @bits(1U, 21);
+const A_VERTICAL   = @bits(1U, 22);
+const A_ITALIC     = @bits(1U, 23);
+
+// continue from line 1159.
