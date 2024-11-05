@@ -808,4 +808,13 @@ macro gettmode()
 // macro mvinstr(y, x, s) => mvwinstr(stdscr, y, x, s);
 // macro mvvline(y, x, c, n) => mvwvline(stdscr, y, x, c, n);
 
-// continue from line 1371.
+// macro slk_attr_off(a, v) => (v ? ERR : slk_attroff(a));
+// macro slk_attr_on(a, v) => (v ? ERR : slk_attron(a));
+
+/*
+ * X/Open says this returns a bool; SVr4 also checked for out-of-range line.
+ * The macro provides compatibility:
+ */
+// macro is_linetouched(w, l) ((!w || (l > getmaxy(w)) || (l < 0)) ? ERR : is_linetouched(w,l));
+
+// continue from line 1472.
