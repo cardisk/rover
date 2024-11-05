@@ -950,4 +950,8 @@ const KEY_SUSPEND   = 0627;		/* suspend key */
 const KEY_UNDO      = 0630;		/* undo key */
 const KEY_MOUSE     = 0631;		/* Mouse event has occurred */
 
-// continue from line 1628.
+const KEY_RESIZE    = 0632;		/* Terminal resize event */
+
+const KEY_MAX       = 0777;	    /* Maximum key value is 0632 */
+
+// continue from line 1633.
