@@ -1272,4 +1272,246 @@ extern fn ZString _nc_viswibuf(CInt *);
  * (see that file for the relevant copyright).
  */
 
-// continue from line 1954.
+/* mouse interface */
+
+const MOUSE_VERSION = 2;
+
+macro @check_mouse_version($v) @private
+{
+    return MOUSE_VERSION > $v;
+}
+
+// NOTE: this macros differ from C because of the C3 naming rules.
+
+macro mouse_mask(b, m) @if(@check_mouse_version(1))
+{
+    return (m << (b - 1) * 5);
+}
+
+macro mouse_mask(b, m) @if(!@check_mouse_version(1))
+{
+    return (m << (b - 1) * 6);
+}
+
+const BUTTON_RELEASED = 001UL;
+const BUTTON_PRESSED = 002UL;
+const BUTTON_CLICKED = 004UL;
+const DOUBLE_CLICKED = 010UL;
+const TRIPLE_CLICKED = 020UL;
+const RESERVED_EVENT = 040UL;
+
+/* event masks */
+
+// ---
+// NOTE: this part is very different from C because of the strict rules of
+// the C3 compiler. Using consts instead of macros will crash the compiler because
+// the assignment cannot be evaluated at compile time.
+macro button1_released()       => mouse_mask(1, BUTTON_RELEASED);
+macro button1_pressed()        => mouse_mask(1, BUTTON_PRESSED);
+macro button1_clicked()        => mouse_mask(1, BUTTON_CLICKED);
+macro button1_double_clicked() => mouse_mask(1, DOUBLE_CLICKED);
+macro button1_triple_clicked() => mouse_mask(1, TRIPLE_CLICKED);
+
+macro button2_released()       => mouse_mask(2, BUTTON_RELEASED);
+macro button2_pressed()        => mouse_mask(2, BUTTON_PRESSED);
+macro button2_clicked()        => mouse_mask(2, BUTTON_CLICKED);
+macro button2_double_clicked() => mouse_mask(2, DOUBLE_CLICKED);
+macro button2_triple_clicked() => mouse_mask(2, TRIPLE_CLICKED);
+
+macro button3_released()       => mouse_mask(3, BUTTON_RELEASED);
+macro button3_pressed()        => mouse_mask(3, BUTTON_PRESSED);
+macro button3_clicked()        => mouse_mask(3, BUTTON_CLICKED);
+macro button3_double_clicked() => mouse_mask(3, DOUBLE_CLICKED);
+macro button3_triple_clicked() => mouse_mask(3, TRIPLE_CLICKED);
+
+macro button4_released()       => mouse_mask(4, BUTTON_RELEASED);
+macro button4_pressed()        => mouse_mask(4, BUTTON_PRESSED);
+macro button4_clicked()        => mouse_mask(4, BUTTON_CLICKED);
+macro button4_double_clicked() => mouse_mask(4, DOUBLE_CLICKED);
+macro button4_triple_clicked() => mouse_mask(4, TRIPLE_CLICKED);
+
+/*
+ * In 32 bits the version-1 scheme does not provide enough space for a 5th
+ * button, unless we choose to change the ABI by omitting the reserved-events.
+ */
+macro button5_released() @if(@check_mouse_version(1))
+{
+    return mouse_mask(5, BUTTON_RELEASED);
+}
+
+macro button5_pressed() @if(@check_mouse_version(1))
+{
+    return mouse_mask(5, BUTTON_PRESSED);
+}
+
+macro button5_clicked() @if(@check_mouse_version(1))
+{
+    return mouse_mask(5, BUTTON_CLICKED);
+}
+
+macro button5_double_clicked() @if(@check_mouse_version(1))
+{
+    return mouse_mask(5, DOUBLE_CLICKED);
+}
+
+macro button5_triple_clicked() @if(@check_mouse_version(1))
+{
+    return mouse_mask(5, TRIPLE_CLICKED);
+}
+
+macro button_ctrl() @if(@check_mouse_version(1))
+{
+    return mouse_mask(6, 0001L);
+}
+
+macro button_shift() @if(@check_mouse_version(1))
+{
+    return mouse_mask(6, 0002L);
+}
+
+macro button_alt() @if(@check_mouse_version(1))
+{
+    return mouse_mask(6, 0004L);
+}
+
+macro report_mouse_position() @if(@check_mouse_version(1))
+{
+    return mouse_mask(6, 0010L);
+}
+
+macro button1_reserved_event() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(1, RESERVED_EVENT);
+}
+
+macro button2_reserved_event() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(2, RESERVED_EVENT);
+}
+
+macro button3_reserved_event() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(3, RESERVED_EVENT);
+}
+
+macro button4_reserved_event() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(4, RESERVED_EVENT);
+}
+
+macro button_ctrl() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(5, 0001L);
+}
+
+macro button_shift() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(5, 0002L);
+}
+
+macro button_alt() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(5, 0004L);
+}
+
+macro report_mouse_position() @if(!@check_mouse_version(1))
+{
+    return mouse_mask(5, 0010L);
+}
+
+macro all_mouse_events() => (report_mouse_position() - 1);
+
+/* macros to extract single event-bits from masks */
+macro button_release(e, x)        => (e & mouse_mask(x, 001));
+macro button_press(e, x)          => (e & mouse_mask(x, 002));
+macro button_click(e, x)          => (e & mouse_mask(x, 004));
+macro button_double_click(e, x)   => (e & mouse_mask(x, 010));
+macro button_triple_click(e, x)   => (e & mouse_mask(x, 020));
+macro button_reserved_event(e, x) => (e & mouse_mask(x, 040));
+// ---
+
+struct MEvent
+{
+    CShort id;      /* ID to distinguish multiple devices */
+    CInt x, y, z;   /* event coordinates (character-cell) */
+    Mmask_t bstate;	/* button state bits */
+}
+
+extern fn bool has_mouse();
+extern fn CInt getmouse(MEvent *);
+extern fn CInt ungetmouse(MEvent *);
+extern fn Mmask_t mousemask(Mmask_t, Mmask_t *);
+extern fn bool wenclose(Window *, CInt, CInt);
+extern fn CInt mouseinterval(CInt);
+extern fn bool wmouse_trafo(Window *, CInt *, CInt *, bool);
+extern fn bool mouse_trafo(CInt *, CInt *, bool);
+
+extern fn bool has_mouse_sp(Screen *);
+extern fn CInt getmouse_sp(Screen *, MEvent *);
+extern fn CInt ungetmouse_sp(Screen *, MEvent *);
+extern fn Mmask_t mousemask_sp(Screen *, Mmask_t, Mmask_t *);
+extern fn CInt mouseinterval_sp(Screen *, CInt);
+
+// NOTE: this is conflicting with an external function declared above.
+// macro mouse_trafo(y, x, to_screen) => wmouse_trafo(stdscr, y, x, to_screen);
+
+/* other non-XSI functions */
+
+extern fn CInt mcprint(ZString, CInt);              /* direct data to printer */
+extern fn CInt has_key(CInt);                       /* do we have given key? */
+
+extern fn CInt has_key_sp(Screen *, CInt);          /* do we have given key? */
+extern fn CInt mcprint_sp(Screen *, ZString, CInt);	/* direct data to printer */
+
+/* Debugging : use with libncurses_g.a */
+
+extern fn void _tracef(ZString, ...);
+extern fn ZString _traceattr(Attr_t);
+extern fn ZString _traceattr2(CInt, Chtype);
+extern fn ZString _tracechar(CInt);
+extern fn ZString _tracechtype(Chtype);
+extern fn ZString _tracechtype2(CInt, Chtype);
+
+// NOTE: this is not possible with C3 macro system.
+// #define _tracech_t _tracecchar_t
+extern fn ZString _tracecchar_t(CChar_t *);
+
+// NOTE: this is not possible with C3 macro system.
+// #define _tracech_t2 _tracecchar_t2
+extern fn ZString _tracecchar_t2(CInt, CChar_t *);
+
+extern fn void trace(CUInt) @deprecated("use curses_trace");
+extern fn CUInt curses_trace(CUInt);
+
+/* trace masks */
+const TRACE_DISABLE  = 0x0000; /* turn off tracing */
+const TRACE_TIMES    = 0x0001; /* trace user and system times of updates */
+const TRACE_TPUTS    = 0x0002; /* trace tputs calls */
+const TRACE_UPDATE   = 0x0004; /* trace update actions, old & new screens */
+const TRACE_MOVE     = 0x0008; /* trace cursor moves and scrolls */
+const TRACE_CHARPUT  = 0x0010; /* trace all character outputs */
+const TRACE_ORDINARY = 0x001F; /* trace all update actions */
+const TRACE_CALLS    = 0x0020; /* trace all curses calls */
+const TRACE_VIRTPUT  = 0x0040; /* trace virtual character puts */
+const TRACE_IEVENT   = 0x0080; /* trace low-level input processing */
+const TRACE_BITS     = 0x0100; /* trace state of TTY control bits */
+const TRACE_ICALLS   = 0x0200; /* trace internal/nested calls */
+const TRACE_CCALLS   = 0x0400; /* trace per-character calls */
+const TRACE_DATABASE = 0x0800; /* trace read/write of terminfo/termcap data */
+const TRACE_ATTRS    = 0x1000; /* trace attribute updates */
+
+const TRACE_SHIFT    = 13; /* number of bits in the trace masks */
+const TRACE_MAXIMUM  = ((1 << TRACE_SHIFT) - 1); /* maximum trace level */
+
+extern CInt _nc_optimize_enable;        /* enable optimizations */
+extern fn ZString _nc_visbuf(ZString);
+const OPTIMIZE_MVCUR   = 0x01;          /* cursor movement optimization */
+const OPTIMIZE_HASHMAP = 0x02;          /* diff hashing to detect scrolls */
+const OPTIMIZE_SCROLL  = 0x04;          /* scroll optimization */
+const OPTIMIZE_ALL     = 0xff;          /* enable all optimizations (dflt) */
+
+extern fn void exit_curses(CInt) @noreturn;
+
+// NOTE: this two externs come from unctrl.h included at the bottom of ncurses.h.
+extern fn ZString unctrl(Chtype);
+extern fn ZString unctrl_sp(Screen *, Chtype);
