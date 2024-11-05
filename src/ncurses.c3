@@ -1,6 +1,9 @@
 module ncurses;
 import std::io;
 
+const ERR = -1;
+const OK = 0;
+
 def Chtype = CUInt;
 def Mmask_t = CUInt;
 
@@ -304,7 +307,7 @@ extern fn void use_tioctl(bool);
 extern fn CInt vidattr(Chtype);
 extern fn CInt vidputs(Chtype, OutC);
 extern fn CInt vline(Chtype, CInt);
-// FIXME: '...' was of type 'va_list', this can be a problem in the future
+// FIXME: '...' was of type 'va_list', can this be a problem in the future?
 extern fn CInt vwprintw(Window *, ZString, ...);
 extern fn CInt vw_printw(Window *, ZString, ...);
 extern fn CInt vwscanw(Window *, ZString, ...);
@@ -574,6 +577,7 @@ extern fn CInt use_legacy_coding_sp(Screen *, CInt);
 /* attributes */
 
 const ATTR_SHIFT = 8;
+// NOTE: this function-like macro differs from C because of the macro-rules of C3.
 macro @bits($mask, $shift) => ((Chtype)$mask << ($shift + ATTR_SHIFT));
 
 const A_NORMAL     = (1U - 1U);
@@ -597,4 +601,211 @@ const A_TOP        = @bits(1U, 21);
 const A_VERTICAL   = @bits(1U, 22);
 const A_ITALIC     = @bits(1U, 23);
 
-// continue from line 1159.
+/*
+ * Most of the pseudo functions are macros that either provide compatibility
+ * with older versions of curses, or provide inline functionality to improve
+ * performance.
+ */
+
+/*
+ * These pseudo functions are always implemented as macros:
+ */
+
+// NOTE: this function-like macros differ from C because of the macro-rules of C3.
+
+macro @getyx(&win, &y, &x)
+{
+    *y = getcury(win);
+    *x = getcurx(win);
+}
+
+macro @getbegyx(&win, &y, &x)
+{
+    *y = getbegy(win);
+    *x = getbegx(win);
+}
+
+macro @getmaxyx(&win, &y, &x)
+{
+    *y = getmaxy(win);
+    *x = getmaxx(win);
+}
+
+macro @getparyx(&win, &y, &x)
+{
+    *y = getpary(win);
+    *x = getparx(win);
+}
+
+macro @getsyx(&y, &x)
+{
+    if (is_leaveok(newscr))
+    {
+        *x = *y = -1;
+    }
+    else
+    {
+        getyx(newscr, *y, *x);
+    }
+}
+
+macro @setsyx(&y, &x)
+{
+    if (*y == -1 && *x == -1)
+    {
+        leaveok(newscr, true);
+    }
+    else
+    {
+        leaveok(newscr, false);
+        wmove(newscr, *y, *x);
+    }
+}
+
+/*
+ * These miscellaneous pseudo functions are provided for compatibility:
+ */
+
+// NOTE: compatibility macros commented out are conflicting with external
+// functions declared above.
+
+// macro wgetstr(w, s) => wgetnstr(w, s, -1);
+// macro getnstr(s, n) => wgetnstr(stdscr, s, n);
+
+macro setterm(term) => setupterm(term, 1, (int *)0);
+
+macro fixterm()     => reset_prog_mode();
+macro resetterm()   => reset_shell_mode();
+macro saveterm()    => def_prog_mode();
+macro crmode()      => cbreak();
+macro nocrmode()    => nocbreak();
+macro gettmode()
+{
+}
+
+// macro wstandout(win)    => (wattrset(win, A_STANDOUT));
+// macro wstandend(win)    => (wattrset(win, A_NORMAL));
+
+// macro wattron(win, at)  => wattr_on(win, (Attr_t)at, null);
+// macro wattroff(win, at) => wattr_off(win, (Attr_t)at, null);
+
+// macro scroll(win) => wscrl(win, 1);
+
+// macro touchwin(win) => wtouchln(win, 0, getmaxy(win), 1);
+// macro touchline(win, s, c) => wtouchln(win, s, c, 1);
+// macro untouchwin(win) => wtouchln(win, 0, getmaxy(win), 0);
+
+// macro box(win, v, h) => wborder(win, v, v, h, h, 0, 0, 0, 0);
+// macro border(ls, rs, ts, bs, tl, tr, bl, br) => wborder(stdscr, ls, rs, ts, bs, tl, tr, bl, br);
+// macro hline(ch, n) => whline(stdscr, ch, n);
+// macro vline(ch, n) => wvline(stdscr, ch, n);
+
+// macro winstr(w, s) => winnstr(w, s, -1);
+// macro winchstr(w, s) => winchnstr(w, s, -1);
+// macro winsstr(w, s) => winsnstr(w, s, -1);
+
+// macro waddstr(win, str)   => waddnstr(win, str, -1);
+// macro waddchstr(win, str) => waddchnstr(win, str, -1);
+
+/*
+ * These apply to the first 256 color pairs.
+ */
+// macro color_pair(n) => @bits(n, 0) & A_COLOR;
+// macro pair_number(a) => ((CInt)((CLong)a) & A_COLOR) >> ATTR_SHIFT;
+
+/*
+ * pseudo functions for standard screen
+ */
+
+// macro addch(ch) => waddch(stdscr, ch);
+// macro addchnstr(str, n) => waddchnstr(stdscr, str, n);
+// macro addchstr(str) => waddchstr(stdscr, str);
+// macro addnstr(str, n) => waddnstr(stdscr, str, n);
+// macro addstr(str) => waddnstr(stdscr, str, -1);
+// macro attr_get(ap, cp, o) => wattr_get(stdscr, ap, cp, o);
+// macro attr_off(a, o) =>	wattr_off(stdscr, a, o);
+// macro attr_on(a, o) => wattr_on(stdscr, a, o);
+// macro attr_set(a, c, o) => wattr_set(stdscr, a, c, o);
+// macro attroff(at) => wattroff(stdscr, at);
+// macro attron(at) => wattron(stdscr, at);
+// macro attrset(at) => wattrset(stdscr, at);
+// macro bkgd(ch) => wbkgd(stdscr, ch);
+// macro bkgdset(ch) => wbkgdset(stdscr, ch);
+// macro chgat(n, a, c, o) => wchgat(stdscr, n, a, c, o);
+// macro clear() => wclear(stdscr);
+// macro clrtobot() => wclrtobot(stdscr);
+// macro clrtoeol() => wclrtoeol(stdscr);
+// macro color_set(c, o) => wcolor_set(stdscr, c, o);
+// macro delch() => wdelch(stdscr);
+// macro deleteln() => winsdelln(stdscr, -1);
+// macro echochar(c) => wechochar(stdscr, c);
+// macro erase() => werase(stdscr);
+// macro getch() => wgetch(stdscr);
+// macro getstr(str) => wgetstr(stdscr, str);
+// macro inch() =>	winch(stdscr);
+// macro inchnstr(s, n) => winchnstr(stdscr, s, n);
+// macro inchstr(s) => winchstr(stdscr, s);
+// macro innstr(s, n) => winnstr(stdscr, s, n);
+// macro insch(c) => winsch(stdscr, c);
+// macro insdelln(n) => winsdelln(stdscr, n);
+// macro insertln() => winsdelln(stdscr, 1);
+// macro insnstr(s, n) => winsnstr(stdscr, s, n);
+// macro insstr(s) => winsstr(stdscr, s);
+// macro instr(s) => winstr(stdscr, s);
+// macro move(y, x) =>	wmove(stdscr, y, x);
+// macro refresh() => wrefresh(stdscr);
+// macro scrl(n) => wscrl(stdscr, n);
+// macro setscrreg(t, b) => wsetscrreg(stdscr, t, b);
+// macro standend() => wstandend(stdscr);
+// macro standout() => wstandout(stdscr);
+// macro timeout(delay) => wtimeout(stdscr, delay);
+// macro wdeleteln(win) => winsdelln(win, -1);
+// macro winsertln(win) => winsdelln(win, 1);
+
+/*
+ * mv functions
+ */
+
+// macro mvwaddch(win, y, x, ch) => (wmove(win, y, x) == ERR ? ERR : waddch(win, ch));
+// macro mvwaddchnstr(win, y, x, str, n) => (wmove(win, y, x) == ERR ? ERR : waddchnstr(win, str, n));
+// macro mvwaddchstr(win, y, x, str) => (wmove(win, y, x) == ERR ? ERR : waddchnstr(win, str, -1));
+// macro mvwaddnstr(win, y, x, str, n) => (wmove(win, y, x) == ERR ? ERR : waddnstr(win, str, n));
+// macro mvwaddstr(win, y, x, str) => (wmove(win, y, x) == ERR ? ERR : waddnstr(win, str, -1));
+// macro mvwchgat(win, y, x, n, a, c, o) => (wmove(win, y, x) == ERR ? ERR : wchgat(win, n, a, c, o));
+// macro mvwdelch(win, y, x) => (wmove(win, y, x) == ERR ? ERR : wdelch(win));
+// macro mvwgetch(win, y, x) => (wmove(win, y, x) == ERR ? ERR : wgetch(win));
+// macro mvwgetnstr(win, y, x, str, n) => (wmove(win, y, x) == ERR ? ERR : wgetnstr(win, str, n));
+// macro mvwgetstr(win, y, x, str) => (wmove(win, y, x) == ERR ? ERR : wgetstr(win, str));
+// macro mvwhline(win, y, x, c, n) => (wmove(win, y, x) == ERR ? ERR : whline(win, c, n));
+// macro mvwinch(win, y, x) => (wmove(win, y, x) == ERR ? (Chtype)ERR : winch(win));
+// macro mvwinchnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : winchnstr(win, s, n));
+// macro mvwinchstr(win, y, x, s) => (wmove(win, y, x) == ERR ? ERR : winchstr(win, s));
+// macro mvwinnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : winnstr(win, s, n));
+// macro mvwinsch(win, y, x, c) => (wmove(win, y, x) == ERR ? ERR : winsch(win, c));
+// macro mvwinsnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : winsnstr(win, s, n));
+// macro mvwinsstr(win, y, x, s) => (wmove(win, y, x) == ERR ? ERR : winsstr(win, s));
+// macro mvwinstr(win, y, x, s) =>	(wmove(win, y, x) == ERR ? ERR : winstr(win, s));
+// macro mvwvline(win, y, x, c, n) => (wmove(win, y, x) == ERR ? ERR : wvline(win, c, n));
+
+// macro mvaddch(y, x, ch) => mvwaddch(stdscr, y, x, ch);
+// macro mvaddchnstr(y, x, str, n) => mvwaddchnstr(stdscr, y, x, str, n);
+// macro mvaddchstr(y, x, str) => mvwaddchstr(stdscr, y, x, str);
+// macro mvaddnstr(y, x, str, n) => mvwaddnstr(stdscr, y, x, str, n);
+// macro mvaddstr(y, x, str) => mvwaddstr(stdscr, y, x, str);
+// macro mvchgat(y, x, n, a, c, o) => mvwchgat(stdscr, y, x, n, a, c, o);
+// macro mvdelch(y, x) => mvwdelch(stdscr, y, x);
+// macro mvgetch(y, x) => mvwgetch(stdscr, y, x);
+// macro mvgetnstr(y, x, str, n) => mvwgetnstr(stdscr, y, x, str, n);
+// macro mvgetstr(y, x, str) => mvwgetstr(stdscr, y, x, str);
+// macro mvhline(y, x, c, n) => mvwhline(stdscr, y, x, c, n);
+// macro mvinch(y, x) => mvwinch(stdscr, y, x);
+// macro mvinchnstr(y, x, s, n) => mvwinchnstr(stdscr, y, x, s, n);
+// macro mvinchstr(y, x, s) => mvwinchstr(stdscr, y, x, s);
+// macro mvinnstr(y, x, s, n) => mvwinnstr(stdscr, y, x, s, n);
+// macro mvinsch(y, x, c) => mvwinsch(stdscr, y, x, c);
+// macro mvinsnstr(y, x, s, n) => mvwinsnstr(stdscr, y, x, s, n);
+// macro mvinsstr(y, x, s) => mvwinsstr(stdscr, y, x, s);
+// macro mvinstr(y, x, s) => mvwinstr(stdscr, y, x, s);
+// macro mvvline(y, x, c, n) => mvwvline(stdscr, y, x, c, n);
+
+// continue from line 1371.
