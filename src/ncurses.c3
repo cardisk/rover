@@ -696,18 +696,18 @@ macro gettmode()
 
 // macro scroll(win) => wscrl(win, 1);
 
-// macro touchwin(win) => wtouchln(win, 0, getmaxy(win), 1);
+// macro touchwin(win)        => wtouchln(win, 0, getmaxy(win), 1);
 // macro touchline(win, s, c) => wtouchln(win, s, c, 1);
-// macro untouchwin(win) => wtouchln(win, 0, getmaxy(win), 0);
+// macro untouchwin(win)      => wtouchln(win, 0, getmaxy(win), 0);
 
-// macro box(win, v, h) => wborder(win, v, v, h, h, 0, 0, 0, 0);
+// macro box(win, v, h)                         => wborder(win, v, v, h, h, 0, 0, 0, 0);
 // macro border(ls, rs, ts, bs, tl, tr, bl, br) => wborder(stdscr, ls, rs, ts, bs, tl, tr, bl, br);
-// macro hline(ch, n) => whline(stdscr, ch, n);
-// macro vline(ch, n) => wvline(stdscr, ch, n);
+// macro hline(ch, n)                           => whline(stdscr, ch, n);
+// macro vline(ch, n)                           => wvline(stdscr, ch, n);
 
-// macro winstr(w, s) => winnstr(w, s, -1);
+// macro winstr(w, s)   => winnstr(w, s, -1);
 // macro winchstr(w, s) => winchnstr(w, s, -1);
-// macro winsstr(w, s) => winsnstr(w, s, -1);
+// macro winsstr(w, s)  => winsnstr(w, s, -1);
 
 // macro waddstr(win, str)   => waddnstr(win, str, -1);
 // macro waddchstr(win, str) => waddchnstr(win, str, -1);
@@ -715,106 +715,106 @@ macro gettmode()
 /*
  * These apply to the first 256 color pairs.
  */
-// macro color_pair(n) => @bits(n, 0) & A_COLOR;
+// macro color_pair(n)  => @bits(n, 0) & A_COLOR;
 // macro pair_number(a) => ((CInt)((CLong)a) & A_COLOR) >> ATTR_SHIFT;
 
 /*
  * pseudo functions for standard screen
  */
 
-// macro addch(ch) => waddch(stdscr, ch);
-// macro addchnstr(str, n) => waddchnstr(stdscr, str, n);
-// macro addchstr(str) => waddchstr(stdscr, str);
-// macro addnstr(str, n) => waddnstr(stdscr, str, n);
-// macro addstr(str) => waddnstr(stdscr, str, -1);
+// macro addch(ch)           => waddch(stdscr, ch);
+// macro addchnstr(str, n)   => waddchnstr(stdscr, str, n);
+// macro addchstr(str)       => waddchstr(stdscr, str);
+// macro addnstr(str, n)     => waddnstr(stdscr, str, n);
+// macro addstr(str)         => waddnstr(stdscr, str, -1);
 // macro attr_get(ap, cp, o) => wattr_get(stdscr, ap, cp, o);
-// macro attr_off(a, o) =>	wattr_off(stdscr, a, o);
-// macro attr_on(a, o) => wattr_on(stdscr, a, o);
-// macro attr_set(a, c, o) => wattr_set(stdscr, a, c, o);
-// macro attroff(at) => wattroff(stdscr, at);
-// macro attron(at) => wattron(stdscr, at);
-// macro attrset(at) => wattrset(stdscr, at);
-// macro bkgd(ch) => wbkgd(stdscr, ch);
-// macro bkgdset(ch) => wbkgdset(stdscr, ch);
-// macro chgat(n, a, c, o) => wchgat(stdscr, n, a, c, o);
-// macro clear() => wclear(stdscr);
-// macro clrtobot() => wclrtobot(stdscr);
-// macro clrtoeol() => wclrtoeol(stdscr);
-// macro color_set(c, o) => wcolor_set(stdscr, c, o);
-// macro delch() => wdelch(stdscr);
-// macro deleteln() => winsdelln(stdscr, -1);
-// macro echochar(c) => wechochar(stdscr, c);
-// macro erase() => werase(stdscr);
-// macro getch() => wgetch(stdscr);
-// macro getstr(str) => wgetstr(stdscr, str);
-// macro inch() =>	winch(stdscr);
-// macro inchnstr(s, n) => winchnstr(stdscr, s, n);
-// macro inchstr(s) => winchstr(stdscr, s);
-// macro innstr(s, n) => winnstr(stdscr, s, n);
-// macro insch(c) => winsch(stdscr, c);
-// macro insdelln(n) => winsdelln(stdscr, n);
-// macro insertln() => winsdelln(stdscr, 1);
-// macro insnstr(s, n) => winsnstr(stdscr, s, n);
-// macro insstr(s) => winsstr(stdscr, s);
-// macro instr(s) => winstr(stdscr, s);
-// macro move(y, x) =>	wmove(stdscr, y, x);
-// macro refresh() => wrefresh(stdscr);
-// macro scrl(n) => wscrl(stdscr, n);
-// macro setscrreg(t, b) => wsetscrreg(stdscr, t, b);
-// macro standend() => wstandend(stdscr);
-// macro standout() => wstandout(stdscr);
-// macro timeout(delay) => wtimeout(stdscr, delay);
-// macro wdeleteln(win) => winsdelln(win, -1);
-// macro winsertln(win) => winsdelln(win, 1);
+// macro attr_off(a, o)      => wattr_off(stdscr, a, o);
+// macro attr_on(a, o)       => wattr_on(stdscr, a, o);
+// macro attr_set(a, c, o)   => wattr_set(stdscr, a, c, o);
+// macro attroff(at)         => wattroff(stdscr, at);
+// macro attron(at)          => wattron(stdscr, at);
+// macro attrset(at)         => wattrset(stdscr, at);
+// macro bkgd(ch)            => wbkgd(stdscr, ch);
+// macro bkgdset(ch)         => wbkgdset(stdscr, ch);
+// macro chgat(n, a, c, o)   => wchgat(stdscr, n, a, c, o);
+// macro clear()             => wclear(stdscr);
+// macro clrtobot()          => wclrtobot(stdscr);
+// macro clrtoeol()          => wclrtoeol(stdscr);
+// macro color_set(c, o)     => wcolor_set(stdscr, c, o);
+// macro delch()             => wdelch(stdscr);
+// macro deleteln()          => winsdelln(stdscr, -1);
+// macro echochar(c)         => wechochar(stdscr, c);
+// macro erase()             => werase(stdscr);
+// macro getch()             => wgetch(stdscr);
+// macro getstr(str)         => wgetstr(stdscr, str);
+// macro inch()              => winch(stdscr);
+// macro inchnstr(s, n)      => winchnstr(stdscr, s, n);
+// macro inchstr(s)          => winchstr(stdscr, s);
+// macro innstr(s, n)        => winnstr(stdscr, s, n);
+// macro insch(c)            => winsch(stdscr, c);
+// macro insdelln(n)         => winsdelln(stdscr, n);
+// macro insertln()          => winsdelln(stdscr, 1);
+// macro insnstr(s, n)       => winsnstr(stdscr, s, n);
+// macro insstr(s)           => winsstr(stdscr, s);
+// macro instr(s)            => winstr(stdscr, s);
+// macro move(y, x)          => wmove(stdscr, y, x);
+// macro refresh()           => wrefresh(stdscr);
+// macro scrl(n)             => wscrl(stdscr, n);
+// macro setscrreg(t, b)     => wsetscrreg(stdscr, t, b);
+// macro standend()          => wstandend(stdscr);
+// macro standout()          => wstandout(stdscr);
+// macro timeout(delay)      => wtimeout(stdscr, delay);
+// macro wdeleteln(win)      => winsdelln(win, -1);
+// macro winsertln(win)      => winsdelln(win, 1);
 
 /*
  * mv functions
  */
 
-// macro mvwaddch(win, y, x, ch) => (wmove(win, y, x) == ERR ? ERR : waddch(win, ch));
+// macro mvwaddch(win, y, x, ch)         => (wmove(win, y, x) == ERR ? ERR : waddch(win, ch));
 // macro mvwaddchnstr(win, y, x, str, n) => (wmove(win, y, x) == ERR ? ERR : waddchnstr(win, str, n));
-// macro mvwaddchstr(win, y, x, str) => (wmove(win, y, x) == ERR ? ERR : waddchnstr(win, str, -1));
-// macro mvwaddnstr(win, y, x, str, n) => (wmove(win, y, x) == ERR ? ERR : waddnstr(win, str, n));
-// macro mvwaddstr(win, y, x, str) => (wmove(win, y, x) == ERR ? ERR : waddnstr(win, str, -1));
+// macro mvwaddchstr(win, y, x, str)     => (wmove(win, y, x) == ERR ? ERR : waddchnstr(win, str, -1));
+// macro mvwaddnstr(win, y, x, str, n)   => (wmove(win, y, x) == ERR ? ERR : waddnstr(win, str, n));
+// macro mvwaddstr(win, y, x, str)       => (wmove(win, y, x) == ERR ? ERR : waddnstr(win, str, -1));
 // macro mvwchgat(win, y, x, n, a, c, o) => (wmove(win, y, x) == ERR ? ERR : wchgat(win, n, a, c, o));
-// macro mvwdelch(win, y, x) => (wmove(win, y, x) == ERR ? ERR : wdelch(win));
-// macro mvwgetch(win, y, x) => (wmove(win, y, x) == ERR ? ERR : wgetch(win));
-// macro mvwgetnstr(win, y, x, str, n) => (wmove(win, y, x) == ERR ? ERR : wgetnstr(win, str, n));
-// macro mvwgetstr(win, y, x, str) => (wmove(win, y, x) == ERR ? ERR : wgetstr(win, str));
-// macro mvwhline(win, y, x, c, n) => (wmove(win, y, x) == ERR ? ERR : whline(win, c, n));
-// macro mvwinch(win, y, x) => (wmove(win, y, x) == ERR ? (Chtype)ERR : winch(win));
-// macro mvwinchnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : winchnstr(win, s, n));
-// macro mvwinchstr(win, y, x, s) => (wmove(win, y, x) == ERR ? ERR : winchstr(win, s));
-// macro mvwinnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : winnstr(win, s, n));
-// macro mvwinsch(win, y, x, c) => (wmove(win, y, x) == ERR ? ERR : winsch(win, c));
-// macro mvwinsnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : winsnstr(win, s, n));
-// macro mvwinsstr(win, y, x, s) => (wmove(win, y, x) == ERR ? ERR : winsstr(win, s));
-// macro mvwinstr(win, y, x, s) =>	(wmove(win, y, x) == ERR ? ERR : winstr(win, s));
-// macro mvwvline(win, y, x, c, n) => (wmove(win, y, x) == ERR ? ERR : wvline(win, c, n));
+// macro mvwdelch(win, y, x)             => (wmove(win, y, x) == ERR ? ERR : wdelch(win));
+// macro mvwgetch(win, y, x)             => (wmove(win, y, x) == ERR ? ERR : wgetch(win));
+// macro mvwgetnstr(win, y, x, str, n)   => (wmove(win, y, x) == ERR ? ERR : wgetnstr(win, str, n));
+// macro mvwgetstr(win, y, x, str)       => (wmove(win, y, x) == ERR ? ERR : wgetstr(win, str));
+// macro mvwhline(win, y, x, c, n)       => (wmove(win, y, x) == ERR ? ERR : whline(win, c, n));
+// macro mvwinch(win, y, x)              => (wmove(win, y, x) == ERR ? (Chtype)ERR : winch(win));
+// macro mvwinchnstr(win, y, x, s, n)    => (wmove(win, y, x) == ERR ? ERR : winchnstr(win, s, n));
+// macro mvwinchstr(win, y, x, s)        => (wmove(win, y, x) == ERR ? ERR : winchstr(win, s));
+// macro mvwinnstr(win, y, x, s, n)      => (wmove(win, y, x) == ERR ? ERR : winnstr(win, s, n));
+// macro mvwinsch(win, y, x, c)          => (wmove(win, y, x) == ERR ? ERR : winsch(win, c));
+// macro mvwinsnstr(win, y, x, s, n)     => (wmove(win, y, x) == ERR ? ERR : winsnstr(win, s, n));
+// macro mvwinsstr(win, y, x, s)         => (wmove(win, y, x) == ERR ? ERR : winsstr(win, s));
+// macro mvwinstr(win, y, x, s)          => (wmove(win, y, x) == ERR ? ERR : winstr(win, s));
+// macro mvwvline(win, y, x, c, n)       => (wmove(win, y, x) == ERR ? ERR : wvline(win, c, n));
 
-// macro mvaddch(y, x, ch) => mvwaddch(stdscr, y, x, ch);
+// macro mvaddch(y, x, ch)         => mvwaddch(stdscr, y, x, ch);
 // macro mvaddchnstr(y, x, str, n) => mvwaddchnstr(stdscr, y, x, str, n);
-// macro mvaddchstr(y, x, str) => mvwaddchstr(stdscr, y, x, str);
-// macro mvaddnstr(y, x, str, n) => mvwaddnstr(stdscr, y, x, str, n);
-// macro mvaddstr(y, x, str) => mvwaddstr(stdscr, y, x, str);
+// macro mvaddchstr(y, x, str)     => mvwaddchstr(stdscr, y, x, str);
+// macro mvaddnstr(y, x, str, n)   => mvwaddnstr(stdscr, y, x, str, n);
+// macro mvaddstr(y, x, str)       => mvwaddstr(stdscr, y, x, str);
 // macro mvchgat(y, x, n, a, c, o) => mvwchgat(stdscr, y, x, n, a, c, o);
-// macro mvdelch(y, x) => mvwdelch(stdscr, y, x);
-// macro mvgetch(y, x) => mvwgetch(stdscr, y, x);
-// macro mvgetnstr(y, x, str, n) => mvwgetnstr(stdscr, y, x, str, n);
-// macro mvgetstr(y, x, str) => mvwgetstr(stdscr, y, x, str);
-// macro mvhline(y, x, c, n) => mvwhline(stdscr, y, x, c, n);
-// macro mvinch(y, x) => mvwinch(stdscr, y, x);
-// macro mvinchnstr(y, x, s, n) => mvwinchnstr(stdscr, y, x, s, n);
-// macro mvinchstr(y, x, s) => mvwinchstr(stdscr, y, x, s);
-// macro mvinnstr(y, x, s, n) => mvwinnstr(stdscr, y, x, s, n);
-// macro mvinsch(y, x, c) => mvwinsch(stdscr, y, x, c);
-// macro mvinsnstr(y, x, s, n) => mvwinsnstr(stdscr, y, x, s, n);
-// macro mvinsstr(y, x, s) => mvwinsstr(stdscr, y, x, s);
-// macro mvinstr(y, x, s) => mvwinstr(stdscr, y, x, s);
-// macro mvvline(y, x, c, n) => mvwvline(stdscr, y, x, c, n);
+// macro mvdelch(y, x)             => mvwdelch(stdscr, y, x);
+// macro mvgetch(y, x)             => mvwgetch(stdscr, y, x);
+// macro mvgetnstr(y, x, str, n)   => mvwgetnstr(stdscr, y, x, str, n);
+// macro mvgetstr(y, x, str)       => mvwgetstr(stdscr, y, x, str);
+// macro mvhline(y, x, c, n)       => mvwhline(stdscr, y, x, c, n);
+// macro mvinch(y, x)              => mvwinch(stdscr, y, x);
+// macro mvinchnstr(y, x, s, n)    => mvwinchnstr(stdscr, y, x, s, n);
+// macro mvinchstr(y, x, s)        => mvwinchstr(stdscr, y, x, s);
+// macro mvinnstr(y, x, s, n)      => mvwinnstr(stdscr, y, x, s, n);
+// macro mvinsch(y, x, c)          => mvwinsch(stdscr, y, x, c);
+// macro mvinsnstr(y, x, s, n)     => mvwinsnstr(stdscr, y, x, s, n);
+// macro mvinsstr(y, x, s)         => mvwinsstr(stdscr, y, x, s);
+// macro mvinstr(y, x, s)          => mvwinstr(stdscr, y, x, s);
+// macro mvvline(y, x, c, n)       => mvwvline(stdscr, y, x, c, n);
 
 // macro slk_attr_off(a, v) => (v ? ERR : slk_attroff(a));
-// macro slk_attr_on(a, v) => (v ? ERR : slk_attron(a));
+// macro slk_attr_on(a, v)  => (v ? ERR : slk_attron(a));
 
 /*
  * X/Open says this returns a bool; SVr4 also checked for out-of-range line.
@@ -1179,4 +1179,87 @@ extern fn CInt winwstr(Window *, CInt *);
 extern fn CInt *wunctrl(CChar_t *);
 extern fn CInt wvline_set(Window *, CChar_t *, CInt);
 
-// continue from line 1852.
+extern fn Attr_t term_attrs_sp (Screen *);
+extern fn CInt erasewchar_sp (Screen *, CInt *);
+extern fn CInt killwchar_sp (Screen *, CInt *);
+extern fn CInt unget_wch_sp (Screen *, CInt);
+extern fn CInt vid_attr_sp (Screen *, Attr_t, CShort, void *);
+extern fn CInt vid_puts_sp (Screen *, Attr_t, CShort, void *, OutC);
+extern fn CInt *wunctrl_sp (Screen *, CChar_t *);
+
+/*
+ * XSI curses macros for XPG4 conformance.
+ */
+
+// NOTE: macros commented out are conflicting with external
+// functions declared above.
+
+// macro add_wch(c)                             => wadd_wch(stdscr, c);
+// macro add_wchnstr(str, n)                    => wadd_wchnstr(stdscr, str, n);
+// macro add_wchstr(str)                        => wadd_wchstr(stdscr, str);
+// macro addnwstr(wstr, n)                      => waddnwstr(stdscr, wstr, n);
+// macro addwstr(wstr)                          => waddwstr(stdscr, wstr);
+// macro bkgrnd(c)                              => wbkgrnd(stdscr, c);
+// macro bkgrndset(c)                           => wbkgrndset(stdscr, c);
+// macro border_set(l, r, t, b, tl, tr, bl, br) => wborder_set(stdscr, l, r, t, b, tl, tr, bl, br);
+// macro box_set(w, v, h)                       => wborder_set(w, v, v, h, h, 0, 0, 0, 0);
+// macro echo_wchar(c)                          => wecho_wchar(stdscr, c);
+// macro get_wch(c)                             => wget_wch(stdscr, c);
+// macro get_wstr(t)                            => wget_wstr(stdscr, t);
+// macro getbkgrnd(wch)                         => wgetbkgrnd(stdscr, wch);
+// macro getn_wstr(t, n)                        => wgetn_wstr(stdscr, t, n);
+// macro hline_set(c, n)                        => whline_set(stdscr, c, n);
+// macro in_wch(c)                              => win_wch(stdscr, c);
+// macro in_wchnstr(c, n)                       => win_wchnstr(stdscr, c, n);
+// macro in_wchstr(c)                           => win_wchstr(stdscr, c);
+// macro innwstr(c, n)                          => winnwstr(stdscr, c, n);
+// macro ins_nwstr(t, n)                        => wins_nwstr(stdscr, t, n);
+// macro ins_wch(c)                             => wins_wch(stdscr, c);
+// macro ins_wstr(t)                            => wins_wstr(stdscr, t);
+// macro inwstr(c)                              => winwstr(stdscr, c);
+// macro vline_set(c, n)                        => wvline_set(stdscr, c, n);
+// macro wadd_wchstr(win, str)                  => wadd_wchnstr(win, str, -1);
+// macro waddwstr(win, wstr)                    => waddnwstr(win, wstr, -1);
+// macro wget_wstr(w, t)                        => wgetn_wstr(w, t, -1);
+// macro win_wchstr(w, c)                       => win_wchnstr(w, c, -1);
+// macro wins_wstr(w, t)                        => wins_nwstr(w, t, -1);
+
+// macro mvadd_wch(y, x, c)              => mvwadd_wch(stdscr, y, x, c);
+// macro mvadd_wchnstr(y, x, s, n)       => mvwadd_wchnstr(stdscr, y, x, s, n);
+// macro mvadd_wchstr(y, x, s)           => mvwadd_wchstr(stdscr, y, x, s);
+// macro mvaddnwstr(y, x, wstr, n)       => mvwaddnwstr(stdscr, y, x, wstr, n);
+// macro mvaddwstr(y, x, wstr)           => mvwaddwstr(stdscr, y, x, wstr);
+// macro mvget_wch(y, x, c)              => mvwget_wch(stdscr, y, x, c);
+// macro mvget_wstr(y, x, t)             => mvwget_wstr(stdscr, y, x, t);
+// macro mvgetn_wstr(y, x, t, n)         => mvwgetn_wstr(stdscr, y, x, t, n);
+// macro mvhline_set(y, x, c, n)         => mvwhline_set(stdscr, y, x, c, n);
+// macro mvin_wch(y, x, c)               => mvwin_wch(stdscr, y, x, c);
+// macro mvin_wchnstr(y, x, c, n)        => mvwin_wchnstr(stdscr, y, x, c, n);
+// macro mvin_wchstr(y, x, c)            => mvwin_wchstr(stdscr, y, x, c);
+// macro mvinnwstr(y, x, c, n)           => mvwinnwstr(stdscr, y, x, c, n);
+// macro mvins_nwstr(y, x, t, n)         => mvwins_nwstr(stdscr, y, x, t, n);
+// macro mvins_wch(y, x, c)              => mvwins_wch(stdscr, y, x, c);
+// macro mvins_wstr(y, x, t)             => mvwins_wstr(stdscr, y, x, t);
+// macro mvinwstr(y, x, c)               => mvwinwstr(stdscr, y, x, c);
+// macro mvvline_set(y, x, c, n)         => mvwvline_set(stdscr, y, x, c, n);
+
+// macro mvwadd_wch(win, y, x, c)        => (wmove(win, y, x) == ERR ? ERR : wadd_wch(win, c));
+// macro mvwadd_wchnstr(win, y, x, s, n) => (wmove(win, y, x) == ERR ? ERR : wadd_wchnstr(win, s, n));
+// macro mvwadd_wchstr(win, y, x, s)     => (wmove(win, y, x) == ERR ? ERR : wadd_wchstr(win, s));
+// macro mvwaddnwstr(win, y, x, wstr, n) => (wmove(win, y, x) == ERR ? ERR : waddnwstr(win, wstr, n));
+// macro mvwaddwstr(win, y, x, wstr)     => (wmove(win, y, x) == ERR ? ERR : waddwstr(win, wstr));
+// macro mvwget_wch(win, y, x, c)        => (wmove(win, y, x) == ERR ? ERR : wget_wch(win, c));
+// macro mvwget_wstr(win, y, x, t)       => (wmove(win, y, x) == ERR ? ERR : wget_wstr(win, t));
+// macro mvwgetn_wstr(win, y, x, t, n)   => (wmove(win, y, x) == ERR ? ERR : wgetn_wstr(win, t, n));
+// macro mvwhline_set(win, y, x, c, n)   => (wmove(win, y, x) == ERR ? ERR : whline_set(win, c, n));
+// macro mvwin_wch(win, y, x, c)         => (wmove(win, y, x) == ERR ? ERR : win_wch(win, c));
+// macro mvwin_wchnstr(win, y, x, c, n)  => (wmove(win, y, x) == ERR ? ERR : win_wchnstr(win, c, n));
+// macro mvwin_wchstr(win, y, x, c)      => (wmove(win, y, x) == ERR ? ERR : win_wchstr(win, c));
+// macro mvwinnwstr(win, y, x, c, n)     => (wmove(win, y, x) == ERR ? ERR : winnwstr(win, c, n));
+// macro mvwins_nwstr(win, y, x, t, n)   => (wmove(win, y, x) == ERR ? ERR : wins_nwstr(win, t, n));
+// macro mvwins_wch(win, y, x, c)        => (wmove(win, y, x) == ERR ? ERR : wins_wch(win, c));
+// macro mvwins_wstr(win, y, x, t)       => (wmove(win, y, x) == ERR ? ERR : wins_wstr(win, t));
+// macro mvwinwstr(win, y, x, c)         => (wmove(win, y, x) == ERR ? ERR : winwstr(win, c));
+// macro mvwvline_set(win, y, x, c, n)   => (wmove(win, y, x) == ERR ? ERR : wvline_set(win, c, n));
+
+// continue from line 1941.
