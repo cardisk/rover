@@ -1262,4 +1262,14 @@ extern fn CInt *wunctrl_sp (Screen *, CChar_t *);
 // macro mvwinwstr(win, y, x, c)         => (wmove(win, y, x) == ERR ? ERR : winwstr(win, c));
 // macro mvwvline_set(win, y, x, c, n)   => (wmove(win, y, x) == ERR ? ERR : wvline_set(win, c, n));
 
-// continue from line 1941.
+extern fn ZString _nc_viswbuf(CInt *);
+extern fn ZString _nc_viswibuf(CInt *);
+
+/* $Id: curses.tail,v 1.27 2023/08/05 19:43:46 tom Exp $ */
+/*
+ * vile:cmode:
+ * This file is part of ncurses, designed to be appended after curses.h.in
+ * (see that file for the relevant copyright).
+ */
+
+// continue from line 1954.
