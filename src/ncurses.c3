@@ -7,6 +7,11 @@ const OK = 0;
 def Chtype = CUInt;
 def Mmask_t = CUInt;
 
+// NOTE: CInt is used instead of wchar_t.
+// This may cause some problems in the future.
+// NOTE: CInt is used instead of wint_t.
+// This may cause some problems in the future.
+
 // FIXME: this is an hack, may cause some problems in the future.
 // ORIGINAL: typedef struct screen SCREEN;
 // struct screen has no reference over ncurses.h
@@ -954,4 +959,224 @@ const KEY_RESIZE    = 0632;		/* Terminal resize event */
 
 const KEY_MAX       = 0777;	    /* Maximum key value is 0632 */
 
-// continue from line 1633.
+/* $Id: curses.wide,v 1.51 2021/05/22 20:28:29 tom Exp $ */
+/*
+ * vile:cmode:
+ * This file is part of ncurses, designed to be appended after curses.h.in
+ * (see that file for the relevant copyright).
+ */
+extern CChar_t *_nc_wacs;
+
+macro wacs(c) => &_nc_wacs[(CChar)c];
+
+// ---
+// NOTE: this part is very different from C because of the strict rules of
+// the C3 compiler. Using consts instead of macros will crash the compiler because
+// the assignment cannot be evaluated at compile time.
+macro wacs_bssb() => wacs('l');
+macro wacs_ssbb() => wacs('m');
+macro wacs_bbss() => wacs('k');
+macro wacs_sbbs() => wacs('j');
+macro wacs_sbss() => wacs('u');
+macro wacs_sssb() => wacs('t');
+macro wacs_ssbs() => wacs('v');
+macro wacs_bsss() => wacs('w');
+macro wacs_bsbs() => wacs('q');
+macro wacs_sbsb() => wacs('x');
+macro wacs_ssss() => wacs('n');
+
+macro wacs_ulcorner() => wacs_bssb();
+macro wacs_llcorner() => wacs_ssbb();
+macro wacs_urcorner() => wacs_bbss();
+macro wacs_lrcorner() => wacs_sbbs();
+macro wacs_rtee()     => wacs_sbss();
+macro wacs_ltee()     => wacs_sssb();
+macro wacs_btee()     => wacs_ssbs();
+macro wacs_ttee()     => wacs_bsss();
+macro wacs_hline()    => wacs_bsbs();
+macro wacs_vline()    => wacs_sbsb();
+macro wacs_plus()     => wacs_ssss();
+
+macro wacs_s1()      => wacs('o'); /* scan line 1 */
+macro wacs_s9()      => wacs('s'); /* scan line 9 */
+macro wacs_diamond() => wacs('`'); /* diamond */
+macro wacs_ckboard() => wacs('a'); /* checker board */
+macro wacs_degree()  => wacs('f'); /* degree symbol */
+macro wacs_plminus() => wacs('g'); /* plus/minus */
+macro wacs_bullet()  => wacs('~'); /* bullet */
+
+/* Teletype 5410v1 symbols */
+macro wacs_larrow()  => wacs(','); /* arrow left */
+macro wacs_rarrow()  => wacs('+'); /* arrow right */
+macro wacs_darrow()  => wacs('.'); /* arrow down */
+macro wacs_uarrow()  => wacs('-'); /* arrow up */
+macro wacs_board()   => wacs('h'); /* board of squares */
+macro wacs_lantern() => wacs('i'); /* lantern symbol */
+macro wacs_block()   => wacs('0'); /* solid square block */
+
+/* ncurses extensions */
+macro wacs_s3()       => wacs('p'); /* scan line 3 */
+macro wacs_s7()       => wacs('r'); /* scan line 7 */
+macro wacs_lequal()   => wacs('y'); /* less/equal */
+macro wacs_gequal()   => wacs('z'); /* greater/equal */
+macro wacs_pi()       => wacs('{'); /* Pi */
+macro wacs_nequal()   => wacs('|'); /* not equal */
+macro wacs_sterling() => wacs('}'); /* UK pound sign */
+
+/* double lines */
+macro wacs_bddb() => wacs('c');
+macro wacs_ddbb() => wacs('d');
+macro wacs_bbdd() => wacs('b');
+macro wacs_dbbd() => wacs('a');
+macro wacs_dbdd() => wacs('g');
+macro wacs_dddb() => wacs('f');
+macro wacs_ddbd() => wacs('h');
+macro wacs_bddd() => wacs('i');
+macro wacs_bdbd() => wacs('r');
+macro wacs_dbdb() => wacs('y');
+macro wacs_dddd() => wacs('e');
+
+macro wacs_d_ulcorner() => wacs_bddb();
+macro wacs_d_llcorner() => wacs_ddbb();
+macro wacs_d_urcorner() => wacs_bbdd();
+macro wacs_d_lrcorner() => wacs_dbbd();
+macro wacs_d_rtee()     => wacs_dbdd();
+macro wacs_d_ltee()     => wacs_dddb();
+macro wacs_d_btee()     => wacs_ddbd();
+macro wacs_d_ttee()     => wacs_bddd();
+macro wacs_d_hline()    => wacs_bdbd();
+macro wacs_d_vline()    => wacs_dbdb();
+macro wacs_d_plus()     => wacs_dddd();
+
+/* thick lines */
+macro wacs_bttb() => wacs('L');
+macro wacs_ttbb() => wacs('M');
+macro wacs_bbtt() => wacs('K');
+macro wacs_tbbt() => wacs('J');
+macro wacs_tbtt() => wacs('U');
+macro wacs_tttb() => wacs('T');
+macro wacs_ttbt() => wacs('V');
+macro wacs_bttt() => wacs('W');
+macro wacs_btbt() => wacs('Q');
+macro wacs_tbtb() => wacs('X');
+macro wacs_tttt() => wacs('N');
+
+macro wacs_t_ulcorner() => wacs_bttb();
+macro wacs_t_llcorner() => wacs_ttbb();
+macro wacs_t_urcorner() => wacs_bbtt();
+macro wacs_t_lrcorner() => wacs_tbbt();
+macro wacs_t_rtee()     => wacs_tbtt();
+macro wacs_t_ltee()     => wacs_tttb();
+macro wacs_t_btee()     => wacs_ttbt();
+macro wacs_t_ttee()     => wacs_bttt();
+macro wacs_t_hline()    => wacs_btbt();
+macro wacs_t_vline()    => wacs_tbtb();
+macro wacs_t_plus()     => wacs_tttt();
+// ---
+
+/*
+ * Function prototypes for wide-character operations.
+ *
+ * "generated" comments should include ":WIDEC" to make the corresponding
+ * functions ifdef'd in lib_gen.c
+ *
+ * "implemented" comments do not need this marker.
+ */
+
+extern fn CInt add_wch(CChar_t *);
+extern fn CInt add_wchnstr(CChar_t *, CInt);
+extern fn CInt add_wchstr(CChar_t *);
+extern fn CInt addnwstr(CInt *, CInt);
+extern fn CInt addwstr(CInt *);
+extern fn CInt bkgrnd(CChar_t *);
+extern fn void bkgrndset(CChar_t *);
+extern fn CInt border_set(CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *);
+extern fn CInt box_set(Window *, CChar_t *, CChar_t *);
+extern fn CInt echo_wchar(CChar_t *);
+extern fn CInt erasewchar(CInt *);
+extern fn CInt get_wch(CInt *);
+extern fn CInt get_wstr(CInt *);
+extern fn CInt getbkgrnd(CChar_t *);
+extern fn CInt getcchar(CChar_t *, CInt *, Attr_t *, CShort *, void *);
+extern fn CInt getn_wstr(CInt *, CInt);
+extern fn CInt hline_set(CChar_t *, CInt);
+extern fn CInt in_wch(CChar_t *);
+extern fn CInt in_wchnstr(CChar_t *, CInt);
+extern fn CInt in_wchstr(CChar_t *);
+extern fn CInt innwstr(CInt *, CInt);
+extern fn CInt ins_nwstr(CInt *, CInt);
+extern fn CInt ins_wch(CChar_t *);
+extern fn CInt ins_wstr(CInt *);
+extern fn CInt inwstr(CInt *);
+extern fn ZString key_name(CInt);
+extern fn CInt killwchar(CInt *);
+extern fn CInt mvadd_wch(CInt, CInt, CChar_t *);
+extern fn CInt mvadd_wchnstr(CInt, CInt, CChar_t *, CInt);
+extern fn CInt mvadd_wchstr(CInt, CInt, CChar_t *);
+extern fn CInt mvaddnwstr(CInt, CInt, CInt *, CInt);
+extern fn CInt mvaddwstr(CInt, CInt, CInt *);
+extern fn CInt mvget_wch(CInt, CInt, CInt *);
+extern fn CInt mvget_wstr(CInt, CInt, CInt *);
+extern fn CInt mvgetn_wstr(CInt, CInt, CInt *, CInt);
+extern fn CInt mvhline_set(CInt, CInt, CChar_t *, CInt);
+extern fn CInt mvin_wch(CInt, CInt, CChar_t *);
+extern fn CInt mvin_wchnstr(CInt, CInt, CChar_t *, CInt);
+extern fn CInt mvin_wchstr(CInt, CInt, CChar_t *);
+extern fn CInt mvinnwstr(CInt, CInt, CInt *, CInt);
+extern fn CInt mvins_nwstr(CInt, CInt, CInt *, CInt);
+extern fn CInt mvins_wch(CInt, CInt, CChar_t *);
+extern fn CInt mvins_wstr(CInt, CInt, CInt *);
+extern fn CInt mvinwstr(CInt, CInt, CInt *);
+extern fn CInt mvvline_set(CInt, CInt, CChar_t *, CInt);
+extern fn CInt mvwadd_wch(Window *, CInt, CInt, CChar_t *);
+extern fn CInt mvwadd_wchnstr(Window *, CInt, CInt, CChar_t *, CInt);
+extern fn CInt mvwadd_wchstr(Window *, CInt, CInt, CChar_t *);
+extern fn CInt mvwaddnwstr(Window *, CInt, CInt, CInt *, CInt);
+extern fn CInt mvwaddwstr(Window *, CInt, CInt, CInt *);
+extern fn CInt mvwget_wch(Window *, CInt, CInt, CInt *);
+extern fn CInt mvwget_wstr(Window *, CInt, CInt, CInt *);
+extern fn CInt mvwgetn_wstr(Window *, CInt, CInt, CInt *, CInt);
+extern fn CInt mvwhline_set(Window *, CInt, CInt, CChar_t *, CInt);
+extern fn CInt mvwin_wch(Window *, CInt, CInt, CChar_t *);
+extern fn CInt mvwin_wchnstr(Window *, CInt,CInt, CChar_t *,CInt);
+extern fn CInt mvwin_wchstr(Window *, CInt, CInt, CChar_t *);
+extern fn CInt mvwinnwstr(Window *, CInt, CInt, CInt *, CInt);
+extern fn CInt mvwins_nwstr(Window *, CInt,CInt, CInt *, CInt);
+extern fn CInt mvwins_wch(Window *, CInt, CInt, CChar_t *);
+extern fn CInt mvwins_wstr(Window *, CInt, CInt, CInt *);
+extern fn CInt mvwinwstr(Window *, CInt, CInt, CInt *);
+extern fn CInt mvwvline_set(Window *, CInt, CInt, CChar_t *, CInt);
+extern fn CInt pecho_wchar(Window *, CChar_t *);
+extern fn CInt setcchar(CChar_t *, CInt *, Attr_t, CShort, void *);
+extern fn CInt slk_wset(CInt, CInt *, CInt);
+extern fn Attr_t term_attrs();
+extern fn CInt unget_wch(CInt);
+extern fn CInt vid_attr(Attr_t, CShort, void *);
+extern fn CInt vid_puts(Attr_t, CShort, void *, OutC);
+extern fn CInt vline_set(CChar_t *, CInt);
+extern fn CInt wadd_wch(Window *, CChar_t *);
+extern fn CInt wadd_wchnstr(Window *, CChar_t *, CInt);
+extern fn CInt wadd_wchstr(Window *, CChar_t *);
+extern fn CInt waddnwstr(Window *, CInt *, CInt);
+extern fn CInt waddwstr(Window *, CInt *);
+extern fn CInt wbkgrnd(Window *,CChar_t *);
+extern fn void wbkgrndset(Window *, CChar_t *);
+extern fn CInt wborder_set(Window *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *, CChar_t *);
+extern fn CInt wecho_wchar(Window *, CChar_t *);
+extern fn CInt wget_wch(Window *, CInt *);
+extern fn CInt wget_wstr(Window *, CInt *);
+extern fn CInt wgetbkgrnd(Window *, CChar_t *);
+extern fn CInt wgetn_wstr(Window *, CInt *, CInt);
+extern fn CInt whline_set(Window *, CChar_t *, CInt);
+extern fn CInt win_wch(Window *, CChar_t *);
+extern fn CInt win_wchnstr(Window *, CChar_t *, CInt);
+extern fn CInt win_wchstr(Window *, CChar_t *);
+extern fn CInt winnwstr(Window *, CInt *, CInt);
+extern fn CInt wins_nwstr(Window *, CInt *, CInt);
+extern fn CInt wins_wch(Window *, CChar_t *);
+extern fn CInt wins_wstr(Window *, CInt *);
+extern fn CInt winwstr(Window *, CInt *);
+extern fn CInt *wunctrl(CChar_t *);
+extern fn CInt wvline_set(Window *, CChar_t *, CInt);
+
+// continue from line 1852.
