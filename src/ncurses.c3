@@ -1608,9 +1608,3 @@ const OPTIMIZE_MVCUR   = 0x01;          /* cursor movement optimization */
 const OPTIMIZE_HASHMAP = 0x02;          /* diff hashing to detect scrolls */
 const OPTIMIZE_SCROLL  = 0x04;          /* scroll optimization */
 const OPTIMIZE_ALL     = 0xff;          /* enable all optimizations (dflt) */
-
-extern fn void exit_curses(CInt) @noreturn;
-
-// NOTE: this two externs come from unctrl.h included at the bottom of ncurses.h.
-extern fn ZString unctrl(Chtype);
-extern fn ZString unctrl_sp(Screen *, Chtype);
