@@ -1,11 +1,16 @@
 module main;
-import std::io, std::io::path, std::env;
+import std::io, std::io::path;
 import ncurses;
 
-const KEY_UP    = 258 @if(env::DARWIN);
-const KEY_DOWN  = 259 @if(env::DARWIN);
-const KEY_LEFT  = 260 @if(env::DARWIN);
-const KEY_RIGHT = 261 @if(env::DARWIN);
+const KEY_DOWN  @if(env::DARWIN) = 258 ;
+const KEY_UP    @if(env::DARWIN) = 259 ;
+const KEY_LEFT  @if(env::DARWIN) = 260 ;
+const KEY_RIGHT @if(env::DARWIN) = 261 ;
+
+const KEY_DOWN  @if(!env::DARWIN) = ncurses::KEY_DOWN;
+const KEY_UP    @if(!env::DARWIN) = ncurses::KEY_UP;
+const KEY_LEFT  @if(!env::DARWIN) = ncurses::KEY_LEFT;
+const KEY_RIGHT @if(!env::DARWIN) = ncurses::KEY_RIGHT;
 
 const BLACK   = 0;
 const RED     = 1;
@@ -131,21 +136,19 @@ fn void! main()
             ncurses::printw("%s\n", p.path_string);
         }
 
-        switch (ncurses::getch())
+        ncurses::move(y, x);
+
+        switch (CInt key = ncurses::getch())
         {
             case KEY_UP:
-                if (y > 0)
-                {
-                    ncurses::move(y--, x);
-                }
+                if (y > 0) y--;
             case KEY_DOWN:
-                if (y < ncurses::getmaxy(ncurses::stdscr))
-                {
-                    ncurses::move(y--, x);
-                }
+                if (y < ncurses::getmaxy(ncurses::stdscr) - 1) y++;
             case 'Q':
             case 'q':
                 looping = false;
+            default:
+                ncurses::printw("%d\n", key);
         }
 
         ncurses::refresh();
