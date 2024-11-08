@@ -1,5 +1,6 @@
 module main;
 import std::io, std::io::path;
+import libc;
 import ncurses;
 
 const BLACK   = 0;
@@ -118,12 +119,28 @@ fn void! main()
     {
         ncurses::clear();
     
-        ncurses::printw("%d %d\n", x, y);
-    
         Path cwd = path::new_cwd()!;
-        foreach (i, p : path::new_ls(cwd)!)
+        foreach (p : path::new_ls(cwd)!)
         {
-            ncurses::printw("%s\n", p.path_string);
+            if (path::is_dir(p)) 
+            {
+                set_color_mode(DIR);
+            }
+            else
+            {
+                Stat stat;
+                if (catch os::native_stat(&stat, p.str_view()))
+                {
+                    libc::exit(1);
+                }
+
+                if (stat.st_mode & libc::S_IXUSR) set_color_mode(EXE);
+
+            }
+  
+            ncurses::printw("%s\n", p.str_view());
+
+            set_color_mode(NORMAL);
         }
 
         ncurses::move(y, x);
