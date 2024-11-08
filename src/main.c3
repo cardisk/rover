@@ -7,10 +7,10 @@ const KEY_UP    @if(env::DARWIN) = 259 ;
 const KEY_LEFT  @if(env::DARWIN) = 260 ;
 const KEY_RIGHT @if(env::DARWIN) = 261 ;
 
-const KEY_DOWN  @if(!env::DARWIN) = ncurses::KEY_DOWN;
-const KEY_UP    @if(!env::DARWIN) = ncurses::KEY_UP;
-const KEY_LEFT  @if(!env::DARWIN) = ncurses::KEY_LEFT;
-const KEY_RIGHT @if(!env::DARWIN) = ncurses::KEY_RIGHT;
+const KEY_DOWN  @if(env::LINUX) = 66;
+const KEY_UP    @if(env::LINUX) = 65;
+const KEY_LEFT  @if(env::LINUX) = 68;
+const KEY_RIGHT @if(env::LINUX) = 67;
 
 const BLACK   = 0;
 const RED     = 1;
