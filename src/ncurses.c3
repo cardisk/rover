@@ -7,6 +7,125 @@ const OK = 0;
 def Chtype = CUInt;
 def Mmask_t = CUInt;
 
+/*
+ * X/Open attributes.  In the ncurses implementation, they are identical to the
+ * A_ attributes.
+ */
+const WA_ATTRIBUTES = A_ATTRIBUTES;
+const WA_NORMAL     = A_NORMAL;
+const WA_STANDOUT   = A_STANDOUT;
+const WA_UNDERLINE  = A_UNDERLINE;
+const WA_REVERSE    = A_REVERSE;
+const WA_BLINK      = A_BLINK;
+const WA_DIM        = A_DIM;
+const WA_BOLD       = A_BOLD;
+const WA_ALTCHARSET = A_ALTCHARSET;
+const WA_INVIS      = A_INVIS;
+const WA_PROTECT    = A_PROTECT;
+const WA_HORIZONTAL = A_HORIZONTAL;
+const WA_LEFT       = A_LEFT;
+const WA_LOW        = A_LOW;
+const WA_RIGHT      = A_RIGHT;
+const WA_TOP        = A_TOP;
+const WA_VERTICAL   = A_VERTICAL;
+
+const WA_ITALIC	= A_ITALIC;	/* ncurses extension */
+
+/* colors */
+const COLOR_BLACK   = 0;
+const COLOR_RED     = 1;
+const COLOR_GREEN   = 2;
+const COLOR_YELLOW  = 3;
+const COLOR_BLUE    = 4;
+const COLOR_MAGENTA = 5;
+const COLOR_CYAN    = 6;
+const COLOR_WHITE   = 7;
+
+/* line graphics */
+extern Chtype[] acs_map;
+
+macro acs(c) => acs_map[(CChar)c];
+
+/* VT100 symbols begin here */
+#define ACS_ULCORNER	NCURSES_ACS('l') /* upper left corner */
+#define ACS_LLCORNER	NCURSES_ACS('m') /* lower left corner */
+#define ACS_URCORNER	NCURSES_ACS('k') /* upper right corner */
+#define ACS_LRCORNER	NCURSES_ACS('j') /* lower right corner */
+#define ACS_LTEE	NCURSES_ACS('t') /* tee pointing right */
+#define ACS_RTEE	NCURSES_ACS('u') /* tee pointing left */
+#define ACS_BTEE	NCURSES_ACS('v') /* tee pointing up */
+#define ACS_TTEE	NCURSES_ACS('w') /* tee pointing down */
+#define ACS_HLINE	NCURSES_ACS('q') /* horizontal line */
+#define ACS_VLINE	NCURSES_ACS('x') /* vertical line */
+#define ACS_PLUS	NCURSES_ACS('n') /* large plus or crossover */
+#define ACS_S1		NCURSES_ACS('o') /* scan line 1 */
+#define ACS_S9		NCURSES_ACS('s') /* scan line 9 */
+#define ACS_DIAMOND	NCURSES_ACS('`') /* diamond */
+#define ACS_CKBOARD	NCURSES_ACS('a') /* checker board (stipple) */
+#define ACS_DEGREE	NCURSES_ACS('f') /* degree symbol */
+#define ACS_PLMINUS	NCURSES_ACS('g') /* plus/minus */
+#define ACS_BULLET	NCURSES_ACS('~') /* bullet */
+/* Teletype 5410v1 symbols begin here */
+#define ACS_LARROW	NCURSES_ACS(',') /* arrow pointing left */
+#define ACS_RARROW	NCURSES_ACS('+') /* arrow pointing right */
+#define ACS_DARROW	NCURSES_ACS('.') /* arrow pointing down */
+#define ACS_UARROW	NCURSES_ACS('-') /* arrow pointing up */
+#define ACS_BOARD	NCURSES_ACS('h') /* board of squares */
+#define ACS_LANTERN	NCURSES_ACS('i') /* lantern symbol */
+#define ACS_BLOCK	NCURSES_ACS('0') /* solid square block */
+/*
+ * These aren't documented, but a lot of System Vs have them anyway
+ * (you can spot pprryyzz{{||}} in a lot of AT&T terminfo strings).
+ * The ACS_names may not match AT&T's, our source didn't know them.
+ */
+#define ACS_S3		NCURSES_ACS('p') /* scan line 3 */
+#define ACS_S7		NCURSES_ACS('r') /* scan line 7 */
+#define ACS_LEQUAL	NCURSES_ACS('y') /* less/equal */
+#define ACS_GEQUAL	NCURSES_ACS('z') /* greater/equal */
+#define ACS_PI		NCURSES_ACS('{') /* Pi */
+#define ACS_NEQUAL	NCURSES_ACS('|') /* not equal */
+#define ACS_STERLING	NCURSES_ACS('}') /* UK pound sign */
+
+/*
+ * Line drawing ACS names are of the form ACS_trbl, where t is the top, r
+ * is the right, b is the bottom, and l is the left.  t, r, b, and l might
+ * be B (blank), S (single), D (double), or T (thick).  The subset defined
+ * here only uses B and S.
+ */
+#define ACS_BSSB	ACS_ULCORNER
+#define ACS_SSBB	ACS_LLCORNER
+#define ACS_BBSS	ACS_URCORNER
+#define ACS_SBBS	ACS_LRCORNER
+#define ACS_SBSS	ACS_RTEE
+#define ACS_SSSB	ACS_LTEE
+#define ACS_SSBS	ACS_BTEE
+#define ACS_BSSS	ACS_TTEE
+#define ACS_BSBS	ACS_HLINE
+#define ACS_SBSB	ACS_VLINE
+#define ACS_SSSS	ACS_PLUS
+
+
+/* values for the _flags member */
+#define _SUBWIN         0x01	/* is this a sub-window? */
+#define _ENDLINE        0x02	/* is the window flush right? */
+#define _FULLWIN        0x04	/* is the window full-screen? */
+#define _SCROLLWIN      0x08	/* bottom edge is at screen bottom? */
+#define _ISPAD	        0x10	/* is this window a pad? */
+#define _HASMOVED       0x20	/* has cursor moved since last refresh? */
+#define _WRAPPED        0x40	/* cursor was just wrappped */
+
+/*
+ * this value is used in the firstchar and lastchar fields to mark
+ * unchanged lines
+ */
+#define _NOCHANGE       -1
+
+/*
+ * this value is used in the oldindex field to mark lines created by insertions
+ * and scrolls.
+ */
+#define _NEWINDEX	-1
+
 // NOTE: CInt is used instead of wchar_t.
 // This may cause some problems in the future.
 // NOTE: CInt is used instead of wint_t.
