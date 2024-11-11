@@ -1,7 +1,62 @@
-module main;
+module rover;
 import std::io, std::io::path;
 import libc;
 import ncurses;
+
+bool dir, exe;
+const CInt DIR = 1;
+const CInt EXE = 2;
+
+macro set_dir()
+{
+    assert(!dir, "Directory text color can be set only once per time.");
+    dir = true;
+    ncurses::attron(ncurses::color_pair(DIR));
+}
+
+macro set_exe()
+{
+    assert(!exe, "Executable text color can be set only once per time.");
+    exe = true;
+    ncurses::attron(ncurses::color_pair(EXE));
+}
+
+macro reset()
+{
+    assert(!dir || !exe, "Item can't be colored as directory and executable at the same time.");
+
+    if (dir)
+    {
+        dir = false;
+        ncurses::attroff(ncurses::color_pair(DIR));
+    }
+    
+    if (exe)
+    {
+        exe = false;
+        ncurses::attroff(ncurses::color_pair(EXE));
+    }
+}
+
+macro bool is_dir(p)
+{
+    // TODO: native is_dir does not take account of WIN32.
+    // maybe implement something here?
+    return path::is_dir(p);
+}
+
+macro bool is_exe(p)
+{
+
+    Stat stat;
+    if (catch os::native_stat(&stat, p.str_view()))
+    {
+        libc::exit(1);
+    }
+
+    if (stat.st_mode & libc::S_IXUSR) return true;
+    return false;
+}
 
 CInt x, y;
 
@@ -12,6 +67,9 @@ fn void rover_init()
     ncurses::noecho();
     ncurses::raw();
     ncurses::curs_set(1);
+
+    ncurses::init_pair(DIR, ncurses::COLOR_BLUE, ncurses::COLOR_BLACK);
+    ncurses::init_pair(EXE, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK);
 }
 
 fn void! main()
@@ -31,28 +89,23 @@ fn void! main()
         Path cwd = path::new_cwd()!;
         foreach (p : path::new_ls(cwd)!)
         {
-            // if (path::is_dir(p)) 
-            // {
-            //     set_color_mode(DIR);
-            // }
-            // else
-            // {
-            //     Stat stat;
-            //     if (catch os::native_stat(&stat, p.str_view()))
-            //     {
-            //         libc::exit(1);
-            //     }
-
-            //     if (stat.st_mode & libc::S_IXUSR) set_color_mode(EXE);
-
-            // }
+            if (is_dir(p)) 
+            {
+                set_dir();
+            }
+            else if (is_exe(p))
+            {
+                set_exe();
+            }
   
             ncurses::printw("%s\n", p.str_view());
+
+            reset();
         }
 
         ncurses::move(y, x);
 
-        switch (CInt key = ncurses::wgetch(ncurses::stdscr))
+        switch (CInt key = ncurses::getch())
         {
             case ncurses::KEY_UP:
                 if (y > 0) y--;
