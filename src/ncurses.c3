@@ -44,47 +44,50 @@ const COLOR_WHITE   = 7;
 /* line graphics */
 extern Chtype[] acs_map;
 
+// ---
+// NOTE: this part is very different from C because of the strict rules
+// of the C3 compiler.
 macro acs(c) => acs_map[(CChar)c];
 
 /* VT100 symbols begin here */
-#define ACS_ULCORNER	NCURSES_ACS('l') /* upper left corner */
-#define ACS_LLCORNER	NCURSES_ACS('m') /* lower left corner */
-#define ACS_URCORNER	NCURSES_ACS('k') /* upper right corner */
-#define ACS_LRCORNER	NCURSES_ACS('j') /* lower right corner */
-#define ACS_LTEE	NCURSES_ACS('t') /* tee pointing right */
-#define ACS_RTEE	NCURSES_ACS('u') /* tee pointing left */
-#define ACS_BTEE	NCURSES_ACS('v') /* tee pointing up */
-#define ACS_TTEE	NCURSES_ACS('w') /* tee pointing down */
-#define ACS_HLINE	NCURSES_ACS('q') /* horizontal line */
-#define ACS_VLINE	NCURSES_ACS('x') /* vertical line */
-#define ACS_PLUS	NCURSES_ACS('n') /* large plus or crossover */
-#define ACS_S1		NCURSES_ACS('o') /* scan line 1 */
-#define ACS_S9		NCURSES_ACS('s') /* scan line 9 */
-#define ACS_DIAMOND	NCURSES_ACS('`') /* diamond */
-#define ACS_CKBOARD	NCURSES_ACS('a') /* checker board (stipple) */
-#define ACS_DEGREE	NCURSES_ACS('f') /* degree symbol */
-#define ACS_PLMINUS	NCURSES_ACS('g') /* plus/minus */
-#define ACS_BULLET	NCURSES_ACS('~') /* bullet */
+macro acs_ulcorner() => acs('l'); /* upper left corner */
+macro acs_llcorner() => acs('m'); /* lower left corner */
+macro acs_urcorner() => acs('k'); /* upper right corner */
+macro acs_lrcorner() => acs('j'); /* lower right corner */
+macro acs_ltee()     => acs('t'); /* tee pointing right */
+macro acs_rtee()     => acs('u'); /* tee pointing left */
+macro acs_btee()     => acs('v'); /* tee pointing up */
+macro acs_ttee()     => acs('w'); /* tee pointing down */
+macro acs_hline()    => acs('q'); /* horizontal line */
+macro acs_vline()    => acs('x'); /* vertical line */
+macro acs_plus()     => acs('n'); /* large plus or crossover */
+macro acs_s1()       => acs('o'); /* scan line 1 */
+macro acs_s9()       => acs('s'); /* scan line 9 */
+macro acs_diamond()  => acs('`'); /* diamond */
+macro acs_ckboard()  => acs('a'); /* checker board (stipple) */
+macro acs_degree()   => acs('f'); /* degree symbol */
+macro acs_plminus()  => acs('g'); /* plus/minus */
+macro acs_bullet()   => acs('~'); /* bullet */
 /* Teletype 5410v1 symbols begin here */
-#define ACS_LARROW	NCURSES_ACS(',') /* arrow pointing left */
-#define ACS_RARROW	NCURSES_ACS('+') /* arrow pointing right */
-#define ACS_DARROW	NCURSES_ACS('.') /* arrow pointing down */
-#define ACS_UARROW	NCURSES_ACS('-') /* arrow pointing up */
-#define ACS_BOARD	NCURSES_ACS('h') /* board of squares */
-#define ACS_LANTERN	NCURSES_ACS('i') /* lantern symbol */
-#define ACS_BLOCK	NCURSES_ACS('0') /* solid square block */
+macro acs_larrow()  => acs(','); /* arrow pointing left */
+macro acs_rarrow()  => acs('+'); /* arrow pointing right */
+macro acs_darrow()  => acs('.'); /* arrow pointing down */
+macro acs_uarrow()  => acs('-'); /* arrow pointing up */
+macro acs_board()   => acs('h'); /* board of squares */
+macro acs_lantern() => acs('i'); /* lantern symbol */
+macro acs_block()   => acs('0'); /* solid square block */
 /*
  * These aren't documented, but a lot of System Vs have them anyway
- * (you can spot pprryyzz{{||}} in a lot of AT&T terminfo strings).
+ * (you can spot pprryyzz{{||}} in a lot of AT&T terminfo strings)
  * The ACS_names may not match AT&T's, our source didn't know them.
  */
-#define ACS_S3		NCURSES_ACS('p') /* scan line 3 */
-#define ACS_S7		NCURSES_ACS('r') /* scan line 7 */
-#define ACS_LEQUAL	NCURSES_ACS('y') /* less/equal */
-#define ACS_GEQUAL	NCURSES_ACS('z') /* greater/equal */
-#define ACS_PI		NCURSES_ACS('{') /* Pi */
-#define ACS_NEQUAL	NCURSES_ACS('|') /* not equal */
-#define ACS_STERLING	NCURSES_ACS('}') /* UK pound sign */
+macro acs_s3()       => acs('p'); /* scan line 3 */
+macro acs_s7()       => acs('r'); /* scan line 7 */
+macro acs_lequal()   => acs('y'); /* less/equal */
+macro acs_gequal()   => acs('z'); /* greater/equal */
+macro acs_pi()       => acs('{'); /* Pi */
+macro acs_nequal()   => acs('|'); /* not equal */
+macro acs_sterling() => acs('}'); /* UK pound sign */
 
 /*
  * Line drawing ACS names are of the form ACS_trbl, where t is the top, r
@@ -92,39 +95,40 @@ macro acs(c) => acs_map[(CChar)c];
  * be B (blank), S (single), D (double), or T (thick).  The subset defined
  * here only uses B and S.
  */
-#define ACS_BSSB	ACS_ULCORNER
-#define ACS_SSBB	ACS_LLCORNER
-#define ACS_BBSS	ACS_URCORNER
-#define ACS_SBBS	ACS_LRCORNER
-#define ACS_SBSS	ACS_RTEE
-#define ACS_SSSB	ACS_LTEE
-#define ACS_SSBS	ACS_BTEE
-#define ACS_BSSS	ACS_TTEE
-#define ACS_BSBS	ACS_HLINE
-#define ACS_SBSB	ACS_VLINE
-#define ACS_SSSS	ACS_PLUS
+macro acs_bssb() => acs_ulcorner();
+macro acs_ssbb() => acs_llcorner();
+macro acs_bbss() => acs_urcorner();
+macro acs_sbbs() => acs_lrcorner();
+macro acs_sbss() => acs_rtee();
+macro acs_sssb() => acs_ltee();
+macro acs_ssbs() => acs_btee();
+macro acs_bsss() => acs_ttee();
+macro acs_bsbs() => acs_hline();
+macro acs_sbsb() => acs_vline();
+macro acs_ssss() => acs_plus();
+// ---
 
 
 /* values for the _flags member */
-#define _SUBWIN         0x01	/* is this a sub-window? */
-#define _ENDLINE        0x02	/* is the window flush right? */
-#define _FULLWIN        0x04	/* is the window full-screen? */
-#define _SCROLLWIN      0x08	/* bottom edge is at screen bottom? */
-#define _ISPAD	        0x10	/* is this window a pad? */
-#define _HASMOVED       0x20	/* has cursor moved since last refresh? */
-#define _WRAPPED        0x40	/* cursor was just wrappped */
+const _SUBWIN    = 0x01; /* is this a sub-window? */
+const _ENDLINE   = 0x02; /* is the window flush right? */
+const _FULLWIN   = 0x04; /* is the window full-screen? */
+const _SCROLLWIN = 0x08; /* bottom edge is at screen bottom? */
+const _ISPAD     = 0x10; /* is this window a pad? */
+const _HASMOVED  = 0x20; /* has cursor moved since last refresh? */
+const _WRAPPED   = 0x40; /* cursor was just wrappped */
 
 /*
  * this value is used in the firstchar and lastchar fields to mark
  * unchanged lines
  */
-#define _NOCHANGE       -1
+const _NOCHANGE = -1;
 
 /*
  * this value is used in the oldindex field to mark lines created by insertions
  * and scrolls.
  */
-#define _NEWINDEX	-1
+const _NEWINDEX = -1;
 
 // NOTE: CInt is used instead of wchar_t.
 // This may cause some problems in the future.
