@@ -12,12 +12,14 @@ macro set_dir()
     assert(!dir, "Directory text color can be set only once per time.");
     dir = true;
     ncurses::attron(ncurses::color_pair(DIR));
+    ncurses::attron(ncurses::A_BOLD);
 }
 
 macro set_exe()
 {
     assert(!exe, "Executable text color can be set only once per time.");
     exe = true;
+    ncurses::attron(ncurses::A_BOLD);
     ncurses::attron(ncurses::color_pair(EXE));
 }
 
@@ -25,6 +27,8 @@ macro reset()
 {
     assert(!dir || !exe, "Item can't be colored as directory and executable at the same time.");
 
+    ncurses::attroff(ncurses::A_BOLD);
+    ncurses::attroff(ncurses::A_REVERSE);
     if (dir)
     {
         dir = false;
@@ -66,7 +70,7 @@ fn void rover_init()
     ncurses::keypad(ncurses::stdscr, true);
     ncurses::noecho();
     ncurses::raw();
-    ncurses::curs_set(1);
+    ncurses::curs_set(0);
 
     ncurses::init_pair(DIR, ncurses::COLOR_BLUE, ncurses::COLOR_BLACK);
     ncurses::init_pair(EXE, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK);
@@ -87,7 +91,7 @@ fn void! main()
         ncurses::clear();
     
         Path cwd = path::new_cwd()!;
-        foreach (p : path::new_ls(cwd)!)
+        foreach (i, p : path::new_ls(cwd)!)
         {
             if (is_dir(p)) 
             {
@@ -97,8 +101,13 @@ fn void! main()
             {
                 set_exe();
             }
+
+            if (i == y)
+            {
+                ncurses::attron(ncurses::A_REVERSE);
+            }
   
-            ncurses::printw("%s\n", p.str_view());
+            ncurses::printw(" %s\n", p.str_view());
 
             reset();
         }
