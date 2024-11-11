@@ -63,6 +63,7 @@ macro bool is_exe(p)
 }
 
 CInt x, y;
+CInt w, h;
 
 fn void rover_init()
 {
@@ -89,7 +90,9 @@ fn void! main()
     while (looping)
     {
         ncurses::clear();
-    
+
+        ncurses::@getmaxyx(ncurses::stdscr, h, w);
+
         Path cwd = path::new_cwd()!;
         foreach (i, p : path::new_ls(cwd)!)
         {
@@ -106,8 +109,9 @@ fn void! main()
             {
                 ncurses::attron(ncurses::A_REVERSE);
             }
-  
-            ncurses::printw(" %s\n", p.str_view());
+
+            // align text taking in account the first space and one in the middle
+            ncurses::printw(" %- *s\n", (w / 2) - 2, p.str_view());
 
             reset();
         }
