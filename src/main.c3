@@ -94,7 +94,11 @@ fn void! main()
         ncurses::@getmaxyx(ncurses::stdscr, h, w);
 
         Path cwd = path::new_cwd()!;
-        foreach (i, p : path::new_ls(cwd)!)
+        defer cwd.free();
+        PathList ls = path::new_ls(cwd)!;
+        defer ls.free();
+
+        foreach (i, p : ls)
         {
             if (is_dir(p)) 
             {
@@ -123,10 +127,18 @@ fn void! main()
             case ncurses::KEY_UP:
                 if (y > 0) y--;
             case ncurses::KEY_DOWN:
-                if (y < ncurses::getmaxy(ncurses::stdscr) - 1) y++;
+                // if (y < ncurses::getmaxy(ncurses::stdscr) - 1) y++;
+                if (y < ls.len() - 1) y++;
+            case '\n':
+                if (!is_dir(ls[y])) continue;
+                // TODO: changing directory should have a better error handling.
+                if (catch path::chdir(ls[y])) continue;
+                y = 0;
             case 'Q':
             case 'q':
                 looping = false;
+            default:
+                ncurses::printw("%d ", key);
         }
 
         ncurses::refresh();
