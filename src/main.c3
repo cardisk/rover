@@ -77,7 +77,7 @@ fn void rover_init()
     ncurses::init_pair(EXE, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK);
 }
 
-fn void! main()
+fn void main()
 {
     ncurses::initscr();
     defer ncurses::endwin();
@@ -93,9 +93,14 @@ fn void! main()
 
         ncurses::@getmaxyx(ncurses::stdscr, h, w);
 
-        Path cwd = path::new_cwd()!;
+        Path! cwd = path::new_cwd();
+        // TODO: better error handling for getting cwd.
+        if (catch cwd) continue;
         defer cwd.free();
-        PathList ls = path::new_ls(cwd)!;
+
+        PathList! ls = path::new_ls(cwd);
+        // TODO: better error handling for getting the content of cwd.
+        if (catch ls) continue;
         defer ls.free();
 
         foreach (i, p : ls)
@@ -135,15 +140,13 @@ fn void! main()
                 if (catch path::chdir(ls[y])) continue;
                 y = 0;
             case '-':
-                // ncurses::printw("here ");
-                // TODO: this should fail only if the cwd is the root.
+                // FIXME: when reaching the /Users directory on env::DARWIN
+                // the application crash. It seems a problem with ncurses
+                // because trying to access the root folder by C3 works fine.
                 Path! parent = path::new("..");
-                // ncurses::printw("parent ");
                 if (catch parent) continue;
-                // ncurses::printw("no error ");
                 // TODO: changing directory should have a better error handling.
                 if (catch path::chdir(parent)) continue;
-                // ncurses::printw("chdir success ");
                 y = 0;
             case 'Q':
             case 'q':
@@ -153,7 +156,6 @@ fn void! main()
         }
 
         ncurses::refresh();
-        // ncurses::getch();
     }
 }
 
