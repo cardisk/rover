@@ -134,6 +134,17 @@ fn void! main()
                 // TODO: changing directory should have a better error handling.
                 if (catch path::chdir(ls[y])) continue;
                 y = 0;
+            case '-':
+                // ncurses::printw("here ");
+                // TODO: this should fail only if the cwd is the root.
+                Path! parent = path::new("..");
+                // ncurses::printw("parent ");
+                if (catch parent) continue;
+                // ncurses::printw("no error ");
+                // TODO: changing directory should have a better error handling.
+                if (catch path::chdir(parent)) continue;
+                // ncurses::printw("chdir success ");
+                y = 0;
             case 'Q':
             case 'q':
                 looping = false;
@@ -142,6 +153,7 @@ fn void! main()
         }
 
         ncurses::refresh();
+        // ncurses::getch();
     }
 }
 
