@@ -229,7 +229,7 @@ fn void main()
                 if (catch p) continue;
                 old.push(p);
                 y = 0;
-            case 'u':
+            case 'b':
                 Path! p = old.pop();
                 if (catch p) continue;
                 // TODO: changing directory should have a better error handling.
