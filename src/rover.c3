@@ -46,6 +46,7 @@ fn void init()
         io::eprintn("Unable to locate HOME directory from environment.");
         libc::exit(1);
     }
+
     // FIXME: this assertion can cause some problems in the future.
     home = path::new(env_home)!!;
     old.new_init();
@@ -57,8 +58,9 @@ fn void deinit()
     ncurses::endwin();
 
     // ---- MEMORY ----
-    libc::free(user);
-    libc::free(hostname);
+    // FIXME: on ubuntu manpages this is statically allocated so, no needs to free?
+    // libc::free(user);
+    if (hostname) libc::free(hostname);
     old.free();
     home.free();
 }
