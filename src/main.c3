@@ -1,5 +1,6 @@
 module rover;
 import std::io::path;
+import libc;
 import ncurses;
 
 // missing function inside stdlib.
@@ -71,10 +72,19 @@ fn void main()
                 if (y < ls.len() - 1) y++;
 
             case '\n':
-                if (!stat::is_dir(ls[y])) continue;
-                if (catch path::chdir(ls[y])) continue;
-                if (catch save_cwd(cwd)) continue;
-                y = 0;
+                if (!stat::is_dir(ls[y]))
+                {
+                    ncurses::def_prog_mode();
+                    ncurses::endwin();
+                    // TODO: make a fork and run the subprocess.
+                    ncurses::reset_prog_mode();
+                }
+                else
+                {
+                    if (catch path::chdir(ls[y])) continue;
+                    if (catch save_cwd(cwd)) continue;
+                    y = 0;
+                }
 
             case '-':
                 Path! parent = path::new("..");
