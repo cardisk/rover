@@ -28,7 +28,7 @@ fn void main()
         defer cwd.free();
 
         theme::set_host();
-        ncurses::printw("%s ", hostname);
+        ncurses::printw("%s@%s ", user, hostname);
         theme::set_pwd();
         ncurses::printw("%s\n\n", cwd.str_view());
         theme::reset();

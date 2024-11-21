@@ -8,12 +8,18 @@ import ncurses;
 
 CInt x, y;
 CInt w, h;
+ZString user;
 ZString hostname;
 Path home;
 List(<Path>) old;
 
+// missing function in stdlib.
+extern fn ZString getlogin();
+
 fn void init()
 {
+    user = getlogin();
+
     hostname = (ZString) mem::new_array(char, 256);
     assert(gethostname(hostname, 256) == 0, "Can't access host name.");
 
@@ -51,6 +57,7 @@ fn void deinit()
     ncurses::endwin();
 
     // ---- MEMORY ----
+    libc::free(user);
     libc::free(hostname);
     old.free();
     home.free();
