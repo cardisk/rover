@@ -5,22 +5,25 @@ import ncurses;
 // missing function inside stdlib.
 extern fn CInt gethostname(ZString, usz);
 
+fn void! save_cwd(Path cwd) @inline
+{
+    Path p = path::new(cwd.str_view())!;
+    old.push(p);
+}
+
 fn void main()
 {
     init();
 
-    bool looping = true;
+    // TODO: distinct allocations from heap and temporary arrays.
 
-    // FIXME: distinct allocations from heap and temporary arrays.
-
-    while (looping)
+    while LOOP: (true)
     {
         ncurses::clear();
 
         ncurses::@getmaxyx(ncurses::stdscr, h, w);
 
         Path! cwd = path::new_cwd();
-        // TODO: better error handling for getting cwd.
         if (catch cwd) continue;
         defer cwd.free();
 
@@ -31,7 +34,6 @@ fn void main()
         theme::reset();
 
         PathList! ls = path::new_ls(cwd);
-        // TODO: better error handling for getting the content of cwd.
         if (catch ls) continue;
         defer ls.free();
 
@@ -64,41 +66,37 @@ fn void main()
         {
             case ncurses::KEY_UP:
                 if (y > 0) y--;
+
             case ncurses::KEY_DOWN:
                 if (y < ls.len() - 1) y++;
+
             case '\n':
                 if (!stat::is_dir(ls[y])) continue;
-                // TODO: changing directory should have a better error handling.
                 if (catch path::chdir(ls[y])) continue;
-                Path! p = path::new(cwd.to_new_string());
-                if (catch p) continue;
-                old.push(p);
+                if (catch save_cwd(cwd)) continue;
                 y = 0;
+
             case '-':
                 Path! parent = path::new("..");
                 if (catch parent) continue;
-                // TODO: changing directory should have a better error handling.
+
                 if (catch path::chdir(parent)) continue;
-                Path! p = path::new(cwd.to_new_string());
-                if (catch p) continue;
-                old.push(p);
+                if (catch save_cwd(cwd)) continue;
                 y = 0;
+
             case '.':
-                // TODO: changing directory should have a better error handling.
                 if (catch path::chdir(home)) continue;
-                Path! p = path::new(cwd.to_new_string());
-                if (catch p) continue;
-                old.push(p);
+                if (catch save_cwd(cwd)) continue;
                 y = 0;
+
             case 'b':
                 Path! p = old.pop();
                 if (catch p) continue;
-                // TODO: changing directory should have a better error handling.
                 if (catch path::chdir(p)) continue;
                 y = 0;
-            case 'Q':
+
             case 'q':
-                looping = false;
+                break LOOP;
         }
 
         ncurses::refresh();
