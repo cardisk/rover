@@ -76,8 +76,20 @@ fn void main()
                 {
                     ncurses::def_prog_mode();
                     ncurses::endwin();
-                    // TODO: make a fork and run the subprocess.
+
+                    ZString cmd = string::new_format_zstr(
+                        "nvim %s", ls[y]
+                    );
+                    libc::system(cmd);
+                    libc::free(cmd);
+
                     ncurses::reset_prog_mode();
+                    
+                    // this is necessary but redundant because using CTRL-Z
+                    // outside of the main application, will cause ncurses
+                    // to CASUALLY forget about some of the configs set
+                    // during the initialization.
+                    ncurses::endwin();
                 }
                 else
                 {
