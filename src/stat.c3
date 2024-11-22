@@ -19,7 +19,7 @@ macro bool is_exe(p)
     $if env::POSIX:
         if (lstat(p.as_zstr(), &stat) < 0)
         {
-            rover::deinit();
+            rover::app.deinit();
             io::eprintfn("Can't read stats of '%s': %s", p, libc::strerror(libc::errno()));
             libc::exit(1);
         }
@@ -37,7 +37,7 @@ macro bool is_link(p)
     $if env::POSIX:
         if (lstat(p.as_zstr(), &stat) < 0)
         {
-            rover::deinit();
+            rover::app.deinit();
             io::eprintfn("Can't read stats of '%s': %s", p, libc::strerror(libc::errno()));
             libc::exit(1);
         }

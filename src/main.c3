@@ -6,15 +6,21 @@ import ncurses;
 // missing function inside stdlib.
 extern fn CInt gethostname(ZString, usz);
 
+Rover app;
+
 fn void! save_cwd(Path cwd) @inline
 {
     Path p = path::new(cwd.str_view())!;
-    old.push(p);
+    app.history.push(p);
 }
 
-fn void main()
+fn int main()
 {
-    init();
+    if (catch err = app.init())
+    {
+        io::eprintn(((RoverError) err).what());
+        return 1;
+    }
 
     // TODO: distinct allocations from heap and temporary arrays.
 
@@ -22,14 +28,14 @@ fn void main()
     {
         ncurses::clear();
 
-        ncurses::@getmaxyx(ncurses::stdscr, h, w);
+        ncurses::@getmaxyx(ncurses::stdscr, app.h, app.w);
 
         Path! cwd = path::new_cwd();
         if (catch cwd) continue;
         defer cwd.free();
 
         theme::set_host();
-        ncurses::printw("%s@%s ", user, hostname);
+        ncurses::printw("%s@%s ", app.user, app.host);
         theme::set_pwd();
         ncurses::printw("%s\n\n", cwd.str_view());
         theme::reset();
@@ -53,32 +59,32 @@ fn void main()
                 theme::set_dir();
             }
 
-            if (i == y) theme::highlight();
+            if (i == app.cury) theme::highlight();
 
             // align text taking in account the first space and one in the middle
-            ncurses::printw(" %- *s\n", (w / 2) - 2, p.str_view());
+            ncurses::printw(" %- *s\n", (app.w / 2) - 2, p.str_view());
 
             theme::reset();
         }
 
-        ncurses::move(y, x);
+        ncurses::move(app.cury, app.curx);
 
         switch (CInt key = ncurses::getch())
         {
             case ncurses::KEY_UP:
-                if (y > 0) y--;
+                if (app.cury > 0) app.cury--;
 
             case ncurses::KEY_DOWN:
-                if (y < ls.len() - 1) y++;
+                if (app.cury < ls.len() - 1) app.cury++;
 
             case '\n':
-                if (!stat::is_dir(ls[y]))
+                if (!stat::is_dir(ls[app.cury]))
                 {
                     ncurses::def_prog_mode();
                     ncurses::endwin();
 
                     ZString cmd = string::new_format_zstr(
-                        "nvim %s", ls[y]
+                        "nvim %s", ls[app.cury]
                     );
                     libc::system(cmd);
                     libc::free(cmd);
@@ -93,9 +99,9 @@ fn void main()
                 }
                 else
                 {
-                    if (catch path::chdir(ls[y])) continue;
+                    if (catch path::chdir(ls[app.cury])) continue;
                     if (catch save_cwd(cwd)) continue;
-                    y = 0;
+                    app.cury = 0;
                 }
 
             case '-':
@@ -104,18 +110,18 @@ fn void main()
 
                 if (catch path::chdir(parent)) continue;
                 if (catch save_cwd(cwd)) continue;
-                y = 0;
+                app.cury = 0;
 
             case '.':
-                if (catch path::chdir(home)) continue;
+                if (catch path::chdir(app.home)) continue;
                 if (catch save_cwd(cwd)) continue;
-                y = 0;
+                app.cury = 0;
 
             case 'b':
-                Path! p = old.pop();
+                Path! p = app.history.pop();
                 if (catch p) continue;
                 if (catch path::chdir(p)) continue;
-                y = 0;
+                app.cury = 0;
 
             case 'q':
                 break LOOP;
@@ -124,6 +130,7 @@ fn void main()
         ncurses::refresh();
     }
 
-    deinit();
+    app.deinit();
+    return 0;
 }
 
