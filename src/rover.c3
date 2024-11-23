@@ -97,25 +97,32 @@ fn void! Rover.draw(&self, Path cwd, PathList ls)
     ncurses::printw("%s\n\n", cwd.str_view());
     theme::reset();
 
-    foreach (i, p : ls)
+    int idx = 0;
+    if (self.cury > self.h) idx = self.cury - self.h;
+
+    int stop = self.cury;
+    if (stop < self.h) stop = (int) ls.len();
+
+    // foreach (i, ls[idx] : ls)
+    for (; idx < stop; idx++)
     {
-        if (stat::is_link(p))
+        if (stat::is_link(ls[idx]))
         {
             theme::set_link();
         }
-        else if (stat::is_exe(p))
+        else if (stat::is_exe(ls[idx]))
         {
             theme::set_exe();
         }
-        else if (stat::is_dir(p)) 
+        else if (stat::is_dir(ls[idx])) 
         {
             theme::set_dir();
         }
 
-        if (i == self.cury) theme::highlight();
+        if (idx == self.cury) theme::highlight();
 
         // align text taking in account the first space and one in the middle
-        ncurses::printw(" %- *s\n", (self.w / 2) - 2, p.str_view());
+        ncurses::printw(" %- *s\n", (self.w / 2) - 2, ls[idx].str_view());
 
         theme::reset();
     }
