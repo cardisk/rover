@@ -88,3 +88,35 @@ fn void Rover.deinit(&self)
     self.history.free();
     self.home.free();
 }
+
+fn void! Rover.draw(&self, Path cwd, PathList ls)
+{
+    theme::set_host();
+    ncurses::printw("%s@%s ", self.user, self.host);
+    theme::set_pwd();
+    ncurses::printw("%s\n\n", cwd.str_view());
+    theme::reset();
+
+    foreach (i, p : ls)
+    {
+        if (stat::is_link(p))
+        {
+            theme::set_link();
+        }
+        else if (stat::is_exe(p))
+        {
+            theme::set_exe();
+        }
+        else if (stat::is_dir(p)) 
+        {
+            theme::set_dir();
+        }
+
+        if (i == self.cury) theme::highlight();
+
+        // align text taking in account the first space and one in the middle
+        ncurses::printw(" %- *s\n", (self.w / 2) - 2, p.str_view());
+
+        theme::reset();
+    }
+}

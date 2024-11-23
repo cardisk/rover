@@ -34,38 +34,11 @@ fn int main()
         if (catch cwd) continue;
         defer cwd.free();
 
-        theme::set_host();
-        ncurses::printw("%s@%s ", app.user, app.host);
-        theme::set_pwd();
-        ncurses::printw("%s\n\n", cwd.str_view());
-        theme::reset();
-
         PathList! ls = path::new_ls(cwd);
         if (catch ls) continue;
         defer ls.free();
 
-        foreach (i, p : ls)
-        {
-            if (stat::is_link(p))
-            {
-                theme::set_link();
-            }
-            else if (stat::is_exe(p))
-            {
-                theme::set_exe();
-            }
-            else if (stat::is_dir(p)) 
-            {
-                theme::set_dir();
-            }
-
-            if (i == app.cury) theme::highlight();
-
-            // align text taking in account the first space and one in the middle
-            ncurses::printw(" %- *s\n", (app.w / 2) - 2, p.str_view());
-
-            theme::reset();
-        }
+        if (catch app.draw(cwd, ls)) continue;
 
         ncurses::move(app.cury, app.curx);
 
