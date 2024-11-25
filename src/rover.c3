@@ -97,15 +97,19 @@ fn void! Rover.draw(&self, Path cwd, PathList ls)
     ncurses::printw("%s\n\n", cwd.str_view());
     theme::reset();
 
+    // viewport height aka content height.
+    int vh = self.h - 2;
+
     int idx = 0;
-    if (self.cury > self.h) idx = self.cury - self.h;
+    if (self.cury >= vh) idx = self.cury - vh + 1;
 
-    int stop = self.cury;
-    if (stop < self.h) stop = (int) ls.len();
+    int stop = vh;
+    if (self.cury >= vh) stop += idx;
 
-    // foreach (i, ls[idx] : ls)
     for (; idx < stop; idx++)
     {
+        if (idx >= (int) ls.len()) break;
+
         if (stat::is_link(ls[idx]))
         {
             theme::set_link();
