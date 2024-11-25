@@ -27,7 +27,8 @@ fn String RoverError.what(self)
         case NO_USER: return "Failed to retrieve logged user info.";
         case NO_HOST: return "Failed to retrieve host name info.";
     }
-    return "No known info on what happend.";
+
+    unreachable("No known info on what happend.");
 }
 
 struct Rover
