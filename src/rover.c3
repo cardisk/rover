@@ -90,7 +90,7 @@ fn void Rover.deinit(&self)
     // libc::free(self.user);
     self.history.free();
     self.home.free();
-    self.filter.free();
+    if (self.filter) libc::free(self.filter);
 }
 
 fn void! Rover.draw(&self, Path cwd, PathList ls)

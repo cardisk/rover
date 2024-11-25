@@ -121,7 +121,7 @@ fn int main()
                     in = ncurses::getch();
                 }
 
-                app.filter.free();
+                if (app.filter) libc::free(app.filter);
                 app.filter = buf.copy_zstr();
                 buf.free();
 
