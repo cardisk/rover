@@ -96,6 +96,38 @@ fn int main()
                 if (catch path::chdir(p)) continue;
                 app.cury = 0;
 
+            case '/':
+                ncurses::move(app.h - 1, 0);
+                ncurses::echo();
+                ncurses::curs_set(1);
+
+                ncurses::printw("/");
+                ncurses::refresh();
+                
+                CInt in;
+                DString buf;
+
+                while (in != 27 && in != '\n')
+                {
+                    if (in == ncurses::KEY_BACKSPACE)
+                    {
+                        ncurses::delch();
+                        buf.chop(buf.len() - 1);
+                    }
+                    else
+                    {
+                        buf.append(in);
+                    }
+                    in = ncurses::getch();
+                }
+
+                app.filter.free();
+                app.filter = buf.copy_zstr();
+                buf.free();
+
+                ncurses::noecho();
+                ncurses::curs_set(0);
+
             case 'q':
                 break LOOP;
         }

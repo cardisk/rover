@@ -42,6 +42,8 @@ struct Rover
     Path home;
     // TODO: make history as a fixed size array.
     List(<Path>) history;
+
+    ZString filter;
 }
 
 fn void! Rover.init(&self)
@@ -88,6 +90,7 @@ fn void Rover.deinit(&self)
     // libc::free(self.user);
     self.history.free();
     self.home.free();
+    self.filter.free();
 }
 
 fn void! Rover.draw(&self, Path cwd, PathList ls)
@@ -99,7 +102,7 @@ fn void! Rover.draw(&self, Path cwd, PathList ls)
     theme::reset();
 
     // viewport height aka content height.
-    int vh = self.h - 2;
+    int vh = self.h - 3;
 
     int idx = 0;
     if (self.cury >= vh) idx = self.cury - vh + 1;
