@@ -109,16 +109,18 @@ fn int main()
 
                 while (in != 27 && in != '\n')
                 {
+                    in = ncurses::getch();
+
+                    // TODO: chars can still be deleted even if nothing is inputted.
                     if (in == ncurses::KEY_BACKSPACE)
                     {
                         ncurses::delch();
                         buf.chop(buf.len() - 1);
                     }
-                    else
+                    else if (in != '\n')
                     {
                         buf.append(in);
                     }
-                    in = ncurses::getch();
                 }
 
                 if (app.filter) libc::free(app.filter);
@@ -127,6 +129,10 @@ fn int main()
 
                 ncurses::noecho();
                 ncurses::curs_set(0);
+
+            case '\\':
+                if (app.filter) libc::free(app.filter);
+                app.filter = null;
 
             case 'q':
                 break LOOP;

@@ -65,6 +65,7 @@ fn void! Rover.init(&self)
     self.home = home_path;
 
     self.history.new_init();
+    self.filter = null;
 
     if (ncurses::start_color() == ncurses::ERR) return RoverError.INIT_FAIL?;
     if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return RoverError.INIT_FAIL?;
@@ -113,6 +114,13 @@ fn void! Rover.draw(&self, Path cwd, PathList ls)
     for (; idx < stop; idx++)
     {
         if (idx >= (int) ls.len()) break;
+        // TODO: the app doesn't work properly when showing filtered content.
+        // for example files can still be opened.
+        if (self.filter && 
+            !(ls[idx].str_view().contains(self.filter.str_view())))
+        {
+            continue;
+        }
 
         if (stat::is_link(ls[idx]))
         {
