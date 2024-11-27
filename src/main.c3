@@ -3,8 +3,9 @@ import std::io::path;
 import libc;
 import ncurses;
 
-// missing function inside stdlib.
+// missing functions inside stdlib.
 extern fn CInt gethostname(ZString, usz);
+extern fn CInt isalnum(CInt);
 
 Rover app;
 
@@ -95,6 +96,42 @@ fn int main()
                 if (catch p) continue;
                 if (catch path::chdir(p)) continue;
                 app.cury = 0;
+
+            case '/':
+                ncurses::move(app.h - 1, 0);
+                ncurses::curs_set(1);
+
+                ncurses::printw("/");
+                ncurses::refresh();
+                
+                CInt in = 0;
+                DString buf;
+
+                while (in != 27 && in != '\n')
+                {
+                    in = ncurses::getch();
+
+                    if (in == ncurses::KEY_BACKSPACE && buf.len() > 0)
+                    {
+                        ncurses::printw("\b \b");
+                        buf.chop(buf.len() - 1);
+                    }
+                    else if (isalnum(in))
+                    {
+                        ncurses::printw("%c", (char) in);
+                        buf.append((char) in);
+                    }
+                }
+
+                if (app.filter) libc::free(app.filter);
+                app.filter = buf.copy_zstr();
+                buf.free();
+
+                ncurses::curs_set(0);
+
+            case '\\':
+                if (app.filter) libc::free(app.filter);
+                app.filter = null;
 
             case 'q':
                 break LOOP;

@@ -42,6 +42,8 @@ struct Rover
     Path home;
     // TODO: make history as a fixed size array.
     List(<Path>) history;
+
+    ZString filter;
 }
 
 fn void! Rover.init(&self)
@@ -63,6 +65,7 @@ fn void! Rover.init(&self)
     self.home = home_path;
 
     self.history.new_init();
+    self.filter = null;
 
     if (ncurses::start_color() == ncurses::ERR) return RoverError.INIT_FAIL?;
     if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return RoverError.INIT_FAIL?;
@@ -88,6 +91,7 @@ fn void Rover.deinit(&self)
     // libc::free(self.user);
     self.history.free();
     self.home.free();
+    if (self.filter) libc::free(self.filter);
 }
 
 fn void! Rover.draw(&self, Path cwd, PathList ls)
@@ -99,7 +103,7 @@ fn void! Rover.draw(&self, Path cwd, PathList ls)
     theme::reset();
 
     // viewport height aka content height.
-    int vh = self.h - 2;
+    int vh = self.h - 3;
 
     int idx = 0;
     if (self.cury >= vh) idx = self.cury - vh + 1;
@@ -110,6 +114,13 @@ fn void! Rover.draw(&self, Path cwd, PathList ls)
     for (; idx < stop; idx++)
     {
         if (idx >= (int) ls.len()) break;
+        // TODO: the app doesn't work properly when showing filtered content.
+        // for example files can still be opened.
+        if (self.filter && 
+            !(ls[idx].str_view().contains(self.filter.str_view())))
+        {
+            continue;
+        }
 
         if (stat::is_link(ls[idx]))
         {
