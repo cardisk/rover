@@ -3,10 +3,6 @@ import std::io::path;
 import libc;
 import ncurses;
 
-// missing functions inside stdlib.
-extern fn CInt gethostname(ZString, usz);
-extern fn CInt isalnum(CInt);
-
 Rover app;
 
 fn void! save_cwd(Path cwd) @inline

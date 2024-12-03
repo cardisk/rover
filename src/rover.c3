@@ -6,9 +6,6 @@ import std::os::env;
 import libc;
 import ncurses;
 
-// missing function in stdlib.
-extern fn ZString getlogin();
-
 fault RoverError
 {
     INIT_FAIL,
