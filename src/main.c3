@@ -1,60 +1,41 @@
 module rover;
-import std::io::path;
-import libc;
+import rover::state, rover::system, rover::display;
+import std::io;
 import ncurses;
+import libc;
 
-Rover app;
+State   app;
+System  sys;
+Display tui;
 
-fn void! save_cwd(Path cwd) @inline
+fn void crash(anyfault f) @noreturn
 {
-    Path p = path::new(cwd.str_view())!;
-    app.history.push(p);
+    ncurses::endwin();
+    io::eprintfn("Unattended error happened: %s", f);
+    libc::exit(1);
 }
 
-fn int main()
+fn void main()
 {
-    if (catch err = app.init())
-    {
-        io::eprintn(((RoverError) err).what());
-        return 1;
-    }
-
-    // TODO: distinct allocations from heap and temporary arrays.
+    if (catch e = app.init())           crash(e);
+    if (catch e = sys.init())           crash(e);
+    if (catch e = tui.init(&app, &sys)) crash(e);
 
     while LOOP: (true)
     {
-        ncurses::clear();
-
-        ncurses::@getmaxyx(ncurses::stdscr, app.h, app.w);
-
-        Path! cwd = path::new_cwd();
-        if (catch cwd) continue;
-        defer cwd.free();
-
-        PathList! ls = path::new_ls(cwd);
-        if (catch ls) continue;
-        defer ls.free();
-
-        if (catch app.draw(cwd, ls)) continue;
-
-        ncurses::move(app.cury, app.curx);
-
         switch (CInt key = ncurses::getch())
         {
-            case ncurses::KEY_UP:
-                if (app.cury > 0) app.cury--;
-
-            case ncurses::KEY_DOWN:
-                if (app.cury < ls.len() - 1) app.cury++;
+            case 'q':
+                break LOOP;
 
             case '\n':
-                if (!stat::is_dir(ls[app.cury]))
+                if (!stat::is_dir(sys.ls[tui.cur]))
                 {
                     ncurses::def_prog_mode();
                     ncurses::endwin();
 
                     ZString cmd = string::new_format_zstr(
-                        "nvim %s", ls[app.cury]
+                        "nvim %s", sys.ls[tui.cur]
                     );
                     libc::system(cmd);
                     libc::free(cmd);
@@ -69,9 +50,9 @@ fn int main()
                 }
                 else
                 {
-                    if (catch path::chdir(ls[app.cury])) continue;
-                    if (catch save_cwd(cwd)) continue;
-                    app.cury = 0;
+                    if (catch path::chdir(sys.ls[tui.cur])) continue;
+                    sys.save_cwd();
+                    tui.top();
                 }
 
             case '-':
@@ -79,19 +60,19 @@ fn int main()
                 if (catch parent) continue;
 
                 if (catch path::chdir(parent)) continue;
-                if (catch save_cwd(cwd)) continue;
-                app.cury = 0;
+                sys.save_cwd();
+                tui.top();
 
             case '.':
-                if (catch path::chdir(app.home)) continue;
-                if (catch save_cwd(cwd)) continue;
-                app.cury = 0;
+                if (catch path::chdir(sys.home)) continue;
+                sys.save_cwd();
+                tui.top();
 
             case 'b':
-                Path! p = app.history.pop();
+                Path! p = sys.history.pop();
                 if (catch p) continue;
                 if (catch path::chdir(p)) continue;
-                app.cury = 0;
+                tui.top();
 
             case '/':
                 ncurses::move(app.h - 1, 0);
@@ -112,31 +93,34 @@ fn int main()
                         ncurses::printw("\b \b");
                         buf.chop(buf.len() - 1);
                     }
-                    else if (isalnum(in))
+                    else if (rover::isalnum(in))
                     {
                         ncurses::printw("%c", (char) in);
                         buf.append((char) in);
                     }
                 }
 
-                if (app.filter) libc::free(app.filter);
-                app.filter = buf.copy_zstr();
+                sys.set_filter(buf.copy_zstr());
                 buf.free();
 
                 ncurses::curs_set(0);
 
             case '\\':
-                if (app.filter) libc::free(app.filter);
-                app.filter = null;
+                if (catch sys.clear_filter()) continue;
 
-            case 'q':
-                break LOOP;
+            case ncurses::KEY_UP:
+                tui.up();
+
+            case ncurses::KEY_DOWN:
+                tui.down();
         }
 
-        ncurses::refresh();
+        app.update();
+        if (catch sys.update()) continue;
+        tui.draw();
     }
-
-    app.deinit();
-    return 0;
 }
 
+// TODO: the application ignores the errors, but maybe it should crash or
+// store somewhere the logs that will be printed to the user at the end of
+// the execution.

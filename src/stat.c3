@@ -9,42 +9,46 @@ macro bool is_dir(p)
     return path::is_dir(p);
 }
 
-extern fn CInt lstat(ZString, Stat *);
-macro bool is_stat(stat, type) => ((stat.st_mode & libc::S_IFMT) == type);
-
-macro bool is_exe(p)
+macro bool @read_stat(p, &s)
 {
-
-    Stat stat;
     $if env::POSIX:
-        if (lstat(p.as_zstr(), &stat) < 0)
-        {
-            rover::app.deinit();
-            io::eprintfn("Can't read stats of '%s': %s", p, libc::strerror(libc::errno()));
-            libc::exit(1);
-        }
+        if (rover::lstat(p.as_zstr(), s) < 0) return false;
+        return true;
     $else
         $error("Non-Posix platform not supported");
     $endif
-
-    if (is_stat(stat, libc::S_IXUSR)) return true;
-    return false;
 }
 
-macro bool is_link(p)
+macro bool is_stat(stat, type) => ((stat.st_mode & libc::S_IFMT) == type);
+
+fn int is_exe(Path p)
 {
     Stat stat;
-    $if env::POSIX:
-        if (lstat(p.as_zstr(), &stat) < 0)
-        {
-            rover::app.deinit();
-            io::eprintfn("Can't read stats of '%s': %s", p, libc::strerror(libc::errno()));
-            libc::exit(1);
-        }
-    $else
-        $error("Non-Posix platform not supported");
+    if (!@read_stat(p, stat)) return -1;
+    if (is_stat(stat, libc::S_IXUSR)) return 1;
+    return 0;
+}
+
+fn int is_link(Path p)
+{
+    Stat stat;
+    if (!@read_stat(p, stat)) return -1;
+    if (is_stat(stat, libc::S_IFLNK)) return 1;
+    return 0;
+}
+
+fn int is_modified(Path p, Stat last_seen)
+{
+    Stat stat;
+    if (!@read_stat(p, stat)) return -1;
+
+    $if env::DARWIN:
+        return (int)(last_seen.st_mtimespec.tv_nsec == stat.st_mtimespec.tv_nsec);
     $endif
 
-    if (is_stat(stat, libc::S_IFLNK)) return true;
-    return false;
+    $if env::LINUX:
+        return (int)(last_seen.st_mtime == stat.st_mtime);
+    $endif
+
+    unreachable("Platform not supported, only DARWIN and LINUX.");
 }

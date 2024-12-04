@@ -121,9 +121,13 @@ fn void Display.reset(&self)
 
 macro Display.up(&self)   => (self.cur > 0) ? self.cur-- : 0;
 macro Display.down(&self) => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
+macro Display.top(&self) => self.cur = 0;
+macro Display.bottom(&self) => self.cur = self.sys.ls.len() - 1;
 
 fn void Display.draw(&self)
 {
+    ncurses::clear();
+
     self.host();
     ncurses::printw("%s@%s ", self.app.user, self.app.host);
     self.pwd();
