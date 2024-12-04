@@ -56,18 +56,28 @@ fn void! System.init(&self)
 
 fn void System.set_filter(&self, ZString filter)
 {
-    self.filter = filter;
+    assert(self.filter);
 
-    // TODO: actual filtering of System.ls needs to be here.    
+    self.filter = filter;
+    self.ls.remove_using_test(
+        fn bool(PathImp *p, any ctx)
+        {
+            return p.str_view().contains(((ZString) ctx).str_view());
+        },
+
+        self.filter
+    );
 }
 
 fn void System.clear_filter(&self)
 {
-    assert(self.filter);
+    if (!self.filter) return;
     libc::free(self.filter);
     self.filter = null;
 
-    // TODO: actual resetting of System.ls needs to be here.
+    PathList! ls = path::new_ls(self.cwd);
+    if (catch ls) return;
+    self.ls = ls;
 }
 
 fn void System.free(&self)
