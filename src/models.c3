@@ -135,8 +135,12 @@ fault DisplayError
 
 struct Display
 {
-    // TODO: maybe vw and vh are not needed inside Display.
-    CInt vw, vh;
+    // Where the cursor needs to be placed.
+    int cur;
+    // Boundaries of the window (inclusive).
+    int vtop;
+    int vbot;
+
     State *app;
     System *sys;
 }
@@ -153,10 +157,11 @@ fn void! Display.init(&self, State *app, System *sys)
     self.app = app;
     self.sys = sys;
 
-    // Half of the screen, the rest will be selected entry content.
-    self.vw = self.app.w / 2;
-    // Taking in account the status and command lines.
-    self.vh = self.app.h - 3;
+    self.cur = 0;
+    self.vtop = 0;
+    self.vbot = (int) sys.ls.len() - 1;
+
+    self.update_viewport();
 
     if (!ncurses::initscr()) return DisplayError.INIT_FAIL?;
     if (!ncurses::has_colors()) return DisplayError.NO_COLORS?;
@@ -177,24 +182,51 @@ fn void! Display.init(&self, State *app, System *sys)
 
 // Display doesn't need a free method.
 
+// This is only called by Display.init() and Display.draw().
+fn void Display.update_viewport(&self) @private
+{
+    if (self.cur < self.vtop)
+    {
+        self.vtop = self.cur;
+        self.vbot -= 1;
+    }
+
+    if (self.cur > self.vbot)
+    {
+        // TODO: modify viewport height if the TUI changes.
+        self.vtop = self.cur - (self.app.h - 3) + 1;
+        self.vbot = self.cur;
+    }
+}
+
 fn void Display.dir(&self)
 {
+    ncurses::attroff(ncurses::A_BOLD);
+    ncurses::attroff(ncurses::color_pair(DIR));
 }
 
 fn void Display.exe(&self)
 {
+    ncurses::attroff(ncurses::A_BOLD);
+    ncurses::attroff(ncurses::color_pair(EXE));
 }
 
 fn void Display.link(&self)
 {
+    ncurses::attroff(ncurses::A_BOLD);
+    ncurses::attroff(ncurses::color_pair(LNK));
 }
 
 fn void Display.pwd(&self)
 {
+    ncurses::attroff(ncurses::A_BOLD);
+    ncurses::attroff(ncurses::color_pair(PWD));
 }
 
 fn void Display.host(&self)
 {
+    ncurses::attroff(ncurses::A_BOLD);
+    ncurses::attroff(ncurses::color_pair(HST));
 }
 
 macro Display.select(&self) => ncurses::attron(ncurses::A_REVERSE);
@@ -211,6 +243,42 @@ fn void Display.reset(&self)
     ncurses::attroff(ncurses::color_pair(HST));
 }
 
+macro Display.up(&self)   => (self.cur > 0) ? self.cur-- : 0;
+macro Display.down(&self) => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
+
 fn void Display.draw(&self)
 {
+    self.host();
+    ncurses::printw("%s@%s ", self.app.user, self.app.host);
+    self.pwd();
+    ncurses::printw("%s\n\n", self.sys.cwd.str_view());
+    self.reset();
+
+    self.update_viewport();
+
+    for (int i = self.vtop; i <= self.vbot; i++)
+    {
+        // if (i >= (int) ls.len()) break;
+
+        if (stat::is_link(self.sys.ls[i]))
+        {
+            self.link();
+        }
+        else if (stat::is_exe(self.sys.ls[i]))
+        {
+            self.exe();
+        }
+        else if (stat::is_dir(self.sys.ls[i])) 
+        {
+            self.dir();
+        }
+
+        if (i == self.cur) self.select();
+
+        // align text taking in account the first space and one in the middle
+        ncurses::printw(" %- *s\n", (self.app.w / 2) - 2, 
+                                    self.sys.ls[i].str_view());
+
+        self.reset();
+    }
 }
