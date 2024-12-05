@@ -49,6 +49,4 @@ fn int is_modified(Path p, Stat last_seen)
     $if env::LINUX:
         return (int)(last_seen.st_mtime == stat.st_mtime);
     $endif
-
-    unreachable("Platform not supported, only DARWIN and LINUX.");
 }

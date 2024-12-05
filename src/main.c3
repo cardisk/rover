@@ -23,6 +23,10 @@ fn void main()
 
     while LOOP: (true)
     {
+        app.update();
+        if (catch sys.update()) continue;
+        tui.draw();
+
         switch (CInt key = ncurses::getch())
         {
             case 'q':
@@ -114,11 +118,12 @@ fn void main()
             case ncurses::KEY_DOWN:
                 tui.down();
         }
-
-        app.update();
-        if (catch sys.update()) continue;
-        tui.draw();
     }
+
+    app.free();
+    sys.free();
+
+    ncurses::endwin();
 }
 
 // TODO: the application ignores the errors, but maybe it should crash or

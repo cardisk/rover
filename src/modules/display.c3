@@ -18,10 +18,10 @@ fault DisplayError
 struct Display
 {
     // Where the cursor needs to be placed.
-    int cur;
+    usz cur;
     // Boundaries of the window (inclusive).
-    int vtop;
-    int vbot;
+    usz vtop;
+    usz vbot;
 
     State *app;
     System *sys;
@@ -35,7 +35,7 @@ fn void! Display.init(&self, State *app, System *sys)
 
     self.cur = 0;
     self.vtop = 0;
-    self.vbot = (int) sys.ls.len() - 1;
+    self.vbot = sys.ls.len() - 1;
 
     self.update_viewport();
 
@@ -61,17 +61,26 @@ fn void! Display.init(&self, State *app, System *sys)
 // This is only called by Display.init() and Display.draw().
 fn void Display.update_viewport(&self) @private
 {
+    // TODO: this commented code will break the viewport.
+    // if (self.sys.ls.len() - 1 <= (usz)(self.app.h - 3)) 
+    // {
+    //     self.vbot = self.sys.ls.len() - 1;
+    // }
+    // else 
+    // {
+    //     self.vbot = (usz)(self.app.h - 3);
+    // }
+
     if (self.cur < self.vtop)
     {
-        self.vtop = self.cur;
+        self.vtop -= 1;
         self.vbot -= 1;
     }
 
-    if (self.cur > self.vbot)
+    if (self.cur >= self.vbot)
     {
-        // TODO: modify viewport height if the TUI changes.
-        self.vtop = self.cur - (self.app.h - 3) + 1;
-        self.vbot = self.cur;
+        self.vtop += 1;
+        self.vbot += 1;
     }
 }
 
@@ -128,17 +137,21 @@ fn void Display.draw(&self)
 {
     ncurses::clear();
 
-    self.host();
-    ncurses::printw("%s@%s ", self.app.user, self.app.host);
-    self.pwd();
-    ncurses::printw("%s\n\n", self.sys.cwd.str_view());
-    self.reset();
+    // self.host();
+    // ncurses::printw("%s@%s ", self.app.user, self.app.host);
+    // self.pwd();
+    // ncurses::printw("%s\n\n", self.sys.cwd.str_view());
+    // self.reset();
 
     self.update_viewport();
 
-    for (int i = self.vtop; i <= self.vbot; i++)
+    // TODO: this line is here to eventaully check over viewport errors.
+    ncurses::printw("w: %d h: %d c: %d t: %d b: %d l: %d\n\n", self.app.w, self.app.h, self.cur, self.vtop, self.vbot, self.sys.ls.len());
+
+    for (usz i = self.vtop; i < self.vbot; i++)
     {
-        // if (i >= (int) ls.len()) break;
+        // TODO: this line is here to eventaully check over viewport errors.
+        // if (i >= self.sys.ls.len()) break;
 
         if (stat::is_link(self.sys.ls[i]))
         {

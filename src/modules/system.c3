@@ -54,7 +54,7 @@ fn void! System.init(&self)
 
 fn void System.apply_filter(&self)
 {
-    assert(self.filter);
+    if (!self.filter) return;
     self.ls.remove_using_test(
         fn bool(PathImp *p, any ctx)
         {
