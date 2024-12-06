@@ -58,7 +58,7 @@ fn void System.apply_filter(&self)
     self.ls.remove_using_test(
         fn bool(PathImp *p, any ctx)
         {
-            return p.str_view().contains(((ZString) ctx).str_view());
+            return !p.str_view().contains(((ZString) ctx).str_view());
         },
 
         self.filter

@@ -103,11 +103,13 @@ fn void main()
                         buf.append((char) in);
                     }
                 }
-
-                sys.set_filter(buf.copy_zstr());
-                buf.free();
-
+                if (buf.len() != 0)
+                {
+                    sys.set_filter(buf.copy_zstr());
+                    buf.free();
+                }
                 ncurses::curs_set(0);
+                tui.top();
 
             case '\\':
                 if (catch sys.clear_filter()) continue;
