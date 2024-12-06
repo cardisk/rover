@@ -61,7 +61,12 @@ fn void! Display.init(&self, State *app, System *sys)
 // This is only called by Display.init() and Display.draw().
 fn void Display.update_viewport(&self) @private
 {
-    // TODO: this if-else code will break the viewport.
+    // TODO: if the cursor is outside of the screen when the terminal resizes
+    // it remains outside instead of clipping inside it.
+    // The following line of code doesn't work properly because it clips the
+    // cursor to the screen size but then it will not be able to scroll down.
+    // if (self.cur > (usz)(self.app.h - 3)) self.cur = (usz)(self.app.h - 3);
+
     if (self.sys.ls.len() < (usz)(self.app.h - 3)) 
     {
         self.vtop = 0;
@@ -88,32 +93,32 @@ fn void Display.update_viewport(&self) @private
 
 fn void Display.dir(&self)
 {
-    ncurses::attroff(ncurses::A_BOLD);
-    ncurses::attroff(ncurses::color_pair(DIR));
+    ncurses::attron(ncurses::A_BOLD);
+    ncurses::attron(ncurses::color_pair(DIR));
 }
 
 fn void Display.exe(&self)
 {
-    ncurses::attroff(ncurses::A_BOLD);
-    ncurses::attroff(ncurses::color_pair(EXE));
+    ncurses::attron(ncurses::A_BOLD);
+    ncurses::attron(ncurses::color_pair(EXE));
 }
 
 fn void Display.link(&self)
 {
-    ncurses::attroff(ncurses::A_BOLD);
-    ncurses::attroff(ncurses::color_pair(LNK));
+    ncurses::attron(ncurses::A_BOLD);
+    ncurses::attron(ncurses::color_pair(LNK));
 }
 
 fn void Display.pwd(&self)
 {
-    ncurses::attroff(ncurses::A_BOLD);
-    ncurses::attroff(ncurses::color_pair(PWD));
+    ncurses::attron(ncurses::A_BOLD);
+    ncurses::attron(ncurses::color_pair(PWD));
 }
 
 fn void Display.host(&self)
 {
-    ncurses::attroff(ncurses::A_BOLD);
-    ncurses::attroff(ncurses::color_pair(HST));
+    ncurses::attron(ncurses::A_BOLD);
+    ncurses::attron(ncurses::color_pair(HST));
 }
 
 macro Display.select(&self) => ncurses::attron(ncurses::A_REVERSE);
@@ -139,16 +144,16 @@ fn void Display.draw(&self)
 {
     ncurses::clear();
 
-    // self.host();
-    // ncurses::printw("%s@%s ", self.app.user, self.app.host);
-    // self.pwd();
-    // ncurses::printw("%s\n\n", self.sys.cwd.str_view());
-    // self.reset();
+    self.host();
+    ncurses::printw("%s@%s ", self.app.user, self.app.host);
+    self.pwd();
+    ncurses::printw("%s\n\n", self.sys.cwd.str_view());
+    self.reset();
 
     self.update_viewport();
 
     // TODO: this line is here to eventaully check over viewport errors.
-    ncurses::printw("w: %d h: %d c: %d t: %d b: %d l: %d\n\n", self.app.w, self.app.h, self.cur, self.vtop, self.vbot, self.sys.ls.len());
+    // ncurses::printw("w: %d h: %d c: %d t: %d b: %d l: %d\n\n", self.app.w, self.app.h, self.cur, self.vtop, self.vbot, self.sys.ls.len());
 
     for (usz i = self.vtop; i < self.vbot; i++)
     {
