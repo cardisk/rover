@@ -35,7 +35,7 @@ fn void! Display.init(&self, State *app, System *sys)
 
     self.cur = 0;
     self.vtop = 0;
-    self.vbot = sys.ls.len() - 1;
+    self.vbot = (usz)(app.h - 3);
 
     self.update_viewport();
 
@@ -61,15 +61,17 @@ fn void! Display.init(&self, State *app, System *sys)
 // This is only called by Display.init() and Display.draw().
 fn void Display.update_viewport(&self) @private
 {
-    // TODO: this commented code will break the viewport.
-    // if (self.sys.ls.len() - 1 <= (usz)(self.app.h - 3)) 
-    // {
-    //     self.vbot = self.sys.ls.len() - 1;
-    // }
-    // else 
-    // {
-    //     self.vbot = (usz)(self.app.h - 3);
-    // }
+    // TODO: this if-else code will break the viewport.
+    if (self.sys.ls.len() < (usz)(self.app.h - 3)) 
+    {
+        self.vtop = 0;
+        self.vbot = self.sys.ls.len();
+        return;
+    }
+    else 
+    {
+        self.vbot = self.vtop + (usz)(self.app.h - 3);
+    }
 
     if (self.cur < self.vtop)
     {
