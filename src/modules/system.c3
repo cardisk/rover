@@ -47,7 +47,6 @@ fn void! System.init(&self)
 
     Path! home = path::new(home_env);
     if (catch home) return SystemError.NO_HOME?;
-    home.free();
 
     self.home = home;
     // ------------------------
@@ -82,7 +81,7 @@ fn void System.apply_filter(&self)
 
 fn void System.set_apply_filter(&self, ZString filter)
 {
-    // TODO: System.set_filter() doesn't handle errors.
+    // TODO: System.set_apply_filter() doesn't handle errors.
     if (catch self.clear_filter()) return;
     self.filter = filter;
     self.apply_filter();
