@@ -54,28 +54,26 @@ fn void main()
                 }
                 else
                 {
-                    if (catch path::chdir(sys.ls[tui.cur])) continue;
-                    sys.save_cwd();
+                    if (catch sys.pchdir(sys.ls[tui.cur])) continue;
+                    if (catch sys.clear_filter()) continue;
                     tui.top();
                 }
 
             case '-':
-                Path! parent = path::new("..");
-                if (catch parent) continue;
-
-                if (catch path::chdir(parent)) continue;
-                sys.save_cwd();
+                if (catch sys.clear_filter()) continue;
+                if (catch sys.schdir("..")) continue;
                 tui.top();
 
             case '.':
-                if (catch path::chdir(sys.home)) continue;
-                sys.save_cwd();
+                if (catch sys.clear_filter()) continue;
+                if (catch sys.pchdir(sys.home)) continue;
                 tui.top();
 
             case 'b':
                 Path! p = sys.history.pop();
                 if (catch p) continue;
-                if (catch path::chdir(p)) continue;
+                if (catch sys.clear_filter()) continue;
+                if (catch sys.pchdir(p, false)) continue;
                 tui.top();
 
             case '/':
@@ -105,7 +103,7 @@ fn void main()
                 }
                 if (buf.len() != 0)
                 {
-                    sys.set_filter(buf.copy_zstr());
+                    sys.set_apply_filter(buf.copy_zstr());
                     buf.free();
                 }
                 ncurses::curs_set(0);

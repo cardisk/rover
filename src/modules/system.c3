@@ -5,12 +5,27 @@ import std::io::path;
 import std::os::env;
 import libc;
 
+fn bool is_root(Path p) @private
+{
+    $if env::POSIX:
+        return p.str_view() == "/";
+    $endif
+
+    $if env::WIN32:
+        // TODO: assuming that there is no other characters inside the root 
+        // directory path on WIN32.
+        return p.str_view() == "\\";
+    $endif
+}
+
 fault SystemError
 {
     NO_HOME,
     NO_CWD,
     NO_LS,
     NO_STAT,
+    NO_PATH,
+    NO_CHDIR,
 }
 
 struct System
@@ -65,11 +80,12 @@ fn void System.apply_filter(&self)
     );
 }
 
-fn void System.set_filter(&self, ZString filter)
+fn void System.set_apply_filter(&self, ZString filter)
 {
     // TODO: System.set_filter() doesn't handle errors.
     if (catch self.clear_filter()) return;
     self.filter = filter;
+    self.apply_filter();
 }
 
 fn void! System.clear_filter(&self)
@@ -84,11 +100,8 @@ fn void! System.clear_filter(&self)
     self.ls = ls;
 }
 
-fn void! System.update(&self)
+fn void! System.reload_cwd(&self) @private
 {
-    if (stat::is_modified(self.cwd, self.cwd_stat) < 0) return SystemError.NO_STAT?;
-    if (!stat::is_modified(self.cwd, self.cwd_stat)) return;
-
     self.cwd.free();
     Path! cwd = path::new_cwd();
     if (catch cwd) return SystemError.NO_CWD?;
@@ -104,10 +117,39 @@ fn void! System.update(&self)
     self.apply_filter();
 }
 
+fn void! System.pchdir(&self, Path p, bool save_cwd = true)
+{
+    if (is_root(self.cwd) && p.str_view() == "..") return;
+    if (catch path::chdir(p)) return SystemError.NO_CHDIR?;
+    if (save_cwd) self.save_cwd();
+
+    self.reload_cwd()!;
+}
+
+fn void! System.schdir(&self, String p, bool save_cwd = true)
+{
+    if (is_root(self.cwd) && p == "..") return;
+    Path! path = path::new(p);
+    if (catch path) return SystemError.NO_PATH?;
+
+    if (catch path::chdir(path)) return SystemError.NO_CHDIR?;
+    if (save_cwd) self.save_cwd();
+
+    self.reload_cwd()!;
+}
+
+fn void! System.update(&self)
+{
+    if (stat::is_modified(self.cwd, self.cwd_stat) < 0) return SystemError.NO_STAT?;
+    if (!stat::is_modified(self.cwd, self.cwd_stat)) return;
+
+    self.reload_cwd()!;
+}
+
 fn void System.save_cwd(&self)
 {
     // TODO: assuming that creating a new path from an existing one will never fail.
-    Path p = path::new(self.cwd.str_view())!!;
+    Path p = path::new(self.cwd.as_zstr().copy())!!;
     self.history.push(p);
 }
 
