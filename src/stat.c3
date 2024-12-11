@@ -43,10 +43,10 @@ fn int is_modified(Path p, Stat last_seen)
     if (!@read_stat(p, stat)) return -1;
 
     $if env::DARWIN:
-        return (int)(last_seen.st_mtimespec.tv_nsec == stat.st_mtimespec.tv_nsec);
+        return (int)(last_seen.st_mtimespec.tv_nsec != stat.st_mtimespec.tv_nsec);
     $endif
 
     $if env::LINUX:
-        return (int)(last_seen.st_mtime == stat.st_mtime);
+        return (int)(last_seen.st_mtime != stat.st_mtime);
     $endif
 }
