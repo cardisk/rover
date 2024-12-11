@@ -1,5 +1,7 @@
 module rover::display;
 import rover::state, rover::system, rover::stat;
+import std::io::path, std::io::file;
+import std::core::mem::allocator;
 import ncurses;
 
 const CInt DIR = 1;
@@ -22,6 +24,8 @@ struct Display
     // Boundaries of the window (inclusive).
     usz vtop;
     usz vbot;
+    // Marker for the temporary allocator.
+    usz tmark;
 
     State *app;
     System *sys;
@@ -36,6 +40,8 @@ fn void! Display.init(&self, State *app, System *sys)
     self.cur = 0;
     self.vtop = 0;
     self.vbot = (usz)(app.h - 3);
+
+    self.tmark = allocator::temp().mark();
 
     self.update_viewport();
 
@@ -140,8 +146,18 @@ macro Display.down(&self) => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0
 macro Display.top(&self) => self.cur = 0;
 macro Display.bottom(&self) => self.cur = self.sys.ls.len() - 1;
 
+fn bool is_printable(String str) @private
+{
+    foreach (c : str)
+    {
+        if (!(rover::isascii(c) || c.is_space())) return false;
+    }
+    return true;
+}
+
 fn void Display.draw(&self)
 {
+    allocator::temp().reset(self.tmark);
     ncurses::clear();
 
     self.host();
@@ -181,4 +197,59 @@ fn void Display.draw(&self)
 
         self.reset();
     }
+
+    if (path::is_file(self.sys.ls[self.cur]))
+    {
+        CInt x = (self.app.w / 2) + 1;
+        CInt y = 2;
+
+        switch (stat::is_exe(self.sys.ls[self.cur]))
+        {
+            case 1:
+                ncurses::mvprintw(y, x, "<binary>");
+
+            case 0:
+                char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
+                if (catch chars) break;
+
+                String content = (String) chars;
+                if (content.len == 0)
+                {
+                    ncurses::mvprintw(y, x, "<empty>");
+                    break;
+                }
+                if (!is_printable(content))
+                {
+                    ncurses::mvprintw(y, x, "<binary>");
+                    break;
+                }
+                String[] lines = content.tsplit("\n");
+
+                usz stop = (usz)(self.app.h - 3);
+                if (lines.len < stop) stop = lines.len;
+                
+                for (int i = 0; i < stop; i++)
+                {
+                    CInt len = lines[i].len;
+                    if (len > (self.app.w / 2 - 2)) len = (CInt)(self.app.w / 2 - 2);
+                    ncurses::mvprintw(y + i, x, "%.*s", len, lines[i]);
+                }
+
+            case -1:
+                // TODO: if the app will log errors in future, here @read_stat
+                // needs to log it excuse.
+                break;
+        }
+    }
+
+    if (stat::is_dir(self.sys.ls[self.cur]))
+    {
+        PathList! ls = path::new_ls(self.sys.ls[self.cur]);
+        // TODO: maybe is better to handle ls errors here.
+        if (catch ls) return;
+
+        // Draw the preview as a list
+    }
+
+    ncurses::refresh();
 }
