@@ -67,11 +67,12 @@ fn void! Display.init(&self, State *app, System *sys)
 // This is only called by Display.init() and Display.draw().
 fn void Display.update_viewport(&self) @private
 {
-    // TODO: if the cursor is outside of the screen when the terminal resizes
-    // it remains outside instead of clipping inside it.
-    // The following line of code doesn't work properly because it clips the
-    // cursor to the screen size but then it will not be able to scroll down.
-    // if (self.cur > (usz)(self.app.h - 3)) self.cur = (usz)(self.app.h - 3);
+    // TODO: maybe the behaviour of the resize should be handled differently.
+    if (self.app.resized()) {
+        self.top();
+        self.vtop = 0;
+        self.vbot = (usz)(self.app.h - 3);
+    }
 
     if (self.sys.ls.len() < (usz)(self.app.h - 3)) 
     {

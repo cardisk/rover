@@ -10,6 +10,7 @@ fault StateError
 struct State
 {
     CInt w, h;
+    CInt old_w, old_h;
     ZString user;
     char[255] host;
 }
@@ -23,10 +24,25 @@ fn void! State.init(&self)
     if (rover::gethostname((ZString) &self.host, 255) != 0) return StateError.NO_HOST?;
 
     ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
+    self.old_w = self.w;
+    self.old_h = self.h;
 }
 
 // TODO: convert State.update() into a function if needed.
-macro State.update(&self) => ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
+macro State.update(&self)
+{
+    self.old_w = self.w;
+    self.old_h = self.h;
+    ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
+}
+
+macro State.shrinkedw(&self) => self.w < self.old_w;
+macro State.shrinkedh(&self) => self.h < self.old_h;
+macro State.shrinked(&self) => self.shrinkedw() && self.shrinkedh();
+macro State.scaledw(&self) => self.w > self.old_w;
+macro State.scaledh(&self) => self.h > self.old_h;
+macro State.scaled(&self) => self.scaledw() && self.scaledh();
+macro State.resized(&self) => self.shrinked() || self.scaled();
 
 // TODO: State.free() may be removed.
 // On OSX and Linux everything is allocated statically so this method is useless.
