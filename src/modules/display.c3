@@ -169,14 +169,18 @@ fn void Display.draw(&self)
 
     self.update_viewport();
 
-    // TODO: this line is here to eventaully check over viewport errors.
-    // ncurses::printw("w: %d h: %d c: %d t: %d b: %d l: %d\n\n", self.app.w, self.app.h, self.cur, self.vtop, self.vbot, self.sys.ls.len());
+    if (self.sys.ls.is_empty())
+    {
+        self.select();
+        ncurses::printw(" %- *s\n", (self.app.w / 2) - 2, 
+                                    "<empty>");
+        self.reset();
+        ncurses::refresh();
+        return;
+    }
 
     for (usz i = self.vtop; i < self.vbot; i++)
     {
-        // TODO: this line is here to eventaully check over viewport errors.
-        // if (i >= self.sys.ls.len()) break;
-
         if (stat::is_link(self.sys.ls[i]))
         {
             self.link();
@@ -252,11 +256,18 @@ fn void Display.draw(&self)
         usz stop = (usz)(self.app.h - 3);
         if (ls.len() < stop) stop = ls.len();
         
-        for (int i = 0; i < stop; i++)
+        if (ls.is_empty())
         {
-            CInt len = ls[i].str_view().len;
-            if (len > (self.app.w / 2 - 2)) len = (CInt)(self.app.w / 2 - 2);
-            ncurses::mvprintw(y + i, x, "%.*s", len, ls[i].str_view());
+            ncurses::mvprintw(y, x, "<empty>");
+        }
+        else
+        {
+            for (int i = 0; i < stop; i++)
+            {
+                CInt len = ls[i].str_view().len;
+                if (len > (self.app.w / 2 - 2)) len = (CInt)(self.app.w / 2 - 2);
+                ncurses::mvprintw(y + i, x, "%.*s", len, ls[i].str_view());
+            }
         }
     }
 

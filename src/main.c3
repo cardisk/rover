@@ -33,6 +33,7 @@ fn void main()
                 break LOOP;
 
             case '\n':
+                if (sys.ls.is_empty()) break;
                 if (!stat::is_dir(sys.ls[tui.cur]))
                 {
                     ncurses::def_prog_mode();
