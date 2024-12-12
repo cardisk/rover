@@ -198,11 +198,11 @@ fn void Display.draw(&self)
         self.reset();
     }
 
+    CInt x = (self.app.w / 2) + 1;
+    CInt y = 2;
+
     if (path::is_file(self.sys.ls[self.cur]))
     {
-        CInt x = (self.app.w / 2) + 1;
-        CInt y = 2;
-
         switch (stat::is_exe(self.sys.ls[self.cur]))
         {
             case 1:
@@ -244,11 +244,19 @@ fn void Display.draw(&self)
 
     if (stat::is_dir(self.sys.ls[self.cur]))
     {
-        PathList! ls = path::new_ls(self.sys.ls[self.cur]);
+        PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
         // TODO: maybe is better to handle ls errors here.
         if (catch ls) return;
 
-        // Draw the preview as a list
+        usz stop = (usz)(self.app.h - 3);
+        if (ls.len() < stop) stop = ls.len();
+        
+        for (int i = 0; i < stop; i++)
+        {
+            CInt len = ls[i].str_view().len;
+            if (len > (self.app.w / 2 - 2)) len = (CInt)(self.app.w / 2 - 2);
+            ncurses::mvprintw(y + i, x, "%.*s", len, ls[i].str_view());
+        }
     }
 
     ncurses::refresh();
