@@ -104,7 +104,7 @@ fn void main()
                 }
                 if (buf.len() != 0)
                 {
-                    sys.set_apply_filter(buf.copy_zstr());
+                    if (catch sys.set_apply_filter(buf.copy_zstr())) continue;
                     buf.free();
                 }
                 ncurses::curs_set(0);

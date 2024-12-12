@@ -250,7 +250,8 @@ fn void Display.draw(&self)
     if (stat::is_dir(self.sys.ls[self.cur]))
     {
         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
-        // TODO: maybe is better to handle ls errors here.
+        // TODO: if the app will log errors in the future, catch and log 
+        // ls excuse here.
         if (catch ls) return;
 
         usz stop = (usz)(self.app.h - 3);

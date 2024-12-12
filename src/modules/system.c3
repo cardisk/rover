@@ -12,9 +12,7 @@ fn bool is_root(Path p) @private
     $endif
 
     $if env::WIN32:
-        // TODO: assuming that there is no other characters inside the root 
-        // directory path on WIN32.
-        return p.str_view() == "\\";
+        return p.str_view().ends_with(":\\");
     $endif
 }
 
@@ -79,10 +77,9 @@ fn void System.apply_filter(&self)
     );
 }
 
-fn void System.set_apply_filter(&self, ZString filter)
+fn void! System.set_apply_filter(&self, ZString filter)
 {
-    // TODO: System.set_apply_filter() doesn't handle errors.
-    if (catch self.clear_filter()) return;
+    self.clear_filter()!;
     self.filter = filter;
     self.apply_filter();
 }
@@ -147,7 +144,7 @@ fn void! System.update(&self)
 
 fn void System.save_cwd(&self)
 {
-    // TODO: assuming that creating a new path from an existing one will never fail.
+    // Assuming that creating a new path from an existing one will never fail.
     Path p = path::new(self.cwd.as_zstr().copy())!!;
     self.history.push(p);
 }

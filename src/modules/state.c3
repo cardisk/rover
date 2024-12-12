@@ -28,7 +28,6 @@ fn void! State.init(&self)
     self.old_h = self.h;
 }
 
-// TODO: convert State.update() into a function if needed.
 macro State.update(&self)
 {
     self.old_w = self.w;
