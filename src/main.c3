@@ -24,8 +24,16 @@ fn void main()
     while LOOP: (true)
     {
         app.update();
-        if (catch sys.update()) continue;
-        tui.draw();
+        if (catch sys.update())
+        {
+            app.log("Unable to update System info.");
+            continue;
+        }
+        if (catch tui.draw())
+        {
+            app.log("Unable to update Display preview info.");
+            continue;
+        }
 
         switch (CInt key = ncurses::getch())
         {
@@ -33,7 +41,7 @@ fn void main()
                 break LOOP;
 
             case '\n':
-                if (sys.ls.is_empty()) break;
+                if (sys.ls.is_empty()) continue;
                 if (!stat::is_dir(sys.ls[tui.cur]))
                 {
                     ncurses::def_prog_mode();
@@ -55,26 +63,63 @@ fn void main()
                 }
                 else
                 {
-                    if (catch sys.pchdir(sys.ls[tui.cur])) continue;
-                    if (catch sys.clear_filter()) continue;
+                    if (catch sys.pchdir(sys.ls[tui.cur]))
+                    {
+                        app.log(string::new_format("Unable to change directory to %s.",
+                                                    sys.ls[tui.cur].str_view()));
+                        continue;
+                    }
+                    if (catch sys.clear_filter())
+                    {
+                        app.log("Unable to clear the filter.");
+                        continue;
+                    }
                     tui.top();
                 }
 
             case '-':
-                if (catch sys.clear_filter()) continue;
-                if (catch sys.schdir("..")) continue;
+                if (catch sys.clear_filter())
+                {
+                    app.log("Unable to clear the filter.");
+                    continue;
+                }
+                if (catch sys.schdir(".."))
+                {
+                    app.log("Unable to change directory to the parent one.");
+                    continue;
+                }
                 tui.top();
 
             case '.':
-                if (catch sys.clear_filter()) continue;
-                if (catch sys.pchdir(sys.home)) continue;
+                if (catch sys.clear_filter())
+                {
+                    app.log("Unable to clear the filter.");
+                    continue;
+                }
+                if (catch sys.pchdir(sys.home))
+                {
+                    app.log("Unable to change directory to the home one.");
+                    continue;
+                }
                 tui.top();
 
             case 'b':
                 Path! p = sys.history.pop();
-                if (catch p) continue;
-                if (catch sys.clear_filter()) continue;
-                if (catch sys.pchdir(p, false)) continue;
+                if (catch p)
+                {
+                    app.log("Unable to create a new path from the history.");
+                    continue;
+                }
+                if (catch sys.clear_filter())
+                {
+                    app.log("Unable to clear the filter.");
+                    continue;
+                }
+                if (catch sys.pchdir(p, false))
+                {
+                    app.log(string::new_format("Unable to change directory to %s.", p.str_view()));
+                    continue;
+                }
                 tui.top();
 
             case '/':
@@ -104,14 +149,22 @@ fn void main()
                 }
                 if (buf.len() != 0)
                 {
-                    if (catch sys.set_apply_filter(buf.copy_zstr())) continue;
+                    if (catch sys.set_apply_filter(buf.copy_zstr()))
+                    {
+                        app.log(string::new_format("Unable to apply filter %s.", buf.str_view()));
+                        continue;
+                    }
                     buf.free();
                 }
                 ncurses::curs_set(0);
                 tui.top();
 
             case '\\':
-                if (catch sys.clear_filter()) continue;
+                if (catch sys.clear_filter())
+                {
+                    app.log("Unable to clear the filter.");
+                    continue;
+                }
 
             case ncurses::KEY_UP:
                 tui.up();
@@ -121,12 +174,10 @@ fn void main()
         }
     }
 
+    ncurses::endwin();
+
+    app.show_logs();
+
     app.free();
     sys.free();
-
-    ncurses::endwin();
 }
-
-// TODO: the application ignores the errors, but maybe it should crash or
-// store somewhere the logs that will be printed to the user at the end of
-// the execution.

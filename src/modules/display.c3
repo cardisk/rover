@@ -15,6 +15,7 @@ fault DisplayError
     INIT_FAIL,
     NO_COLORS,
     NO_COLBIND,
+    NO_PREVIEW,
 }
 
 struct Display
@@ -132,7 +133,6 @@ macro Display.select(&self) => ncurses::attron(ncurses::A_REVERSE);
 
 fn void Display.reset(&self)
 {
-    // TODO: making a bold assumption that if this is set twice it will not crash.
     ncurses::attroff(ncurses::A_BOLD);
     ncurses::attroff(ncurses::A_REVERSE);
     ncurses::attroff(ncurses::color_pair(DIR));
@@ -156,7 +156,7 @@ fn bool is_printable(String str) @private
     return true;
 }
 
-fn void Display.draw(&self)
+fn void! Display.draw(&self)
 {
     allocator::temp().reset(self.tmark);
     ncurses::clear();
@@ -241,18 +241,14 @@ fn void Display.draw(&self)
                 }
 
             case -1:
-                // TODO: if the app will log errors in future, here @read_stat
-                // needs to log it excuse.
-                break;
+                return DisplayError.NO_PREVIEW?;
         }
     }
 
     if (stat::is_dir(self.sys.ls[self.cur]))
     {
         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
-        // TODO: if the app will log errors in the future, catch and log 
-        // ls excuse here.
-        if (catch ls) return;
+        if (catch ls) return DisplayError.NO_PREVIEW?;
 
         usz stop = (usz)(self.app.h - 3);
         if (ls.len() < stop) stop = ls.len();

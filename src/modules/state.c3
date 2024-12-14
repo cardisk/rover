@@ -1,4 +1,6 @@
 module rover::state;
+import std::collections::list;
+import std::io;
 import ncurses;
 
 fault StateError
@@ -13,6 +15,8 @@ struct State
     CInt old_w, old_h;
     ZString user;
     char[255] host;
+
+    List(<String>) logs;
 }
 
 fn void! State.init(&self)
@@ -26,6 +30,8 @@ fn void! State.init(&self)
     ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
     self.old_w = self.w;
     self.old_h = self.h;
+
+    self.logs.new_init();
 }
 
 macro State.update(&self)
@@ -43,10 +49,17 @@ macro State.scaledh(&self) => self.h > self.old_h;
 macro State.scaled(&self) => self.scaledw() && self.scaledh();
 macro State.resized(&self) => self.shrinked() || self.scaled();
 
-// TODO: State.free() may be removed.
-// On OSX and Linux everything is allocated statically so this method is useless.
-// WIN32 is not supported yet, but if it will, there will be 
-// the memory management of the struct members here.
+macro State.log(&self, String str) => self.logs.push(str);
+
+fn void State.show_logs(&self)
+{
+    foreach (s : self.logs)
+    {
+        io::printn(s);
+    }
+}
+
 fn void State.free(&self)
 {
+    self.logs.free();
 }
