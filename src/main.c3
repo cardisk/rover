@@ -23,6 +23,8 @@ fn void main()
 
     while LOOP: (true)
     {
+        if (app.logs.len() > 10) break;
+
         app.update();
         if (catch sys.update())
         {

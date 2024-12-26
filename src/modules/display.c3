@@ -27,6 +27,10 @@ struct Display
     usz vbot;
     // Marker for the temporary allocator.
     usz tmark;
+    // Subwindows
+    Window *list;
+    Window *prev;
+    Window *text;
 
     State *app;
     System *sys;
@@ -61,6 +65,16 @@ fn void! Display.init(&self, State *app, System *sys)
     if (ncurses::init_pair(LNK, ncurses::COLOR_CYAN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
+
+    // This is needed because of the chain of initialization of the modules.
+    // When the State is created, initscr() needs to be called from here before
+    // calling getmaxyx(), otherwise it returns -1,-1.
+    CInt w, h;
+    ncurses::@getmaxyx(ncurses::stdscr, h, w);
+
+    self.list = ncurses::subwin(ncurses::stdscr, h - 3, w / 2, 0, 0);
+    self.prev = ncurses::subwin(ncurses::stdscr, h, w / 2, 0, w / 2);
+    self.text = ncurses::subwin(ncurses::stdscr, 3, w / 2, h - 3, 0);
 }
 
 // Display doesn't need a free method.
@@ -156,10 +170,17 @@ fn bool is_printable(String str) @private
     return true;
 }
 
+// This is an hack because ncurses will segfault when accessing ACS characters.
+extern fn void winbox(Window *);
+
 fn void! Display.draw(&self)
 {
     allocator::temp().reset(self.tmark);
     ncurses::clear();
+
+    winbox(self.list);
+    winbox(self.prev);
+    winbox(self.text);
 
     self.host();
     ncurses::printw("%s@%s ", self.app.user, self.app.host);
@@ -245,6 +266,7 @@ fn void! Display.draw(&self)
         }
     }
 
+    // TODO: for some directories here it will crash loading the preview.
     if (stat::is_dir(self.sys.ls[self.cur]))
     {
         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
