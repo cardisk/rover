@@ -182,19 +182,26 @@ fn void! Display.draw(&self)
     winbox(self.prev);
     winbox(self.text);
 
-    self.host();
-    ncurses::printw("%s@%s ", self.app.user, self.app.host);
-    self.pwd();
-    ncurses::printw("%s\n\n", self.sys.cwd.str_view());
-    self.reset();
+    // Coordinates relative to the window.
+    CInt x = 1;
+    CInt y = 2;
+
+    CInt wl, hl, wp, hp;
+    ncurses::@getmaxyx(self.list, hl, wl);
+    ncurses::@getmaxyx(self.prev, hp, wp);
+
+    // self.host();
+    // ncurses::printw("%s@%s ", self.app.user, self.app.host);
+    // self.pwd();
+    // ncurses::printw("%s\n\n", self.sys.cwd.str_view());
+    // self.reset();
 
     self.update_viewport();
 
     if (self.sys.ls.is_empty())
     {
         self.select();
-        ncurses::printw(" %- *s\n", (self.app.w / 2) - 2, 
-                                    "<empty>");
+        ncurses::mvwprintw(self.list, y, x, "%- *s", wl - 2, "<empty>");
         self.reset();
         ncurses::refresh();
         return;
@@ -217,22 +224,20 @@ fn void! Display.draw(&self)
 
         if (i == self.cur) self.select();
 
-        // align text taking in account the first space and one in the middle
-        ncurses::printw(" %- *s\n", (self.app.w / 2) - 2, 
-                                    self.sys.ls[i].str_view());
+        // Align text taking in account the first space and one in the middle
+        ncurses::mvwprintw(self.list, y + (CInt)i, x, "%- *s", wl - 2, 
+                                                self.sys.ls[i].str_view());
 
         self.reset();
     }
 
-    CInt x = (self.app.w / 2) + 1;
-    CInt y = 2;
 
     if (path::is_file(self.sys.ls[self.cur]))
     {
         switch (stat::is_exe(self.sys.ls[self.cur]))
         {
             case 1:
-                ncurses::mvprintw(y, x, "<binary>");
+                ncurses::mvwprintw(self.prev, y, x, "<binary>");
 
             case 0:
                 char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
@@ -241,24 +246,24 @@ fn void! Display.draw(&self)
                 String content = (String) chars;
                 if (content.len == 0)
                 {
-                    ncurses::mvprintw(y, x, "<empty>");
+                    ncurses::mvwprintw(self.prev, y, x, "<empty>");
                     break;
                 }
                 if (!is_printable(content))
                 {
-                    ncurses::mvprintw(y, x, "<binary>");
+                    ncurses::mvwprintw(self.prev, y, x, "<binary>");
                     break;
                 }
                 String[] lines = content.tsplit("\n");
 
-                usz stop = (usz)(self.app.h - 3);
+                usz stop = (usz)(hp - 3);
                 if (lines.len < stop) stop = lines.len;
                 
                 for (int i = 0; i < stop; i++)
                 {
                     CInt len = lines[i].len;
-                    if (len > (self.app.w / 2 - 2)) len = (CInt)(self.app.w / 2 - 2);
-                    ncurses::mvprintw(y + i, x, "%.*s", len, lines[i]);
+                    if (len > (wp - 2)) len = wp - 2;
+                    ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, lines[i]);
                 }
 
             case -1:
@@ -266,26 +271,29 @@ fn void! Display.draw(&self)
         }
     }
 
-    // TODO: for some directories here it will crash loading the preview.
     if (stat::is_dir(self.sys.ls[self.cur]))
     {
         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
-        if (catch ls) return DisplayError.NO_PREVIEW?;
+        if (catch ls)
+        {
+            ncurses::mvwprintw(self.prev, y, x, "<error>");
+            return;
+        }
 
-        usz stop = (usz)(self.app.h - 3);
+        usz stop = (usz)(hp - 3);
         if (ls.len() < stop) stop = ls.len();
         
         if (ls.is_empty())
         {
-            ncurses::mvprintw(y, x, "<empty>");
+            ncurses::mvwprintw(self.prev, y, x, "<empty>");
         }
         else
         {
             for (int i = 0; i < stop; i++)
             {
                 CInt len = ls[i].str_view().len;
-                if (len > (self.app.w / 2 - 2)) len = (CInt)(self.app.w / 2 - 2);
-                ncurses::mvprintw(y + i, x, "%.*s", len, ls[i].str_view());
+                if (len > (wp - 2)) len = (CInt)(wp - 2);
+                ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, ls[i].str_view());
             }
         }
     }
