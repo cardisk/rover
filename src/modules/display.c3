@@ -113,47 +113,47 @@ fn void Display.update_viewport(&self) @private
     }
 }
 
-fn void Display.dir(&self)
+fn void Display.dir(&self, Window *win)
 {
-    ncurses::attron(ncurses::A_BOLD);
-    ncurses::attron(ncurses::color_pair(DIR));
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(DIR));
 }
 
-fn void Display.exe(&self)
+fn void Display.exe(&self, Window *win)
 {
-    ncurses::attron(ncurses::A_BOLD);
-    ncurses::attron(ncurses::color_pair(EXE));
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(EXE));
 }
 
-fn void Display.link(&self)
+fn void Display.link(&self, Window *win)
 {
-    ncurses::attron(ncurses::A_BOLD);
-    ncurses::attron(ncurses::color_pair(LNK));
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(LNK));
 }
 
-fn void Display.pwd(&self)
+fn void Display.pwd(&self, Window *win)
 {
-    ncurses::attron(ncurses::A_BOLD);
-    ncurses::attron(ncurses::color_pair(PWD));
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(PWD));
 }
 
-fn void Display.host(&self)
+fn void Display.host(&self, Window *win)
 {
-    ncurses::attron(ncurses::A_BOLD);
-    ncurses::attron(ncurses::color_pair(HST));
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(HST));
 }
 
-macro Display.select(&self) => ncurses::attron(ncurses::A_REVERSE);
+macro Display.select(&self, Window *win) => ncurses::wattron(win, ncurses::A_REVERSE);
 
-fn void Display.reset(&self)
+fn void Display.reset(&self, Window *win)
 {
-    ncurses::attroff(ncurses::A_BOLD);
-    ncurses::attroff(ncurses::A_REVERSE);
-    ncurses::attroff(ncurses::color_pair(DIR));
-    ncurses::attroff(ncurses::color_pair(EXE));
-    ncurses::attroff(ncurses::color_pair(LNK));
-    ncurses::attroff(ncurses::color_pair(PWD));
-    ncurses::attroff(ncurses::color_pair(HST));
+    ncurses::wattroff(win, ncurses::A_BOLD);
+    ncurses::wattroff(win, ncurses::A_REVERSE);
+    ncurses::wattroff(win, ncurses::color_pair(DIR));
+    ncurses::wattroff(win, ncurses::color_pair(EXE));
+    ncurses::wattroff(win, ncurses::color_pair(LNK));
+    ncurses::wattroff(win, ncurses::color_pair(PWD));
+    ncurses::wattroff(win, ncurses::color_pair(HST));
 }
 
 macro Display.up(&self)   => (self.cur > 0) ? self.cur-- : 0;
@@ -190,19 +190,19 @@ fn void! Display.draw(&self)
     ncurses::@getmaxyx(self.list, hl, wl);
     ncurses::@getmaxyx(self.prev, hp, wp);
 
-    // self.host();
-    // ncurses::printw("%s@%s ", self.app.user, self.app.host);
-    // self.pwd();
-    // ncurses::printw("%s\n\n", self.sys.cwd.str_view());
-    // self.reset();
+    self.host(self.list);
+    ncurses::mvwprintw(self.list, 0, 2, "%s@%s ", self.app.user, self.app.host);
+    self.pwd(self.list);
+    ncurses::wprintw(self.list, "%s", self.sys.cwd.str_view());
+    self.reset(self.list);
 
     self.update_viewport();
 
     if (self.sys.ls.is_empty())
     {
-        self.select();
-        ncurses::mvwprintw(self.list, y, x, "%- *s", wl - 2, "<empty>");
-        self.reset();
+        self.select(self.list);
+        ncurses::mvwprintw(self.list, y, x, " %- *s", wl - 3, "<empty>");
+        self.reset(self.list);
         ncurses::refresh();
         return;
     }
@@ -211,24 +211,24 @@ fn void! Display.draw(&self)
     {
         if (stat::is_link(self.sys.ls[i]))
         {
-            self.link();
+            self.link(self.list);
         }
         else if (stat::is_exe(self.sys.ls[i]))
         {
-            self.exe();
+            self.exe(self.list);
         }
         else if (stat::is_dir(self.sys.ls[i])) 
         {
-            self.dir();
+            self.dir(self.list);
         }
 
-        if (i == self.cur) self.select();
+        if (i == self.cur) self.select(self.list);
 
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + (CInt)i, x, "%- *s", wl - 2, 
+        ncurses::mvwprintw(self.list, y + (CInt)i, x, " %- *s", wl - 3, 
                                                 self.sys.ls[i].str_view());
 
-        self.reset();
+        self.reset(self.list);
     }
 
 
@@ -276,7 +276,7 @@ fn void! Display.draw(&self)
         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
         if (catch ls)
         {
-            ncurses::mvwprintw(self.prev, y, x, "<error>");
+            ncurses::mvwprintw(self.prev, y, x, "<error while loading>");
             return;
         }
 
