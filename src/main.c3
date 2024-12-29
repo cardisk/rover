@@ -102,6 +102,8 @@ fn void main()
                 tui.top();
 
             case 'b':
+                if (sys.history.is_empty()) break;
+
                 Path! p = sys.history.pop();
                 if (catch p)
                 {
@@ -139,7 +141,7 @@ fn void main()
                         ncurses::printw("\b \b");
                         buf.chop(buf.len() - 1);
                     }
-                    else if (rover::isalnum(in))
+                    else if (((char)in).is_alnum())
                     {
                         ncurses::printw("%c", (char) in);
                         buf.append((char) in);
