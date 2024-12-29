@@ -31,11 +31,7 @@ fn void main()
             app.log("Unable to update System info.");
             continue;
         }
-        if (catch tui.draw())
-        {
-            app.log("Unable to update Display preview info.");
-            continue;
-        }
+        tui.update();
 
         switch (CInt key = ncurses::getch())
         {

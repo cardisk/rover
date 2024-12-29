@@ -20,14 +20,14 @@ fault DisplayError
 
 struct Display
 {
-    // Where the cursor needs to be placed.
+    // Position selected inside the list.
     usz cur;
     // Boundaries of the window (inclusive).
     usz vtop;
     usz vbot;
     // Marker for the temporary allocator.
     usz tmark;
-    // Subwindows
+    // Subwindows.
     Window *list;
     Window *prev;
     Window *text;
@@ -66,18 +66,12 @@ fn void! Display.init(&self, State *app, System *sys)
     if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
 
-    // This is needed because of the chain of initialization of the modules.
-    // When the State is created, initscr() needs to be called from here before
-    // calling getmaxyx(), otherwise it returns -1,-1.
-    CInt w, h;
-    ncurses::@getmaxyx(ncurses::stdscr, h, w);
-
-    self.list = ncurses::subwin(ncurses::stdscr, h - 3, w / 2, 0, 0);
-    self.prev = ncurses::subwin(ncurses::stdscr, h, w / 2, 0, w / 2);
-    self.text = ncurses::subwin(ncurses::stdscr, 3, w / 2, h - 3, 0);
+    self.list = null;
+    self.prev = null;
+    self.text = null;
 }
 
-// Display doesn't need a free method.
+// TODO: Display does need a free method for subwindows.
 
 // This is only called by Display.init() and Display.draw().
 fn void Display.update_viewport(&self) @private
@@ -173,38 +167,78 @@ fn bool is_printable(String str) @private
 // This is an hack because ncurses will segfault when accessing ACS characters.
 extern fn void winbox(Window *);
 
-fn void! Display.draw(&self)
+fn void Display.update_screen(&self) @private
 {
-    allocator::temp().reset(self.tmark);
-    ncurses::clear();
+    if (self.list) ncurses::delwin(self.list);
+    if (self.prev) ncurses::delwin(self.prev);
+    if (self.text) ncurses::delwin(self.text);
 
-    winbox(self.list);
-    winbox(self.prev);
-    winbox(self.text);
+    self.list = ncurses::subwin(ncurses::stdscr, self.app.h - 3, self.app.w / 2, 0, 0);
+    self.prev = ncurses::subwin(ncurses::stdscr, self.app.h, self.app.w / 2, 0, self.app.w / 2);
+    self.text = ncurses::subwin(ncurses::stdscr, 3, self.app.w / 2, self.app.h - 3, 0);
+}
 
-    // Coordinates relative to the window.
-    CInt x = 1;
+fn void Display.clear(&self)
+{
+    assert(self.list && self.prev && self.text);
+
+    ncurses::wclear(ncurses::stdscr);
+    ncurses::wclear(self.list);
+    ncurses::wclear(self.prev);
+    ncurses::wclear(self.text);
+}
+
+fn void Display.draw_list(&self)
+{
+    CInt w, h;
+    ncurses::@getmaxyx(self.list, h, w);
+
+    // Cursor coordinates.
+    CInt x = 2;
     CInt y = 2;
-
-    CInt wl, hl, wp, hp;
-    ncurses::@getmaxyx(self.list, hl, wl);
-    ncurses::@getmaxyx(self.prev, hp, wp);
-
+    
+    // Window specifiers.
     self.host(self.list);
     ncurses::mvwprintw(self.list, 0, 2, "%s@%s ", self.app.user, self.app.host);
     self.pwd(self.list);
-    ncurses::wprintw(self.list, "%s", self.sys.cwd.str_view());
+    ncurses::wprintw(self.list, "%s", self.sys.cwd.as_zstr());
     self.reset(self.list);
-
-    self.update_viewport();
 
     if (self.sys.ls.is_empty())
     {
         self.select(self.list);
-        ncurses::mvwprintw(self.list, y, x, " %- *s", wl - 3, "<empty>");
+        // w - 3 because it takes in account the borders and the front space.
+        ncurses::mvwprintw(self.list, y, x, "%- *s", w - 3, "<empty>");
         self.reset(self.list);
-        ncurses::refresh();
         return;
+    }
+
+    if (self.app.resized()) {
+        self.top();
+        self.vtop = 0;
+        self.vbot = (usz)(h - 4);
+    }
+
+    if (self.sys.ls.len() < (usz)(h - 4)) 
+    {
+        self.vtop = 0;
+        self.vbot = self.sys.ls.len();
+        // Here there was a return statement so if something broke maybe it's the cause.
+    }
+    else 
+    {
+        self.vbot = self.vtop + (usz)(h - 4);
+    }
+
+    if (self.cur < self.vtop)
+    {
+        self.vtop -= 1;
+        self.vbot -= 1;
+    }
+    else if (self.cur >= self.vbot)
+    {
+        self.vtop += 1;
+        self.vbot += 1;
     }
 
     for (usz i = self.vtop; i < self.vbot; i++)
@@ -225,78 +259,142 @@ fn void! Display.draw(&self)
         if (i == self.cur) self.select(self.list);
 
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + (CInt)i, x, " %- *s", wl - 3, 
+        ncurses::mvwprintw(self.list, y + (CInt)i, x, "%- *s", w - 3, 
                                                 self.sys.ls[i].str_view());
 
         self.reset(self.list);
     }
-
-
-    if (path::is_file(self.sys.ls[self.cur]))
-    {
-        switch (stat::is_exe(self.sys.ls[self.cur]))
-        {
-            case 1:
-                ncurses::mvwprintw(self.prev, y, x, "<binary>");
-
-            case 0:
-                char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
-                if (catch chars) break;
-
-                String content = (String) chars;
-                if (content.len == 0)
-                {
-                    ncurses::mvwprintw(self.prev, y, x, "<empty>");
-                    break;
-                }
-                if (!is_printable(content))
-                {
-                    ncurses::mvwprintw(self.prev, y, x, "<binary>");
-                    break;
-                }
-                String[] lines = content.tsplit("\n");
-
-                usz stop = (usz)(hp - 3);
-                if (lines.len < stop) stop = lines.len;
-                
-                for (int i = 0; i < stop; i++)
-                {
-                    CInt len = lines[i].len;
-                    if (len > (wp - 2)) len = wp - 2;
-                    ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, lines[i]);
-                }
-
-            case -1:
-                return DisplayError.NO_PREVIEW?;
-        }
-    }
-
-    if (stat::is_dir(self.sys.ls[self.cur]))
-    {
-        PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
-        if (catch ls)
-        {
-            ncurses::mvwprintw(self.prev, y, x, "<error while loading>");
-            return;
-        }
-
-        usz stop = (usz)(hp - 3);
-        if (ls.len() < stop) stop = ls.len();
-        
-        if (ls.is_empty())
-        {
-            ncurses::mvwprintw(self.prev, y, x, "<empty>");
-        }
-        else
-        {
-            for (int i = 0; i < stop; i++)
-            {
-                CInt len = ls[i].str_view().len;
-                if (len > (wp - 2)) len = (CInt)(wp - 2);
-                ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, ls[i].str_view());
-            }
-        }
-    }
-
-    ncurses::refresh();
 }
+
+fn void Display.draw_prev(&self)
+{
+}
+
+fn void Display.draw_text(&self)
+{
+}
+
+fn void Display.update(&self)
+{
+    allocator::temp().reset(self.tmark);
+
+    self.update_screen();
+    self.clear();
+
+    winbox(self.list);
+    winbox(self.prev);
+    winbox(self.text);
+
+    self.draw_list();
+    self.draw_prev();
+    self.draw_text();
+
+    // No need to call refresh cause getch() inside the main will 
+    // automatically call it. 
+}
+
+// fn void! Display.draw(&self)
+// {
+//     // Coordinates relative to the window.
+//     CInt x = 1;
+//     CInt y = 2;
+
+//     CInt wl, hl, wp, hp;
+//     ncurses::@getmaxyx(self.list, hl, wl);
+//     ncurses::@getmaxyx(self.prev, hp, wp);
+
+//     for (usz i = self.vtop; i < self.vbot; i++)
+//     {
+//         if (stat::is_link(self.sys.ls[i]))
+//         {
+//             self.link(self.list);
+//         }
+//         else if (stat::is_exe(self.sys.ls[i]))
+//         {
+//             self.exe(self.list);
+//         }
+//         else if (stat::is_dir(self.sys.ls[i])) 
+//         {
+//             self.dir(self.list);
+//         }
+
+//         if (i == self.cur) self.select(self.list);
+
+//         // Align text taking in account the first space and one in the middle
+//         ncurses::mvwprintw(self.list, y + (CInt)i, x, " %- *s", wl - 3, 
+//                                                 self.sys.ls[i].str_view());
+
+//         self.reset(self.list);
+//     }
+
+
+//     if (path::is_file(self.sys.ls[self.cur]))
+//     {
+//         switch (stat::is_exe(self.sys.ls[self.cur]))
+//         {
+//             case 1:
+//                 ncurses::mvwprintw(self.prev, y, x, "<binary>");
+
+//             case 0:
+//                 char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
+//                 if (catch chars) break;
+
+//                 String content = (String) chars;
+//                 if (content.len == 0)
+//                 {
+//                     ncurses::mvwprintw(self.prev, y, x, "<empty>");
+//                     break;
+//                 }
+//                 if (!is_printable(content))
+//                 {
+//                     ncurses::mvwprintw(self.prev, y, x, "<binary>");
+//                     break;
+//                 }
+//                 String[] lines = content.tsplit("\n");
+
+//                 usz stop = (usz)(hp - 3);
+//                 if (lines.len < stop) stop = lines.len;
+                
+//                 for (int i = 0; i < stop; i++)
+//                 {
+//                     CInt len = lines[i].len;
+//                     if (len > (wp - 2)) len = wp - 2;
+//                     ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, lines[i]);
+//                 }
+
+//             case -1:
+//                 return DisplayError.NO_PREVIEW?;
+//         }
+//     }
+
+//     if (stat::is_dir(self.sys.ls[self.cur]))
+//     {
+//         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
+//         if (catch ls)
+//         {
+//             ncurses::mvwprintw(self.prev, y, x, "<error while loading>");
+//             return;
+//         }
+
+//         usz stop = (usz)(hp - 3);
+//         if (ls.len() < stop) stop = ls.len();
+        
+//         if (ls.is_empty())
+//         {
+//             ncurses::mvwprintw(self.prev, y, x, "<empty>");
+//         }
+//         else
+//         {
+//             for (int i = 0; i < stop; i++)
+//             {
+//                 CInt len = ls[i].str_view().len;
+//                 if (len > (wp - 2)) len = (CInt)(wp - 2);
+//                 ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, ls[i].str_view());
+//             }
+//         }
+//     }
+
+//     ncurses::wrefresh(self.list);
+//     ncurses::wrefresh(self.prev);
+//     ncurses::wrefresh(self.text);
+// }
