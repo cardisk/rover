@@ -208,7 +208,7 @@ fn void Display.draw_list(&self)
     {
         self.select(self.list);
         // w - 3 because it takes in account the borders and the front space.
-        ncurses::mvwprintw(self.list, y, x, "%- *s", w - 3, "<empty>");
+        ncurses::mvwprintw(self.list, y, x, "%- *s", w - 4, "<empty>");
         self.reset(self.list);
         return;
     }
@@ -241,6 +241,7 @@ fn void Display.draw_list(&self)
         self.vbot += 1;
     }
 
+    CInt offset = 0;
     for (usz i = self.vtop; i < self.vbot; i++)
     {
         if (stat::is_link(self.sys.ls[i]))
@@ -258,11 +259,24 @@ fn void Display.draw_list(&self)
 
         if (i == self.cur) self.select(self.list);
 
+        String item = self.sys.ls[i].str_view().tcopy();
+
+        // Taking in account elements with non-ascii chars.
+        foreach (&c : item)
+        {
+            if (!c.is_print()) *c = '?';
+        }
+
+        if (item.len > (usz)(w - 4))
+        {
+            item[(usz)(w - 4)] = '\0';
+        }
+
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + (CInt)i, x, "%- *s", w - 3, 
-                                                self.sys.ls[i].str_view());
+        ncurses::mvwprintw(self.list, y + offset, x, "%- *s", w - 4, item);
 
         self.reset(self.list);
+        offset++;
     }
 }
 
