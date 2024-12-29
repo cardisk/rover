@@ -39,16 +39,6 @@ struct Display
 fn void! Display.init(&self, State *app, System *sys)
 {
     assert(app && sys);
-    self.app = app;
-    self.sys = sys;
-
-    self.cur = 0;
-    self.vtop = 0;
-    self.vbot = (usz)(app.h - 3);
-
-    self.tmark = allocator::temp().mark();
-
-    self.update_viewport();
 
     if (!ncurses::initscr()) return DisplayError.INIT_FAIL?;
     if (!ncurses::has_colors()) return DisplayError.NO_COLORS?;
@@ -66,45 +56,25 @@ fn void! Display.init(&self, State *app, System *sys)
     if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
 
+    self.app = app;
+    self.sys = sys;
+
+    self.cur = 0;
+    self.vtop = 0;
+    self.vbot = 0;
+
+    self.tmark = allocator::temp().mark();
+
     self.list = null;
     self.prev = null;
     self.text = null;
 }
 
-// TODO: Display does need a free method for subwindows.
-
-// This is only called by Display.init() and Display.draw().
-fn void Display.update_viewport(&self) @private
+fn void Display.free(&self)
 {
-    // TODO: maybe the behaviour of the resize should be handled differently.
-    if (self.app.resized()) {
-        self.top();
-        self.vtop = 0;
-        self.vbot = (usz)(self.app.h - 3);
-    }
-
-    if (self.sys.ls.len() < (usz)(self.app.h - 3)) 
-    {
-        self.vtop = 0;
-        self.vbot = self.sys.ls.len();
-        return;
-    }
-    else 
-    {
-        self.vbot = self.vtop + (usz)(self.app.h - 3);
-    }
-
-    if (self.cur < self.vtop)
-    {
-        self.vtop -= 1;
-        self.vbot -= 1;
-    }
-
-    if (self.cur >= self.vbot)
-    {
-        self.vtop += 1;
-        self.vbot += 1;
-    }
+    ncurses::delwin(self.list);
+    ncurses::delwin(self.prev);
+    ncurses::delwin(self.text);
 }
 
 fn void Display.dir(&self, Window *win)
@@ -154,6 +124,36 @@ macro Display.up(&self)   => (self.cur > 0) ? self.cur-- : 0;
 macro Display.down(&self) => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
 macro Display.top(&self) => self.cur = 0;
 macro Display.bottom(&self) => self.cur = self.sys.ls.len() - 1;
+
+fn ZString Display.input(&self, char prefix)
+{
+    ncurses::curs_set(1);
+    ncurses::mvwprintw(self.text, 1, 2, "%c ", prefix);
+    
+    CInt in = 0;
+    DString buf;
+    buf.temp_init(128);
+
+    while (in != 27 && in != '\n')
+    {
+        in = ncurses::wgetch(self.text);
+
+        if (in == ncurses::KEY_BACKSPACE && buf.len() > 0)
+        {
+            ncurses::wprintw(self.text, "\b \b");
+            buf.chop(buf.len() - 1);
+        }
+        else if (((char)in).is_print())
+        {
+            ncurses::wprintw(self.text, "%c", (char) in);
+            buf.append((char) in);
+        }
+    }
+
+    ncurses::curs_set(0);
+
+    return buf.zstr_view();
+}
 
 fn bool is_printable(String str) @private
 {
@@ -373,7 +373,6 @@ fn void! Display.update(&self)
 
     self.draw_list();
     self.draw_prev()!;
-    self.draw_text();
 
     // No need to call refresh cause getch() inside the main will 
     // automatically call it. 

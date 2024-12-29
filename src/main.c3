@@ -127,40 +127,16 @@ fn void main()
                 tui.top();
 
             case '/':
-                ncurses::move(app.h - 1, 0);
-                ncurses::curs_set(1);
+                ZString in = tui.input('/');
 
-                ncurses::printw("/");
-                ncurses::refresh();
-                
-                CInt in = 0;
-                DString buf;
-
-                while (in != 27 && in != '\n')
+                if (in.len() != 0)
                 {
-                    in = ncurses::getch();
-
-                    if (in == ncurses::KEY_BACKSPACE && buf.len() > 0)
+                    if (catch sys.set_apply_filter(in.str_view().zstr_copy()))
                     {
-                        ncurses::printw("\b \b");
-                        buf.chop(buf.len() - 1);
-                    }
-                    else if (((char)in).is_alnum())
-                    {
-                        ncurses::printw("%c", (char) in);
-                        buf.append((char) in);
-                    }
-                }
-                if (buf.len() != 0)
-                {
-                    if (catch sys.set_apply_filter(buf.copy_zstr()))
-                    {
-                        app.log(string::new_format("Unable to apply filter %s.", buf.str_view()));
+                        app.log(string::new_format("Unable to apply filter %s.", in));
                         continue;
                     }
-                    buf.free();
                 }
-                ncurses::curs_set(0);
                 tui.top();
 
             case '\\':
@@ -184,4 +160,5 @@ fn void main()
 
     app.free();
     sys.free();
+    tui.free();
 }
