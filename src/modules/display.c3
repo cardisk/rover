@@ -280,15 +280,87 @@ fn void Display.draw_list(&self)
     }
 }
 
-fn void Display.draw_prev(&self)
+fn void! Display.draw_prev(&self)
 {
+    CInt w, h;
+    ncurses::@getmaxyx(self.prev, h, w);
+
+    // Cursor coordinates.
+    CInt x = 2;
+    CInt y = 2;
+
+    if (path::is_file(self.sys.ls[self.cur]))
+    {
+        switch (stat::is_exe(self.sys.ls[self.cur]))
+        {
+            case 1:
+                ncurses::mvwprintw(self.prev, y, x, "<binary>");
+
+            case 0:
+                char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
+                if (catch chars) break;
+
+                String content = (String) chars;
+                if (content.len == 0)
+                {
+                    ncurses::mvwprintw(self.prev, y, x, "<empty>");
+                    break;
+                }
+                if (!is_printable(content))
+                {
+                    ncurses::mvwprintw(self.prev, y, x, "<binary>");
+                    break;
+                }
+                String[] lines = content.tsplit("\n");
+
+                usz stop = (usz)(h - 4);
+                if (lines.len < stop) stop = lines.len;
+                
+                for (int i = 0; i < stop; i++)
+                {
+                    CInt len = lines[i].len;
+                    if (len > (w - 4)) len = w - 4;
+                    ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, lines[i]);
+                }
+
+            case -1:
+                return DisplayError.NO_PREVIEW?;
+        }
+    }
+
+    if (stat::is_dir(self.sys.ls[self.cur]))
+    {
+        PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
+        if (catch ls)
+        {
+            ncurses::mvwprintw(self.prev, y, x, "<error while loading>");
+            return;
+        }
+
+        usz stop = (usz)(h - 4);
+        if (ls.len() < stop) stop = ls.len();
+        
+        if (ls.is_empty())
+        {
+            ncurses::mvwprintw(self.prev, y, x, "<empty>");
+        }
+        else
+        {
+            for (int i = 0; i < stop; i++)
+            {
+                CInt len = ls[i].str_view().len;
+                if (len > (w - 4)) len = w - 4;
+                ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, ls[i].str_view());
+            }
+        }
+    }
 }
 
 fn void Display.draw_text(&self)
 {
 }
 
-fn void Display.update(&self)
+fn void! Display.update(&self)
 {
     allocator::temp().reset(self.tmark);
 
@@ -300,115 +372,9 @@ fn void Display.update(&self)
     winbox(self.text);
 
     self.draw_list();
-    self.draw_prev();
+    self.draw_prev()!;
     self.draw_text();
 
     // No need to call refresh cause getch() inside the main will 
     // automatically call it. 
 }
-
-// fn void! Display.draw(&self)
-// {
-//     // Coordinates relative to the window.
-//     CInt x = 1;
-//     CInt y = 2;
-
-//     CInt wl, hl, wp, hp;
-//     ncurses::@getmaxyx(self.list, hl, wl);
-//     ncurses::@getmaxyx(self.prev, hp, wp);
-
-//     for (usz i = self.vtop; i < self.vbot; i++)
-//     {
-//         if (stat::is_link(self.sys.ls[i]))
-//         {
-//             self.link(self.list);
-//         }
-//         else if (stat::is_exe(self.sys.ls[i]))
-//         {
-//             self.exe(self.list);
-//         }
-//         else if (stat::is_dir(self.sys.ls[i])) 
-//         {
-//             self.dir(self.list);
-//         }
-
-//         if (i == self.cur) self.select(self.list);
-
-//         // Align text taking in account the first space and one in the middle
-//         ncurses::mvwprintw(self.list, y + (CInt)i, x, " %- *s", wl - 3, 
-//                                                 self.sys.ls[i].str_view());
-
-//         self.reset(self.list);
-//     }
-
-
-//     if (path::is_file(self.sys.ls[self.cur]))
-//     {
-//         switch (stat::is_exe(self.sys.ls[self.cur]))
-//         {
-//             case 1:
-//                 ncurses::mvwprintw(self.prev, y, x, "<binary>");
-
-//             case 0:
-//                 char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
-//                 if (catch chars) break;
-
-//                 String content = (String) chars;
-//                 if (content.len == 0)
-//                 {
-//                     ncurses::mvwprintw(self.prev, y, x, "<empty>");
-//                     break;
-//                 }
-//                 if (!is_printable(content))
-//                 {
-//                     ncurses::mvwprintw(self.prev, y, x, "<binary>");
-//                     break;
-//                 }
-//                 String[] lines = content.tsplit("\n");
-
-//                 usz stop = (usz)(hp - 3);
-//                 if (lines.len < stop) stop = lines.len;
-                
-//                 for (int i = 0; i < stop; i++)
-//                 {
-//                     CInt len = lines[i].len;
-//                     if (len > (wp - 2)) len = wp - 2;
-//                     ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, lines[i]);
-//                 }
-
-//             case -1:
-//                 return DisplayError.NO_PREVIEW?;
-//         }
-//     }
-
-//     if (stat::is_dir(self.sys.ls[self.cur]))
-//     {
-//         PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
-//         if (catch ls)
-//         {
-//             ncurses::mvwprintw(self.prev, y, x, "<error while loading>");
-//             return;
-//         }
-
-//         usz stop = (usz)(hp - 3);
-//         if (ls.len() < stop) stop = ls.len();
-        
-//         if (ls.is_empty())
-//         {
-//             ncurses::mvwprintw(self.prev, y, x, "<empty>");
-//         }
-//         else
-//         {
-//             for (int i = 0; i < stop; i++)
-//             {
-//                 CInt len = ls[i].str_view().len;
-//                 if (len > (wp - 2)) len = (CInt)(wp - 2);
-//                 ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, ls[i].str_view());
-//             }
-//         }
-//     }
-
-//     ncurses::wrefresh(self.list);
-//     ncurses::wrefresh(self.prev);
-//     ncurses::wrefresh(self.text);
-// }

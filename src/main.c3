@@ -31,7 +31,11 @@ fn void main()
             app.log("Unable to update System info.");
             continue;
         }
-        tui.update();
+        if (catch tui.update())
+        {
+            app.log("Unable to update Display module.");
+            continue;
+        }
 
         switch (CInt key = ncurses::getch())
         {
