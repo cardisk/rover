@@ -107,7 +107,11 @@ fn void Display.host(&self, Window *win)
     ncurses::wattron(win, ncurses::color_pair(HST));
 }
 
-macro Display.select(&self, Window *win) => ncurses::wattron(win, ncurses::A_REVERSE);
+macro Display.select(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::A_REVERSE);
+}
 
 fn void Display.reset(&self, Window *win)
 {
@@ -220,7 +224,7 @@ fn void Display.draw_list(&self)
     {
         self.select(self.list);
         // w - 3 because it takes in account the borders and the front space.
-        ncurses::mvwprintw(self.list, y, x, "%- *s", w - 4, "<empty>");
+        ncurses::mvwprintw(self.list, y, x, " %- *s", w - 5, " <empty>");
         self.reset(self.list);
         return;
     }
@@ -285,7 +289,7 @@ fn void Display.draw_list(&self)
         }
 
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + offset, x, "%- *s", w - 4, item);
+        ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w - 5, item);
 
         self.reset(self.list);
         offset++;
@@ -381,6 +385,9 @@ fn void! Display.update(&self)
     self.update_screen();
     self.clear();
 
+    // TODO: redesign the interface.
+    // At the moment there are too many items on the screen and it's clear
+    // when everything is refreshed.
     winbox(self.list);
     winbox(self.prev);
     winbox(self.text);
