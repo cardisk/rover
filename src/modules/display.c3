@@ -120,9 +120,9 @@ fn void Display.reset(&self, Window *win)
     ncurses::wattroff(win, ncurses::color_pair(HST));
 }
 
-macro Display.up(&self)   => (self.cur > 0) ? self.cur-- : 0;
-macro Display.down(&self) => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
-macro Display.top(&self) => self.cur = 0;
+macro Display.up(&self)     => (self.cur > 0) ? self.cur-- : 0;
+macro Display.down(&self)   => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
+macro Display.top(&self)    => self.cur = 0;
 macro Display.bottom(&self) => self.cur = self.sys.ls.len() - 1;
 
 fn ZString Display.input(&self, char prefix)
