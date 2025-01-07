@@ -301,6 +301,8 @@ fn void! Display.draw_prev(&self)
     CInt x = 2;
     CInt y = 2;
 
+    if (self.sys.ls.is_empty()) return;
+
     if (path::is_file(self.sys.ls[self.cur]))
     {
         switch (stat::is_exe(self.sys.ls[self.cur]))
