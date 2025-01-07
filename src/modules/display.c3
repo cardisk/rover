@@ -130,23 +130,35 @@ fn ZString Display.input(&self, char prefix)
     ncurses::curs_set(1);
     ncurses::mvwprintw(self.text, 1, 2, "%c ", prefix);
     
-    CInt in = 0;
     DString buf;
     buf.temp_init(128);
 
-    while (in != 27 && in != '\n')
-    {
-        in = ncurses::wgetch(self.text);
+    CInt w = ncurses::getmaxx(self.text);
 
-        if (in == ncurses::KEY_BACKSPACE && buf.len() > 0)
+    while LOOP: (true)
+    {
+        CInt in = ncurses::wgetch(self.text);
+        CInt x = ncurses::getcurx(self.text);
+
+        switch (in)
         {
-            ncurses::wprintw(self.text, "\b \b");
-            buf.chop(buf.len() - 1);
-        }
-        else if (((char)in).is_print())
-        {
-            ncurses::wprintw(self.text, "%c", (char) in);
-            buf.append((char) in);
+            case 27: // ESC
+            case '\n':
+                break LOOP;
+
+            case 127:
+            case '\b':
+            case ncurses::KEY_BACKSPACE:
+                if (!buf.len()) break;
+                ncurses::wprintw(self.text, "\b \b");
+                buf.delete(buf.len() - 1);
+
+            default:
+                // clamping the text inside the window.
+                if (x > w - 3) break;
+                if (!((char)in).is_print()) break;
+                ncurses::waddch(self.text, in);
+                buf.append((char) in);
         }
     }
 
