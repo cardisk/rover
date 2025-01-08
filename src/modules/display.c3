@@ -147,6 +147,9 @@ fn ZString Display.input(&self, char prefix)
         switch (in)
         {
             case 27: // ESC
+                ncurses::curs_set(0);
+                return null;
+
             case '\n':
                 break LOOP;
 
@@ -198,10 +201,10 @@ fn void Display.clear(&self)
 {
     assert(self.list && self.prev && self.text);
 
-    ncurses::wclear(ncurses::stdscr);
-    ncurses::wclear(self.list);
-    ncurses::wclear(self.prev);
-    ncurses::wclear(self.text);
+    ncurses::werase(ncurses::stdscr);
+    ncurses::werase(self.list);
+    ncurses::werase(self.prev);
+    ncurses::werase(self.text);
 }
 
 fn void Display.draw_list(&self)

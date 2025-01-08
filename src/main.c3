@@ -137,6 +137,7 @@ fn void main()
 
             case '/':
                 ZString in = tui.input('/');
+                if (!in) continue;
 
                 if (in.len() != 0)
                 {
