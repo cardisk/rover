@@ -32,6 +32,7 @@ struct System
     Stat cwd_stat;
     Path cwd;
     List(<Path>) history;
+    List(<Path>) bookmarks;
     // When filtering this List will change, clear-filter will reload the cwd.
     PathList ls;
     ZString filter;
@@ -154,6 +155,7 @@ fn void System.free(&self)
     self.home.free();
     self.cwd.free();
     self.history.free();
+    self.bookmarks.free();
     self.ls.free();
     if (self.filter) libc::free(self.filter);
 }

@@ -126,6 +126,15 @@ fn void main()
                 }
                 tui.top();
 
+            case 's':
+                Path! p = sys.ls[tui.cur].new_absolute();
+                if (catch p)
+                {
+                    app.log("Unable to get absolute path for a new bookmark.");
+                    continue;
+                }
+                sys.bookmarks.push(p);
+
             case '/':
                 ZString in = tui.input('/');
 
