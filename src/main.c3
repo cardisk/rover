@@ -23,15 +23,17 @@ fn void main()
 
     while LOOP: (true)
     {
+        if (app.logs.len() > 10) break;
+
         app.update();
         if (catch sys.update())
         {
             app.log("Unable to update System info.");
             continue;
         }
-        if (catch tui.draw())
+        if (catch tui.update())
         {
-            app.log("Unable to update Display preview info.");
+            app.log("Unable to update Display module.");
             continue;
         }
 
@@ -104,6 +106,8 @@ fn void main()
                 tui.top();
 
             case 'b':
+                if (sys.history.is_empty()) break;
+
                 Path! p = sys.history.pop();
                 if (catch p)
                 {
@@ -122,41 +126,27 @@ fn void main()
                 }
                 tui.top();
 
-            case '/':
-                ncurses::move(app.h - 1, 0);
-                ncurses::curs_set(1);
-
-                ncurses::printw("/");
-                ncurses::refresh();
-                
-                CInt in = 0;
-                DString buf;
-
-                while (in != 27 && in != '\n')
+            case 's':
+                Path! p = sys.ls[tui.cur].new_absolute();
+                if (catch p)
                 {
-                    in = ncurses::getch();
-
-                    if (in == ncurses::KEY_BACKSPACE && buf.len() > 0)
-                    {
-                        ncurses::printw("\b \b");
-                        buf.chop(buf.len() - 1);
-                    }
-                    else if (rover::isalnum(in))
-                    {
-                        ncurses::printw("%c", (char) in);
-                        buf.append((char) in);
-                    }
+                    app.log("Unable to get absolute path for a new bookmark.");
+                    continue;
                 }
-                if (buf.len() != 0)
+                sys.bookmarks.push(p);
+
+            case '/':
+                ZString in = tui.input('/');
+                if (!in) continue;
+
+                if (in.len() != 0)
                 {
-                    if (catch sys.set_apply_filter(buf.copy_zstr()))
+                    if (catch sys.set_apply_filter(in.str_view().zstr_copy()))
                     {
-                        app.log(string::new_format("Unable to apply filter %s.", buf.str_view()));
+                        app.log(string::new_format("Unable to apply filter %s.", in));
                         continue;
                     }
-                    buf.free();
                 }
-                ncurses::curs_set(0);
                 tui.top();
 
             case '\\':
@@ -180,4 +170,5 @@ fn void main()
 
     app.free();
     sys.free();
+    tui.free();
 }
