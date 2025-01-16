@@ -1,30 +1,56 @@
 module rover::defaults;
 
-const String default_display = 
+const String DEFAULT_DISPLAY = 
 `
 {
-    "title" = {
-        "is_visible" = true,
-    },
-    "list" = {
-        "is_visible" = true,
-    },
-    "preview" = {
-        "is_visible" = true,
-    },
-    "bookmarks" = {
-        "is_visible" = true,
-    },
-    "status" = {
-        "is_visible" = true,
-    },
-    "logs" = {
-        "is_visible" = true,
-    },
+    "type" = "vbox",
+    "content" = [
+        {
+            "type" = "win",
+            "name" = "title",
+            "w" = "w",
+            "h" = "3",
+        },
+        {
+            "type" = "hbox",
+            "content" = [
+                {
+                    "type" = "win",
+                    "name" = "list",
+                    "w" = "0.3 * w",
+                    "h" = "h - 9",
+                },
+                {
+                    "type" = "win",
+                    "name" = "preview",
+                    "w" = "0.3 * w",
+                    "h" = "h - 9",
+                },
+                {
+                    "type" = "win",
+                    "name" = "bookmarks",
+                    "w" = "0.3 * w",
+                    "h" = "h - 9",
+                },
+            ],
+        },
+        {
+            "type" = "win",
+            "name" = "status",
+            "w" = "w",
+            "h" = "3",
+        },
+        {
+            "type" = "win",
+            "name" = "logs",
+            "w" = "w",
+            "h" = "3",
+        },
+    ],
 }
 `;
 
-const String default_config =
+const String DEFAULT_CONFIG =
 `
 {
     "bookmarks_path" = "~/.config/rover"

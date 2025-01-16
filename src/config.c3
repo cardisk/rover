@@ -1,27 +1,11 @@
 module rover::config;
 import std::io::path;
-
-enum SubwinType
-{
-    HEADER,
-    CONTENT,
-    FOOTER,
-}
-
-enum SubwinPos
-{
-    LEFT,
-    CENTER,
-    RIGHT,
-}
+import std::encoding::json;
 
 struct Subwin
 {
-    SubwinType type;
-    bool is_visible;
-    // These are multipliers (e.g. w = 2/3 => w = 0.6).
+    CInt x ,y;
     CInt w, h;
-    SubwinPos pos;
 }
 
 struct Config
@@ -35,10 +19,10 @@ struct Config
     Subwin logs;
 }
 
-fn void Config.init()
+fn void Config.init(&self)
 {
 }
 
-fn void Config.read_subwin(String name) @private
+fn void Config.read_subwin(&self, Object name) @private
 {
 }
