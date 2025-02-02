@@ -54,7 +54,7 @@ fn void! System.init(&self)
     if (catch cwd) return SystemError.NO_CWD?;
     self.cwd = cwd;
 
-    if (!stat::@read_stat(self.cwd, self.cwd_stat)) return SystemError.NO_STAT?;
+    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
 
     self.history.new_init();
     
@@ -68,14 +68,24 @@ fn void! System.init(&self)
 fn void System.apply_filter(&self)
 {
     if (!self.filter) return;
-    self.ls.remove_using_test(
-        fn bool(PathImp *p, any ctx)
+    for (int i = 0; i < self.ls.len();)
+    {
+        if (!self.ls[i].str_view().contains(self.filter.str_view())) 
         {
-            return !p.str_view().contains(((ZString) ctx).str_view());
-        },
+            self.ls.remove_at(i);
+            continue;
+        }
+        i++;
+    }
+    // With this implementation the compiler segfaults (c3c version 0.6.6).
+    // self.ls.remove_using_test(
+    //     fn bool(PathImp *p, any ctx)
+    //     {
+    //         return !p.str_view().contains(((ZString) ctx).str_view());
+    //     },
 
-        self.filter
-    );
+    //     self.filter
+    // );
 }
 
 fn void! System.set_apply_filter(&self, ZString filter)
@@ -104,7 +114,7 @@ fn void! System.reload_cwd(&self) @private
     if (catch cwd) return SystemError.NO_CWD?;
     self.cwd = cwd;
 
-    if (!stat::@read_stat(self.cwd, self.cwd_stat)) return SystemError.NO_STAT?;
+    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
 
     self.ls.free();
     PathList! ls = path::new_ls(self.cwd);

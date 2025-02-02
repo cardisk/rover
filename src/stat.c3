@@ -9,7 +9,7 @@ macro bool is_dir(p)
     return path::is_dir(p);
 }
 
-macro bool @read_stat(p, &s)
+fn bool read_stat(Path p, Stat *s)
 {
     $if env::POSIX:
         if (rover::lstat(p.as_zstr(), s) < 0) return false;
@@ -24,7 +24,7 @@ macro bool is_stat(stat, type) => ((stat.st_mode & libc::S_IFMT) == type);
 fn int is_exe(Path p)
 {
     Stat stat;
-    if (!@read_stat(p, stat)) return -1;
+    if (!read_stat(p, &stat)) return -1;
     if (is_stat(stat, libc::S_IXUSR)) return 1;
     return 0;
 }
@@ -32,7 +32,7 @@ fn int is_exe(Path p)
 fn int is_link(Path p)
 {
     Stat stat;
-    if (!@read_stat(p, stat)) return -1;
+    if (!read_stat(p, &stat)) return -1;
     if (is_stat(stat, libc::S_IFLNK)) return 1;
     return 0;
 }
@@ -40,7 +40,7 @@ fn int is_link(Path p)
 fn int is_modified(Path p, Stat last_seen)
 {
     Stat stat;
-    if (!@read_stat(p, stat)) return -1;
+    if (!read_stat(p, &stat)) return -1;
 
     $if env::DARWIN:
         return (int)(last_seen.st_mtimespec.ns != stat.st_mtimespec.ns);

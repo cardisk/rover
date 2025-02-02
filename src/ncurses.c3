@@ -741,43 +741,43 @@ const A_ITALIC     = @bits(1U, 23);
 
 // NOTE: this function-like macros differ from C because of the macro-rules of C3.
 
-macro @getyx(win, &y, &x)
+macro @getyx(win, #y, #x)
 {
-    *y = getcury(win);
-    *x = getcurx(win);
+    #y = getcury(win);
+    #x = getcurx(win);
 }
 
-macro @getbegyx(win, &y, &x)
+macro @getbegyx(win, #y, #x)
 {
-    *y = getbegy(win);
-    *x = getbegx(win);
+    #y = getbegy(win);
+    #x = getbegx(win);
 }
 
-macro @getmaxyx(win, &y, &x)
+macro @getmaxyx(win, #y, #x)
 {
-    *y = getmaxy(win);
-    *x = getmaxx(win);
+    #y = getmaxy(win);
+    #x = getmaxx(win);
 }
 
-macro @getparyx(win, &y, &x)
+macro @getparyx(win, #y, #x)
 {
-    *y = getpary(win);
-    *x = getparx(win);
+    #y = getpary(win);
+    #x = getparx(win);
 }
 
-macro @getsyx(&y, &x)
+macro @getsyx(#y, #x)
 {
     if (is_leaveok(newscr))
     {
-        *x = *y = -1;
+        #x = #y = -1;
     }
     else
     {
-        getyx(newscr, *y, *x);
+        getyx(newscr, #y, #x);
     }
 }
 
-macro @setsyx(&y, &x)
+macro @setsyx(#y, #x)
 {
     if (*y == -1 && *x == -1)
     {
