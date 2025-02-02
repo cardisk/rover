@@ -17,6 +17,9 @@ fn void crash(anyfault f) @noreturn
 
 fn void main()
 {
+    // Doing the initalization here so the modules will load up correctly.
+    ncurses::initscr();
+
     if (catch e = app.init())           crash(e);
     if (catch e = sys.init())           crash(e);
     if (catch e = tui.init(&app, &sys)) crash(e);

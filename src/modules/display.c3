@@ -40,7 +40,8 @@ fn void! Display.init(&self, State *app, System *sys)
 {
     assert(app && sys);
 
-    if (!ncurses::initscr()) return DisplayError.INIT_FAIL?;
+    // Initialization of ncurses is now made inside main.
+
     if (!ncurses::has_colors()) return DisplayError.NO_COLORS?;
 
     if (ncurses::start_color() == ncurses::ERR) return DisplayError.INIT_FAIL?;
