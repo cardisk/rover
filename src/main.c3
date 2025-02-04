@@ -4,6 +4,7 @@ import std::io;
 import ncurses;
 import libc;
 
+Config  cfg;
 State   app;
 System  sys;
 Display tui;
@@ -20,6 +21,7 @@ fn void main()
     // Doing the initalization here so the modules will load up correctly.
     ncurses::initscr();
 
+    if (catch e = cfg.init())           crash(e);
     if (catch e = app.init())           crash(e);
     if (catch e = sys.init())           crash(e);
     if (catch e = tui.init(&app, &sys)) crash(e);
