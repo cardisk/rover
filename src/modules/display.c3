@@ -406,6 +406,81 @@ fn void! Display.draw_preview(&self)
     }
 }
 
+fn void Display.draw_bookmarks(&self)
+{
+    CInt w, h;
+    ncurses::@getmaxyx(self.bookmarks, h, w);
+
+    // Cursor coordinates.
+    CInt x = 2;
+    CInt y = 1;
+
+    CInt w_stop = w - 5;
+    CInt h_stop = h - 3;
+    
+    if (self.sys.bookmarks.is_empty())
+    {
+        self.select(self.bookmarks);
+        // It takes in account the borders and the front space.
+        ncurses::mvwprintw(self.bookmarks, y, x, " %- *s", w_stop, " <empty>");
+        self.reset(self.bookmarks);
+        return;
+    }
+
+    if (self.app.resized()) {
+        self.top();
+        self.vtop = 0;
+        self.vbot = (usz) h_stop;
+    }
+
+    if (self.sys.bookmarks.len() < (usz) h_stop) 
+    {
+        self.vtop = 0;
+        self.vbot = self.sys.bookmarks.len();
+        // Here there was a return statement so if something broke maybe it's the cause.
+    }
+    else 
+    {
+        self.vbot = self.vtop + (usz) h_stop;
+    }
+
+    CInt offset = 0;
+    for (usz i = self.vtop; i < self.vbot; i++)
+    {
+        if (stat::is_link(self.sys.bookmarks[i]))
+        {
+            self.link(self.bookmarks);
+        }
+        else if (stat::is_exe(self.sys.bookmarks[i]))
+        {
+            self.exe(self.bookmarks);
+        }
+        else if (stat::is_dir(self.sys.bookmarks[i])) 
+        {
+            self.dir(self.bookmarks);
+        }
+
+        String item = self.sys.bookmarks[i].str_view().tcopy();
+
+        // Taking in account elements with non-ascii chars.
+        foreach (&c : item)
+        {
+            if (!c.is_print()) *c = '?';
+        }
+
+        if (item.len > (usz)(w_stop - 1))
+        {
+            item[(usz)(w_stop - 1)] = '\0';
+        }
+
+        // Align text taking in account the first space and one in the middle
+        ncurses::mvwprintw(self.bookmarks, y + offset, x, " %- *s", w_stop, item);
+
+        self.reset(self.bookmarks);
+        offset++;
+    }
+}
+
 fn void! Display.update(&self)
 {
     Config *c = self.cfg;
@@ -414,9 +489,10 @@ fn void! Display.update(&self)
     self.update_screen();
     self.clear();
 
-    if (c.title.is_visible)   self.draw_title();
-    if (c.list.is_visible)    self.draw_list();
-    if (c.preview.is_visible) self.draw_preview()!;
+    if (c.title.is_visible)     self.draw_title();
+    if (c.list.is_visible)      self.draw_list();
+    if (c.preview.is_visible)   self.draw_preview()!;
+    if (c.bookmarks.is_visible) self.draw_bookmarks();
 
     // No need to call refresh cause getch() inside the main will 
     // automatically call it. 
