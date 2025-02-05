@@ -499,11 +499,15 @@ fn void! Display.draw_status(&self)
 
     ZString perm = stat::tposix_perm(s).zstr_view();
 
-    ZString trail = string::tformat_zstr("%dB %d/%d", s.st_size, self.cur + 1, self.sys.ls.len());
-    
+    ZString leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+    ZString trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.cur + 1, self.sys.ls.len());
+
+    // Avoid printing anything if the terminal width is too short.
+    if ((CInt)(leading.len() + trailing.len()) + 3 > maxx) return;
+
     ncurses::wattron(self.status, ncurses::A_BOLD);
-    ncurses::mvwprintw(self.status, y / 2, x, "%s @ %s %s", perm, passwd.pw_name, group.gr_name);
-    ncurses::mvwprintw(self.status, y / 2, maxx - ((CInt) trail.len() + 1), "%s", trail);
+    ncurses::mvwprintw(self.status, y / 2, x, "%s", leading);
+    ncurses::mvwprintw(self.status, y / 2, maxx - ((CInt) trailing.len() + 1), "%s", trailing);
     ncurses::wattroff(self.status, ncurses::A_BOLD);
 }
 
