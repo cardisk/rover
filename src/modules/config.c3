@@ -39,7 +39,7 @@ struct Config
     Subwin preview;
     Subwin bookmarks;
     Subwin status;
-    Subwin logs;
+    Subwin prompt;
 }
 
 fn void! Config.init(&self)
@@ -77,8 +77,8 @@ fn void! Config.init(&self)
     io::printn(self.bookmarks);
     io::print("status: ");
     io::printn(self.status);
-    io::print("logs: ");
-    io::printn(self.logs);
+    io::print("prompt: ");
+    io::printn(self.prompt);
     ncurses::refresh();
     // -----------------
 
@@ -204,8 +204,8 @@ fn Subwin*! Config.parse_win(&self, Object *obj, CInt x, CInt y)
             s = &self.bookmarks;
         case "status":
             s = &self.status;
-        case "logs":
-            s = &self.logs;
+        case "prompt":
+            s = &self.prompt;
         default:
             return ConfigError.INVALID_WINDOW_NAME?;
     }

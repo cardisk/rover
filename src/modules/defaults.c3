@@ -42,7 +42,7 @@ const String DEFAULT_DISPLAY =
         },
         {
             "type": "win",
-            "name": "logs",
+            "name": "prompt",
             "w": "w",
             "h": "3"
         },
