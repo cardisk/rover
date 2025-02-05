@@ -228,6 +228,18 @@ fn void Display.clear(&self)
     if (c.prompt.is_visible)    ncurses::werase(self.prompt);
 }
 
+fn void Display.draw_title(&self)
+{
+    CInt x = 2;
+    CInt y = ncurses::getmaxy(self.title);
+
+    self.host(self.title);
+    ncurses::mvwprintw(self.title, y / 2, x, "%s@%s ", self.app.user, self.app.host);
+    self.pwd(self.title);
+    ncurses::wprintw(self.title, "%s", self.sys.cwd.as_zstr());
+    self.reset(self.title);
+}
+
 fn void Display.draw_list(&self)
 {
     CInt w, h;
@@ -235,18 +247,11 @@ fn void Display.draw_list(&self)
 
     // Cursor coordinates.
     CInt x = 2;
-    CInt y = 2;
+    CInt y = 1;
 
     CInt w_stop = w - 5;
-    CInt h_stop = h - 4;
+    CInt h_stop = h - 3;
     
-    // Window specifiers.
-    // self.host(self.list);
-    // ncurses::mvwprintw(self.list, 0, 2, "%s@%s ", self.app.user, self.app.host);
-    // self.pwd(self.list);
-    // ncurses::wprintw(self.list, "%s", self.sys.cwd.as_zstr());
-    // self.reset(self.list);
-
     if (self.sys.ls.is_empty())
     {
         self.select(self.list);
@@ -409,6 +414,7 @@ fn void! Display.update(&self)
     self.update_screen();
     self.clear();
 
+    if (c.title.is_visible)   self.draw_title();
     if (c.list.is_visible)    self.draw_list();
     if (c.preview.is_visible) self.draw_preview()!;
 
