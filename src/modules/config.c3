@@ -28,6 +28,7 @@ struct Subwin
 {
     CInt x ,y;
     CInt w, h;
+    bool is_visible;
 }
 
 struct Config
@@ -209,6 +210,10 @@ fn Subwin*! Config.parse_win(&self, Object *obj, CInt x, CInt y)
             return ConfigError.INVALID_WINDOW_NAME?;
     }
     
+    // If the window is specified inside the configuration then it's
+    // automatically visible.
+    s.is_visible = true;
+
     s.x = x;
     s.y = y;
 

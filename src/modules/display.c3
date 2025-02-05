@@ -1,5 +1,5 @@
 module rover::display;
-import rover::state, rover::system, rover::stat;
+import rover::state, rover::system, rover::config, rover::stat;
 import std::io::path, std::io::file;
 import std::core::mem::allocator;
 import ncurses;
@@ -32,13 +32,21 @@ struct Display
     Window *prev;
     Window *text;
 
+    // Window *title;
+    // Window *list;
+    // Window *preview;
+    // Window *bookmarks;
+    // Window *status;
+    // Window *logs;
+
     State *app;
     System *sys;
+    Config *cfg;
 }
 
-fn void! Display.init(&self, State *app, System *sys)
+fn void! Display.init(&self, State *app, System *sys, Config *cfg)
 {
-    assert(app && sys);
+    assert(app && sys && cfg);
 
     // Initialization of ncurses is now made inside main.
 
@@ -59,6 +67,7 @@ fn void! Display.init(&self, State *app, System *sys)
 
     self.app = app;
     self.sys = sys;
+    self.cfg = cfg;
 
     self.cur = 0;
     self.vtop = 0;
@@ -196,6 +205,14 @@ fn void Display.update_screen(&self) @private
     self.list = ncurses::subwin(ncurses::stdscr, self.app.h - 3, self.app.w / 2, 0, 0);
     self.prev = ncurses::subwin(ncurses::stdscr, self.app.h, self.app.w / 2, 0, self.app.w / 2);
     self.text = ncurses::subwin(ncurses::stdscr, 3, self.app.w / 2, self.app.h - 3, 0);
+
+    // Config *c = self.cfg;
+    // if (c.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, c.title.h    , c.title.w    , c.title.y    , c.title.y);
+    // if (c.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, c.list.h     , c.list.w     , c.list.y     , c.list.x);
+    // if (c.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, c.preview.h  , c.preview.w  , c.preview.y  , c.preview.x);
+    // if (c.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, c.bookmarks.h, c.bookmarks.w, c.bookmarks.y, c.bookmarks.x);
+    // if (c.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, c.status.h   , c.status.w   , c.status.y   , c.status.x);
+    // if (c.logs.is_visible)      self.logs      = ncurses::subwin(ncurses::stdscr, c.logs.h     , c.logs.w     , c.logs.y     , c.logs.x);
 }
 
 fn void Display.clear(&self)
