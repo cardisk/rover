@@ -50,3 +50,27 @@ fn int is_modified(Path p, Stat last_seen)
         return (int)(last_seen.st_mtime != stat.st_mtime);
     $endif
 }
+
+fn DString tposix_perm(Stat s)
+{
+    DString perm;
+    // Only 10 slots are needed, round to the next power of 2.
+    perm.temp_init(16);
+
+    $if env::POSIX:
+        perm.append(libc_S_ISTYPE(s.st_mode, libc::S_IFDIR) ? "d" : "-");
+        perm.append((s.st_mode &  libc::S_IRUSR) ? "r" : "-");
+        perm.append((s.st_mode &  libc::S_IWUSR) ? "w" : "-");
+        perm.append((s.st_mode &  libc::S_IXUSR) ? "x" : "-");
+        perm.append((s.st_mode & rover::S_IRGRP) ? "r" : "-");
+        perm.append((s.st_mode & rover::S_IWGRP) ? "w" : "-");
+        perm.append((s.st_mode & rover::S_IXGRP) ? "x" : "-");
+        perm.append((s.st_mode & rover::S_IROTH) ? "r" : "-");
+        perm.append((s.st_mode & rover::S_IWOTH) ? "w" : "-");
+        perm.append((s.st_mode & rover::S_IXOTH) ? "x" : "-");
+    $else
+        $error("Non-Posix platform not supported");
+    $endif
+
+    return perm;
+}

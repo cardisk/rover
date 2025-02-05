@@ -3,6 +3,7 @@ import rover::state, rover::system, rover::config, rover::stat;
 import std::io::path, std::io::file;
 import std::core::mem::allocator;
 import ncurses;
+import libc;
 
 const CInt DIR = 1;
 const CInt EXE = 2;
@@ -16,6 +17,7 @@ fault DisplayError
     NO_COLORS,
     NO_COLBIND,
     NO_PREVIEW,
+    NO_STATUS,
 }
 
 struct Display
@@ -481,6 +483,30 @@ fn void Display.draw_bookmarks(&self)
     }
 }
 
+fn void! Display.draw_status(&self)
+{
+    CInt x = 2;
+    CInt maxx = ncurses::getmaxx(self.status);
+    CInt y = ncurses::getmaxy(self.status);
+
+    Stat s;
+    if (!stat::read_stat(self.sys.ls[self.cur], &s)) return DisplayError.NO_STATUS?;
+
+    // Needed for group name.
+    Group  *group  = rover::getgrgid(s.st_gid);
+    // Needed for user name.
+    Passwd *passwd = rover::getpwuid(s.st_uid);
+
+    ZString perm = stat::tposix_perm(s).zstr_view();
+
+    ZString trail = string::tformat_zstr("%dB %d/%d", s.st_size, self.cur + 1, self.sys.ls.len());
+    
+    ncurses::wattron(self.status, ncurses::A_BOLD);
+    ncurses::mvwprintw(self.status, y / 2, x, "%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+    ncurses::mvwprintw(self.status, y / 2, maxx - ((CInt) trail.len() + 1), "%s", trail);
+    ncurses::wattroff(self.status, ncurses::A_BOLD);
+}
+
 fn void! Display.update(&self)
 {
     Config *c = self.cfg;
@@ -493,6 +519,7 @@ fn void! Display.update(&self)
     if (c.list.is_visible)      self.draw_list();
     if (c.preview.is_visible)   self.draw_preview()!;
     if (c.bookmarks.is_visible) self.draw_bookmarks();
+    if (c.status.is_visible)    self.draw_status()!;
 
     // No need to call refresh cause getch() inside the main will 
     // automatically call it. 
