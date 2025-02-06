@@ -157,6 +157,8 @@ fn void Display.reset(&self, Window *win)
     ncurses::wattroff(win, ncurses::color_pair(HST));
 }
 
+macro Display.toggle_focus(&self) => self.focus = !self.focus;
+
 macro Display.up(&self)
 {
     if (self.focus)

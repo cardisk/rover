@@ -161,6 +161,9 @@ fn void main()
                     continue;
                 }
 
+            case '\t':
+                tui.toggle_focus();
+
             case ncurses::KEY_UP:
                 tui.up();
 
