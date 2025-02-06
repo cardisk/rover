@@ -23,12 +23,19 @@ fault DisplayError
 struct Display
 {
     // Position selected inside the list.
-    usz cur;
-    // Boundaries of the window (inclusive).
-    usz vtop;
-    usz vbot;
+    usz list_cur;
+    // Boundaries of the list window (inclusive).
+    usz list_vtop;
+    usz list_vbot;
+    // Position selected inside the bookmarks.
+    usz bookmarks_cur;
+    // Boundaries of the bookmarks window (inclusive).
+    usz bookmarks_vtop;
+    usz bookmarks_vbot;
+
     // Marker for the temporary allocator.
     usz tmark;
+
     // Subwindows.
     Window *title;
     Window *list;
@@ -37,6 +44,7 @@ struct Display
     Window *status;
     Window *prompt;
 
+    // Other required modules.
     State *app;
     System *sys;
     Config *cfg;
@@ -67,9 +75,9 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
     self.sys = sys;
     self.cfg = cfg;
 
-    self.cur = 0;
-    self.vtop = 0;
-    self.vbot = 0;
+    self.list_cur = 0;
+    self.list_vtop = 0;
+    self.list_vbot = 0;
 
     self.tmark = allocator::temp().mark();
 
@@ -139,10 +147,10 @@ fn void Display.reset(&self, Window *win)
     ncurses::wattroff(win, ncurses::color_pair(HST));
 }
 
-macro Display.up(&self)     => (self.cur > 0) ? self.cur-- : 0;
-macro Display.down(&self)   => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
-macro Display.top(&self)    => self.cur = 0;
-macro Display.bottom(&self) => self.cur = self.sys.ls.len() - 1;
+macro Display.up(&self)     => (self.list_cur > 0) ? self.list_cur-- : 0;
+macro Display.down(&self)   => (self.list_cur < self.sys.ls.len() - 1) ? self.list_cur++ : 0;
+macro Display.top(&self)    => self.list_cur = 0;
+macro Display.bottom(&self) => self.list_cur = self.sys.ls.len() - 1;
 
 fn ZString Display.input(&self, char prefix)
 {
@@ -265,34 +273,34 @@ fn void Display.draw_list(&self)
 
     if (self.app.resized()) {
         self.top();
-        self.vtop = 0;
-        self.vbot = (usz) h_stop;
+        self.list_vtop = 0;
+        self.list_vbot = (usz) h_stop;
     }
 
     if (self.sys.ls.len() < (usz) h_stop) 
     {
-        self.vtop = 0;
-        self.vbot = self.sys.ls.len();
+        self.list_vtop = 0;
+        self.list_vbot = self.sys.ls.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
     {
-        self.vbot = self.vtop + (usz) h_stop;
+        self.list_vbot = self.list_vtop + (usz) h_stop;
     }
 
-    if (self.cur < self.vtop)
+    if (self.list_cur < self.list_vtop)
     {
-        self.vtop -= 1;
-        self.vbot -= 1;
+        self.list_vtop -= 1;
+        self.list_vbot -= 1;
     }
-    else if (self.cur >= self.vbot)
+    else if (self.list_cur >= self.list_vbot)
     {
-        self.vtop += 1;
-        self.vbot += 1;
+        self.list_vtop += 1;
+        self.list_vbot += 1;
     }
 
     CInt offset = 0;
-    for (usz i = self.vtop; i < self.vbot; i++)
+    for (usz i = self.list_vtop; i < self.list_vbot; i++)
     {
         if (stat::is_link(self.sys.ls[i]))
         {
@@ -307,7 +315,7 @@ fn void Display.draw_list(&self)
             self.dir(self.list);
         }
 
-        if (i == self.cur) self.select(self.list);
+        if (i == self.list_cur) self.select(self.list);
 
         String item = self.sys.ls[i].str_view().tcopy();
 
@@ -341,15 +349,15 @@ fn void! Display.draw_preview(&self)
 
     if (self.sys.ls.is_empty()) return;
 
-    if (path::is_file(self.sys.ls[self.cur]))
+    if (path::is_file(self.sys.ls[self.list_cur]))
     {
-        switch (stat::is_exe(self.sys.ls[self.cur]))
+        switch (stat::is_exe(self.sys.ls[self.list_cur]))
         {
             case 1:
                 ncurses::mvwprintw(self.preview, y, x, "<binary>");
 
             case 0:
-                char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
+                char[]! chars = file::load_temp(self.sys.ls[self.list_cur].str_view());
                 if (catch chars) break;
 
                 String content = (String) chars;
@@ -380,9 +388,9 @@ fn void! Display.draw_preview(&self)
         }
     }
 
-    if (stat::is_dir(self.sys.ls[self.cur]))
+    if (stat::is_dir(self.sys.ls[self.list_cur]))
     {
-        PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
+        PathList! ls = path::temp_ls(self.sys.ls[self.list_cur]);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
@@ -431,23 +439,23 @@ fn void Display.draw_bookmarks(&self)
 
     if (self.app.resized()) {
         self.top();
-        self.vtop = 0;
-        self.vbot = (usz) h_stop;
+        self.bookmarks_vtop = 0;
+        self.bookmarks_vbot = (usz) h_stop;
     }
 
     if (self.sys.bookmarks.len() < (usz) h_stop) 
     {
-        self.vtop = 0;
-        self.vbot = self.sys.bookmarks.len();
+        self.bookmarks_vtop = 0;
+        self.bookmarks_vbot = self.sys.bookmarks.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
     {
-        self.vbot = self.vtop + (usz) h_stop;
+        self.bookmarks_vbot = self.bookmarks_vtop + (usz) h_stop;
     }
 
     CInt offset = 0;
-    for (usz i = self.vtop; i < self.vbot; i++)
+    for (usz i = self.bookmarks_vtop; i < self.bookmarks_vbot; i++)
     {
         if (stat::is_link(self.sys.bookmarks[i]))
         {
@@ -490,7 +498,7 @@ fn void! Display.draw_status(&self)
     CInt y = ncurses::getmaxy(self.status);
 
     Stat s;
-    if (!stat::read_stat(self.sys.ls[self.cur], &s)) return DisplayError.NO_STATUS?;
+    if (!stat::read_stat(self.sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
 
     // Needed for group name.
     Group  *group  = rover::getgrgid(s.st_gid);
@@ -500,7 +508,7 @@ fn void! Display.draw_status(&self)
     ZString perm = stat::tposix_perm(s).zstr_view();
 
     ZString leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
-    ZString trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.cur + 1, self.sys.ls.len());
+    ZString trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, self.sys.ls.len());
 
     // Avoid printing anything if the terminal width is too short.
     if ((CInt)(leading.len() + trailing.len()) + 3 > maxx) return;

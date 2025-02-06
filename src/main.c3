@@ -49,13 +49,13 @@ fn void main()
 
             case '\n':
                 if (sys.ls.is_empty()) continue;
-                if (!stat::is_dir(sys.ls[tui.cur]))
+                if (!stat::is_dir(sys.ls[tui.list_cur]))
                 {
                     ncurses::def_prog_mode();
                     ncurses::endwin();
 
                     ZString cmd = string::new_format_zstr(
-                        "nvim %s", sys.ls[tui.cur]
+                        "nvim %s", sys.ls[tui.list_cur]
                     );
                     libc::system(cmd);
                     libc::free(cmd);
@@ -70,10 +70,10 @@ fn void main()
                 }
                 else
                 {
-                    if (catch sys.pchdir(sys.ls[tui.cur]))
+                    if (catch sys.pchdir(sys.ls[tui.list_cur]))
                     {
                         app.log(string::new_format("Unable to change directory to %s.",
-                                                    sys.ls[tui.cur].str_view()));
+                                                    sys.ls[tui.list_cur].str_view()));
                         continue;
                     }
                     if (catch sys.clear_filter())
@@ -132,7 +132,7 @@ fn void main()
                 tui.top();
 
             case 's':
-                Path! p = sys.ls[tui.cur].new_absolute();
+                Path! p = sys.ls[tui.list_cur].new_absolute();
                 if (catch p)
                 {
                     app.log("Unable to get absolute path for a new bookmark.");
