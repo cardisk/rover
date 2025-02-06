@@ -33,6 +33,10 @@ struct Display
     usz bookmarks_vtop;
     usz bookmarks_vbot;
 
+    // Toggle between list and bookmarks.
+    // (true -> list_focus, false -> bookmarks_focus)
+    bool focus;
+
     // Marker for the temporary allocator.
     usz tmark;
 
@@ -78,6 +82,12 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
     self.list_cur = 0;
     self.list_vtop = 0;
     self.list_vbot = 0;
+
+    self.bookmarks_cur = 0;
+    self.bookmarks_vtop = 0;
+    self.bookmarks_vbot = 0;
+
+    self.focus = true;
 
     self.tmark = allocator::temp().mark();
 
@@ -147,10 +157,67 @@ fn void Display.reset(&self, Window *win)
     ncurses::wattroff(win, ncurses::color_pair(HST));
 }
 
-macro Display.up(&self)     => (self.list_cur > 0) ? self.list_cur-- : 0;
-macro Display.down(&self)   => (self.list_cur < self.sys.ls.len() - 1) ? self.list_cur++ : 0;
-macro Display.top(&self)    => self.list_cur = 0;
-macro Display.bottom(&self) => self.list_cur = self.sys.ls.len() - 1;
+macro Display.up(&self)
+{
+    if (self.focus)
+    {
+        // list
+        if (self.list_cur > 0) self.list_cur--;
+    }
+    else
+    {
+        // bookmarks
+        if (self.bookmarks_cur > 0) self.bookmarks_cur--;
+    }
+}
+
+macro Display.down(&self)
+{
+    if (self.focus)
+    {
+        // list
+        if (self.list_cur < self.sys.ls.len() - 1)
+        {
+            self.list_cur++;
+        }
+    }
+    else
+    {
+        // bookmarks
+        if (self.bookmarks_cur < self.sys.bookmarks.len() - 1)
+        {
+            self.bookmarks_cur++;
+        }
+    }
+}
+
+macro Display.top(&self)
+{
+    if (self.focus)
+    {
+        // list
+        self.list_cur = 0;
+    }
+    else
+    {
+        // bookmarks
+        self.bookmarks_cur = 0;
+    }
+}
+
+macro Display.bottom(&self)
+{
+    if (self.focus)
+    {
+        // list
+        self.list_cur = self.sys.ls.len() - 1;
+    }
+    else
+    {
+        // bookmarks
+        self.bookmarks_cur = self.sys.bookmarks.len() - 1;
+    }
+}
 
 fn ZString Display.input(&self, char prefix)
 {
@@ -454,6 +521,17 @@ fn void Display.draw_bookmarks(&self)
         self.bookmarks_vbot = self.bookmarks_vtop + (usz) h_stop;
     }
 
+    if (self.bookmarks_cur < self.bookmarks_vtop)
+    {
+        self.bookmarks_vtop -= 1;
+        self.bookmarks_vbot -= 1;
+    }
+    else if (self.bookmarks_cur >= self.bookmarks_vbot)
+    {
+        self.bookmarks_vtop += 1;
+        self.bookmarks_vbot += 1;
+    }
+
     CInt offset = 0;
     for (usz i = self.bookmarks_vtop; i < self.bookmarks_vbot; i++)
     {
@@ -469,6 +547,8 @@ fn void Display.draw_bookmarks(&self)
         {
             self.dir(self.bookmarks);
         }
+
+        if (i == self.bookmarks_cur) self.select(self.bookmarks);
 
         String item = self.sys.bookmarks[i].str_view().tcopy();
 
