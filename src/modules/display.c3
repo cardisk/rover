@@ -335,7 +335,7 @@ fn void Display.draw_list(&self)
     {
         self.select(self.list);
         // It takes in account the borders and the front space.
-        ncurses::mvwprintw(self.list, y, x, " %- *s", w_stop, " <empty>");
+        ncurses::mvwprintw(self.list, y, x, " %- *s", w_stop, "<empty>");
         self.reset(self.list);
         return;
     }
@@ -414,7 +414,7 @@ fn void! Display.draw_preview(&self)
 
     // Cursor coordinates.
     CInt x = 2;
-    CInt y = 2;
+    CInt y = 1;
 
     if (self.sys.ls.is_empty()) return;
 
@@ -501,7 +501,7 @@ fn void Display.draw_bookmarks(&self)
     {
         self.select(self.bookmarks);
         // It takes in account the borders and the front space.
-        ncurses::mvwprintw(self.bookmarks, y, x, " %- *s", w_stop, " <empty>");
+        ncurses::mvwprintw(self.bookmarks, y, x, " %- *s", w_stop, "<empty>");
         self.reset(self.bookmarks);
         return;
     }
