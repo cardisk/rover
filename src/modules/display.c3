@@ -416,6 +416,9 @@ fn void! Display.draw_preview(&self)
     CInt x = 2;
     CInt y = 1;
 
+    CInt w_stop = w - 4;
+    CInt h_stop = h - 3;
+
     if (self.sys.ls.is_empty()) return;
 
     if (path::is_file(self.sys.ls[self.list_cur]))
@@ -442,14 +445,20 @@ fn void! Display.draw_preview(&self)
                 }
                 String[] lines = content.tsplit("\n");
 
-                usz stop = (usz)(h - 4);
+                usz stop = (usz) h_stop;
                 if (lines.len < stop) stop = lines.len;
                 
                 for (int i = 0; i < stop; i++)
                 {
-                    CInt len = lines[i].len;
-                    if (len > (w - 4)) len = w - 4;
-                    ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, lines[i]);
+                    DString item;
+                    item.temp_init(1024);
+                    item.append(lines[i]);
+                    item.replace("\t", "    ");
+
+                    CInt len = (CInt) item.len();
+                    if (len > w_stop) len = w_stop; 
+
+                    ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item.zstr_view());
                 }
 
             case -1:
@@ -466,7 +475,7 @@ fn void! Display.draw_preview(&self)
             return;
         }
 
-        usz stop = (usz)(h - 4);
+        usz stop = (usz) h_stop;
         if (ls.len() < stop) stop = ls.len();
         
         if (ls.is_empty())
@@ -477,9 +486,10 @@ fn void! Display.draw_preview(&self)
         {
             for (int i = 0; i < stop; i++)
             {
-                CInt len = ls[i].str_view().len;
-                if (len > (w - 4)) len = w - 4;
-                ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, ls[i].str_view());
+                ZString item = ls[i].str_view().zstr_tcopy();
+                CInt len = (CInt) item.len();
+                if (len > w_stop) len = w_stop;
+                ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item);
             }
         }
     }
@@ -597,8 +607,12 @@ fn void! Display.draw_status(&self)
 
     ncurses::wattron(self.status, ncurses::A_BOLD);
     ncurses::mvwprintw(self.status, y / 2, x, "%s", leading);
-    ncurses::mvwprintw(self.status, y / 2, maxx - ((CInt) trailing.len() + 1), "%s", trailing);
+    ncurses::mvwprintw(self.status, y / 2, maxx - (CInt) trailing.len() - 2, "%s", trailing);
     ncurses::wattroff(self.status, ncurses::A_BOLD);
+}
+
+fn void Display.draw_prompt(&self)
+{
 }
 
 fn void! Display.update(&self)
@@ -609,11 +623,41 @@ fn void! Display.update(&self)
     self.update_screen();
     self.clear();
 
-    if (c.title.is_visible)     self.draw_title();
-    if (c.list.is_visible)      self.draw_list();
-    if (c.preview.is_visible)   self.draw_preview()!;
-    if (c.bookmarks.is_visible) self.draw_bookmarks();
-    if (c.status.is_visible)    self.draw_status()!;
+    if (c.title.is_visible)
+    {
+        if (c.title.is_boxed) ncurses::box(self.title, 0, 0);
+        self.draw_title();
+    }
+
+    if (c.list.is_visible)
+    {
+        if (c.list.is_boxed) ncurses::box(self.list, 0, 0);
+        self.draw_list();
+    }
+
+    if (c.preview.is_visible)
+    {
+        if (c.preview.is_boxed) ncurses::box(self.preview, 0, 0);
+        self.draw_preview()!;
+    }
+
+    if (c.bookmarks.is_visible)
+    {
+        if (c.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
+        self.draw_bookmarks();
+    }
+
+    if (c.status.is_visible)
+    {
+        if (c.status.is_boxed) ncurses::box(self.status, 0, 0);
+        self.draw_status()!;
+    }
+
+    if (c.prompt.is_visible)
+    {
+        if (c.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+        self.draw_prompt();
+    }
 
     // No need to call refresh cause getch() inside the main will 
     // automatically call it. 

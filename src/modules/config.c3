@@ -20,6 +20,7 @@ fault ConfigError
     MISSING_CONFIG_TYPE,
     MISSING_CONTAINER_CONTENT,
     MISSING_WINDOW_NAME,
+    MISSING_OR_INVALID_WINDOW_BOXED,
     MISSING_WINDOW_W,
     MISSING_WINDOW_H,
 }
@@ -29,6 +30,7 @@ struct Subwin
     CInt x ,y;
     CInt w, h;
     bool is_visible;
+    bool is_boxed;
 }
 
 struct Config
@@ -186,6 +188,9 @@ fn Subwin*! Config.parse_win(&self, Object *obj, CInt x, CInt y)
     String! name = obj.get_string("name");
     if (catch name) return ConfigError.MISSING_WINDOW_NAME?;
 
+    bool! boxed = obj.get_bool("boxed");
+    if (catch boxed) return ConfigError.MISSING_OR_INVALID_WINDOW_BOXED?;
+
     String! w = obj.get_string("w");
     if (catch w) return ConfigError.MISSING_WINDOW_W?;
     String! h = obj.get_string("h");
@@ -213,6 +218,9 @@ fn Subwin*! Config.parse_win(&self, Object *obj, CInt x, CInt y)
     // If the window is specified inside the configuration then it's
     // automatically visible.
     s.is_visible = true;
+
+    // s.is_boxed = boxed;
+    s.is_boxed = true;
 
     s.x = x;
     s.y = y;
