@@ -223,43 +223,47 @@ macro Display.bottom(&self)
 
 fn ZString Display.input(&self, char prefix)
 {
+    CInt maxx, maxy;
+    ncurses::@getmaxyx(self.prompt, maxy, maxx);
+
+    CInt x = 2;
+    CInt y = maxy / 2;
+
     ncurses::curs_set(1);
-    // ncurses::mvwprintw(self.text, 1, 2, "%c ", prefix);
+    ncurses::mvwprintw(self.prompt, y, x, "%c ", prefix);
     
     DString buf;
     buf.temp_init(128);
 
-    // CInt w = ncurses::getmaxx(self.text);
+    while LOOP: (true)
+    {
+        CInt in = ncurses::wgetch(self.prompt);
+        CInt cur_x = ncurses::getcurx(self.prompt);
 
-    // while LOOP: (true)
-    // {
-    //     CInt in = ncurses::wgetch(self.text);
-    //     CInt x = ncurses::getcurx(self.text);
+        switch (in)
+        {
+            case 27: // ESC
+                ncurses::curs_set(0);
+                return null;
 
-    //     switch (in)
-    //     {
-    //         case 27: // ESC
-    //             ncurses::curs_set(0);
-    //             return null;
+            case '\n':
+                break LOOP;
 
-    //         case '\n':
-    //             break LOOP;
+            case 127:
+            case '\b':
+            case ncurses::KEY_BACKSPACE:
+                if (!buf.len()) break;
+                ncurses::wprintw(self.prompt, "\b \b");
+                buf.delete(buf.len() - 1);
 
-    //         case 127:
-    //         case '\b':
-    //         case ncurses::KEY_BACKSPACE:
-    //             if (!buf.len()) break;
-    //             ncurses::wprintw(self.text, "\b \b");
-    //             buf.delete(buf.len() - 1);
-
-    //         default:
-    //             // clamping the text inside the window.
-    //             if (x > w - 3) break;
-    //             if (!((char)in).is_print()) break;
-    //             ncurses::waddch(self.text, in);
-    //             buf.append((char) in);
-    //     }
-    // }
+            default:
+                // clamping the text inside the window.
+                if (x > maxx - 3) break;
+                if (!((char) in).is_print()) break;
+                ncurses::waddch(self.prompt, in);
+                buf.append((char) in);
+        }
+    }
 
     ncurses::curs_set(0);
 
@@ -589,18 +593,28 @@ fn void! Display.draw_status(&self)
     CInt maxx = ncurses::getmaxx(self.status);
     CInt y = ncurses::getmaxy(self.status);
 
-    Stat s;
-    if (!stat::read_stat(self.sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
+    ZString leading, trailing;
 
-    // Needed for group name.
-    Group  *group  = rover::getgrgid(s.st_gid);
-    // Needed for user name.
-    Passwd *passwd = rover::getpwuid(s.st_uid);
+    if (self.sys.ls.is_empty())
+    {
+        leading  = string::tformat_zstr("%s @ %s %s", "----------", "---", "---");
+        trailing = string::tformat_zstr("%dB %d/%d", 0, 0, self.sys.ls.len());
+    }
+    else
+    {
+        Stat s;
+        if (!stat::read_stat(self.sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
 
-    ZString perm = stat::tposix_perm(s).zstr_view();
+        // Needed for group name.
+        Group  *group  = rover::getgrgid(s.st_gid);
+        // Needed for user name.
+        Passwd *passwd = rover::getpwuid(s.st_uid);
 
-    ZString leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
-    ZString trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, self.sys.ls.len());
+        ZString perm = stat::tposix_perm(s).zstr_view();
+
+        leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+        trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, self.sys.ls.len());
+    }
 
     // Avoid printing anything if the terminal width is too short.
     if ((CInt)(leading.len() + trailing.len()) + 3 > maxx) return;
@@ -613,6 +627,7 @@ fn void! Display.draw_status(&self)
 
 fn void Display.draw_prompt(&self)
 {
+    // Add here the code that will handle the errors.
 }
 
 fn void! Display.update(&self)
