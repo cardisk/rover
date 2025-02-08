@@ -51,6 +51,10 @@ macro State.resized(&self) => self.shrinked() || self.scaled();
 
 macro State.log(&self, String str) => self.logs.push(str);
 
+// TODO: maybe this can be removed.
+// Now there is the notion of error popup, so this 
+// is not needed anymore. Someone may want to print
+// them anyway at the end with some sort of flags.
 fn void State.show_logs(&self)
 {
     foreach (s : self.logs)

@@ -9,6 +9,10 @@ State   app;
 System  sys;
 Display tui;
 
+// This serves to activate or deactivate actions
+// when displaying the error popup.
+bool enable_action = true;
+
 fn void crash(anyfault f) @noreturn
 {
     ncurses::endwin();
@@ -28,8 +32,6 @@ fn void main()
 
     while LOOP: (true)
     {
-        if (app.logs.len() > 10) break;
-
         app.update();
         if (catch sys.update())
         {
@@ -48,6 +50,8 @@ fn void main()
                 break LOOP;
 
             case '\n':
+                if (!enable_action) continue;
+
                 if (sys.ls.is_empty()) continue;
                 if (!stat::is_dir(sys.ls[tui.list_cur]))
                 {
@@ -85,6 +89,8 @@ fn void main()
                 }
 
             case '-':
+                if (!enable_action) continue;
+
                 if (catch sys.clear_filter())
                 {
                     app.log("Unable to clear the filter.");
@@ -98,6 +104,8 @@ fn void main()
                 tui.top();
 
             case '.':
+                if (!enable_action) continue;
+
                 if (catch sys.clear_filter())
                 {
                     app.log("Unable to clear the filter.");
@@ -111,6 +119,8 @@ fn void main()
                 tui.top();
 
             case 'b':
+                if (!enable_action) continue;
+
                 if (sys.history.is_empty()) break;
 
                 Path! p = sys.history.pop();
@@ -132,6 +142,8 @@ fn void main()
                 tui.top();
 
             case 's':
+                if (!enable_action) continue;
+
                 Path! p = sys.ls[tui.list_cur].new_absolute();
                 if (catch p)
                 {
@@ -140,7 +152,32 @@ fn void main()
                 }
                 sys.bookmarks.push(p);
 
+            case 'e':
+                if (app.logs.is_empty()) continue;
+                if (enable_action)
+                {
+                    // Disable every action that cannot be done with error popup.
+                    enable_action = false;
+                    tui.toggle_focus(true);
+                }
+                else
+                {
+                    enable_action = true;
+                    tui.toggle_focus();
+                }
+
+            case 'd':
+                if (app.logs.is_empty()) continue;
+                app.logs.clear();
+                if (!enable_action)
+                {
+                    enable_action = true;
+                    tui.toggle_focus();
+                }
+
             case '/':
+                if (!enable_action) continue;
+
                 ZString in = tui.input('/');
                 if (!in) continue;
 
@@ -155,6 +192,8 @@ fn void main()
                 tui.top();
 
             case '\\':
+                if (!enable_action) continue;
+
                 if (catch sys.clear_filter())
                 {
                     app.log("Unable to clear the filter.");
@@ -162,6 +201,7 @@ fn void main()
                 }
 
             case '\t':
+                enable_action = true;
                 tui.toggle_focus();
 
             case ncurses::KEY_UP:

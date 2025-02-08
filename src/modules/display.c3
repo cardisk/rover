@@ -11,6 +11,8 @@ const CInt LNK = 3;
 const CInt PWD = 4;
 const CInt HST = 5;
 const CInt ERR = 6;
+// ErrorPopupBorder
+const CInt EPB = 7;
 
 fault DisplayError
 {
@@ -19,6 +21,13 @@ fault DisplayError
     NO_COLBIND,
     NO_PREVIEW,
     NO_STATUS,
+}
+
+enum Focus
+{
+    LIST,
+    BOOKMARKS,
+    ERROR,
 }
 
 struct Display
@@ -33,10 +42,13 @@ struct Display
     // Boundaries of the bookmarks window (inclusive).
     usz bookmarks_vtop;
     usz bookmarks_vbot;
+    // Position selected inside the error popup.
+    usz error_cur;
+    // Boundaries of the error popup (inclusive).
+    usz error_vtop;
+    usz error_vbot;
 
-    // Toggle between list and bookmarks.
-    // (true -> list_focus, false -> bookmarks_focus)
-    bool focus;
+    Focus focus;
 
     // Marker for the temporary allocator.
     usz tmark;
@@ -48,6 +60,9 @@ struct Display
     Window *bookmarks;
     Window *status;
     Window *prompt;
+
+    // Error popup, not customizable.
+    Window *error;
 
     // Other required modules.
     State *app;
@@ -76,6 +91,7 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
     if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(ERR, ncurses::COLOR_WHITE, ncurses::COLOR_RED)) return DisplayError.INIT_FAIL?;
+    if (ncurses::init_pair(EPB, ncurses::COLOR_RED, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
 
     self.app = app;
     self.sys = sys;
@@ -89,7 +105,11 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
     self.bookmarks_vtop = 0;
     self.bookmarks_vbot = 0;
 
-    self.focus = true;
+    self.error_cur = 0;
+    self.error_vtop = 0;
+    self.error_vbot = 0;
+
+    self.focus = Focus.LIST;
 
     self.tmark = allocator::temp().mark();
 
@@ -99,6 +119,8 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
     self.bookmarks = null;
     self.status    = null;
     self.prompt    = null;
+
+    self.error = null;
 }
 
 fn void Display.free(&self)
@@ -166,120 +188,85 @@ fn void Display.reset(&self, Window *win)
     ncurses::wattroff(win, ncurses::color_pair(ERR));
 }
 
-macro Display.toggle_focus(&self) => self.focus = !self.focus;
+macro Display.toggle_focus(&self, bool error = false)
+{
+    if (error)
+    {
+        self.focus = Focus.ERROR;
+        self.top();
+        return;
+    }
+
+    switch (self.focus)
+    {
+        case Focus.LIST:
+            self.focus = Focus.BOOKMARKS;
+        case Focus.BOOKMARKS:
+            self.focus = Focus.LIST;
+        case Focus.ERROR:
+            self.focus = Focus.LIST;
+    }
+}
 
 macro Display.up(&self)
 {
-    if (self.focus)
+    switch (self.focus)
     {
-        // list
-        if (self.list_cur > 0) self.list_cur--;
-    }
-    else
-    {
-        // bookmarks
-        if (self.bookmarks_cur > 0) self.bookmarks_cur--;
+        case Focus.LIST:
+            if (self.list_cur > 0) self.list_cur--;
+        case Focus.BOOKMARKS:
+            if (self.bookmarks_cur > 0) self.bookmarks_cur--;
+        case Focus.ERROR:
+            if (self.error_cur > 0) self.error_cur--;
     }
 }
 
 macro Display.down(&self)
 {
-    if (self.focus)
+    switch (self.focus)
     {
-        // list
-        if (self.list_cur < self.sys.ls.len() - 1)
-        {
-            self.list_cur++;
-        }
-    }
-    else
-    {
-        // bookmarks
-        if (self.bookmarks_cur < self.sys.bookmarks.len() - 1)
-        {
-            self.bookmarks_cur++;
-        }
+        case Focus.LIST:
+            if (self.list_cur < self.sys.ls.len() - 1)
+            {
+                self.list_cur++;
+            }
+        case Focus.BOOKMARKS:
+            if (self.bookmarks_cur < self.sys.bookmarks.len() - 1)
+            {
+                self.bookmarks_cur++;
+            }
+        case Focus.ERROR:
+            if (self.error_cur < self.app.logs.len() - 1)
+            {
+                self.error_cur++;
+            }
     }
 }
 
 macro Display.top(&self)
 {
-    if (self.focus)
+    switch (self.focus)
     {
-        // list
-        self.list_cur = 0;
-    }
-    else
-    {
-        // bookmarks
-        self.bookmarks_cur = 0;
+        case Focus.LIST:
+            self.list_cur = 0;
+        case Focus.BOOKMARKS:
+            self.bookmarks_cur = 0;
+        case Focus.ERROR:
+            self.error_cur = 0;
     }
 }
 
 macro Display.bottom(&self)
 {
-    if (self.focus)
+    switch (self.focus)
     {
-        // list
-        self.list_cur = self.sys.ls.len() - 1;
+        case Focus.LIST:
+            self.list_cur = self.sys.ls.len() - 1;
+        case Focus.BOOKMARKS:
+            self.bookmarks_cur = self.sys.bookmarks.len() - 1;
+        case Focus.ERROR:
+            self.error_cur = self.app.logs.len() - 1;
     }
-    else
-    {
-        // bookmarks
-        self.bookmarks_cur = self.sys.bookmarks.len() - 1;
-    }
-}
-
-fn ZString Display.input(&self, char prefix)
-{
-    ncurses::werase(self.prompt);
-    if (self.cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
-
-    CInt maxx, maxy;
-    ncurses::@getmaxyx(self.prompt, maxy, maxx);
-
-    CInt x = 2;
-    CInt y = maxy / 2;
-
-    ncurses::curs_set(1);
-    ncurses::mvwprintw(self.prompt, y, x, "%c ", prefix);
-    
-    DString buf;
-    buf.temp_init(128);
-
-    while LOOP: (true)
-    {
-        CInt in = ncurses::wgetch(self.prompt);
-        CInt cur_x = ncurses::getcurx(self.prompt);
-
-        switch (in)
-        {
-            case 27: // ESC
-                ncurses::curs_set(0);
-                return null;
-
-            case '\n':
-                break LOOP;
-
-            case 127:
-            case '\b':
-            case ncurses::KEY_BACKSPACE:
-                if (!buf.len()) break;
-                ncurses::wprintw(self.prompt, "\b \b");
-                buf.delete(buf.len() - 1);
-
-            default:
-                // clamping the text inside the window.
-                if (x > maxx - 3) break;
-                if (!((char) in).is_print()) break;
-                ncurses::waddch(self.prompt, in);
-                buf.append((char) in);
-        }
-    }
-
-    ncurses::curs_set(0);
-
-    return buf.zstr_view();
 }
 
 fn bool is_printable(String str) @private
@@ -301,13 +288,18 @@ fn void Display.update_screen(&self) @private
     if (c.status.is_visible)    ncurses::delwin(self.status);
     if (c.prompt.is_visible)    ncurses::delwin(self.prompt);
 
-
     if (c.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, c.title.h    , c.title.w    , c.title.y    , c.title.y);
     if (c.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, c.list.h     , c.list.w     , c.list.y     , c.list.x);
     if (c.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, c.preview.h  , c.preview.w  , c.preview.y  , c.preview.x);
     if (c.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, c.bookmarks.h, c.bookmarks.w, c.bookmarks.y, c.bookmarks.x);
     if (c.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, c.status.h   , c.status.w   , c.status.y   , c.status.x);
     if (c.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, c.prompt.h   , c.prompt.w   , c.prompt.y   , c.prompt.x);
+
+    if (self.focus == Focus.ERROR)
+    {
+        if (self.error) ncurses::delwin(self.error);
+        self.error = ncurses::subwin(ncurses::stdscr, self.app.h / 2, self.app.w / 2, self.app.h / 4, self.app.w / 4);   
+    }
 }
 
 fn void Display.clear(&self)
@@ -654,6 +646,118 @@ fn void Display.draw_prompt(&self)
     self.reset(self.prompt);
 }
 
+fn ZString Display.input(&self, char prefix)
+{
+    ncurses::werase(self.prompt);
+    if (self.cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+
+    CInt maxx, maxy;
+    ncurses::@getmaxyx(self.prompt, maxy, maxx);
+
+    CInt x = 2;
+    CInt y = maxy / 2;
+
+    ncurses::curs_set(1);
+    ncurses::mvwprintw(self.prompt, y, x, "%c ", prefix);
+    
+    DString buf;
+    buf.temp_init(128);
+
+    while LOOP: (true)
+    {
+        CInt in = ncurses::wgetch(self.prompt);
+        CInt cur_x = ncurses::getcurx(self.prompt);
+
+        switch (in)
+        {
+            case 27: // ESC
+                ncurses::curs_set(0);
+                return null;
+
+            case '\n':
+                break LOOP;
+
+            case 127:
+            case '\b':
+            case ncurses::KEY_BACKSPACE:
+                if (!buf.len()) break;
+                ncurses::wprintw(self.prompt, "\b \b");
+                buf.delete(buf.len() - 1);
+
+            default:
+                // clamping the text inside the window.
+                if (x > maxx - 3) break;
+                if (!((char) in).is_print()) break;
+                ncurses::waddch(self.prompt, in);
+                buf.append((char) in);
+        }
+    }
+
+    ncurses::curs_set(0);
+
+    return buf.zstr_view();
+}
+
+fn void Display.draw_error_popup(&self)
+{
+    CInt w, h;
+    ncurses::@getmaxyx(self.error, h, w);
+
+    // Cursor coordinates.
+    CInt x = 2;
+    CInt y = 1;
+
+    CInt w_stop = w - 5;
+    CInt h_stop = h - 2;
+    
+    if (self.app.resized()) {
+        self.top();
+        self.error_vtop = 0;
+        self.error_vbot = (usz) h_stop;
+    }
+
+    if (self.app.logs.len() < (usz) h_stop) 
+    {
+        self.error_vtop = 0;
+        self.error_vbot = self.app.logs.len();
+        // Here there was a return statement so if something broke maybe it's the cause.
+    }
+    else 
+    {
+        self.error_vbot = self.error_vtop + (usz) h_stop;
+    }
+
+    if (self.error_cur < self.error_vtop)
+    {
+        self.error_vtop -= 1;
+        self.error_vbot -= 1;
+    }
+    else if (self.error_cur >= self.error_vbot)
+    {
+        self.error_vtop += 1;
+        self.error_vbot += 1;
+    }
+
+    CInt offset = 0;
+    for (usz i = self.error_vtop; i < self.error_vbot; i++)
+    {
+        if (i == self.error_cur) self.select(self.error);
+
+        String item = self.app.logs[i].tcopy();
+
+        if (item.len > (usz)(w_stop - 1))
+        {
+            item[(usz)(w_stop - 1)] = '\0';
+        }
+
+        // Align text taking in account the first space and one in the middle
+        ncurses::mvwprintw(self.error, y + offset, x, " %- *s", w_stop, item);
+
+        self.reset(self.error);
+        offset++;
+    }
+}
+
 fn void! Display.update(&self)
 {
     Config *c = self.cfg;
@@ -696,6 +800,19 @@ fn void! Display.update(&self)
     {
         if (c.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
         self.draw_prompt();
+    }
+
+    if (self.focus == Focus.ERROR)
+    {
+        ncurses::werase(self.error);
+
+        ncurses::wattron(self.error, ncurses::A_BOLD);
+        ncurses::wattron(self.error, ncurses::color_pair(EPB));
+        ncurses::box(self.error, 0, 0);
+        ncurses::wattroff(self.error, ncurses::A_BOLD);
+        ncurses::wattroff(self.error, ncurses::color_pair(EPB));
+
+        self.draw_error_popup();
     }
 
     // No need to call refresh cause getch() inside the main will 
