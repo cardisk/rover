@@ -159,6 +159,13 @@ fn void main()
                 }
                 sys.bookmarks.push(p);
 
+            case 'd':
+                if (!enable_action) continue;
+                if (tui.focus != Focus.BOOKMARKS) continue;
+                if (sys.bookmarks.is_empty()) continue;
+                sys.bookmarks.remove_at(tui.bookmarks_cur);
+                tui.up();
+
             case 'e':
                 if (app.logs.is_empty()) continue;
                 if (enable_action)
@@ -173,7 +180,7 @@ fn void main()
                     tui.toggle_focus();
                 }
 
-            case 'd':
+            case 'D':
                 if (app.logs.is_empty()) continue;
                 app.logs.clear();
                 if (!enable_action)
