@@ -5,19 +5,9 @@ import std::core::mem::allocator;
 import ncurses;
 import libc;
 
-const CInt DIR = 1;
-const CInt EXE = 2;
-const CInt LNK = 3;
-const CInt PWD = 4;
-const CInt HST = 5;
-const CInt ERR = 6;
-// ErrorPopupBorder
-const CInt EPB = 7;
-
 fault DisplayError
 {
     INIT_FAIL,
-    NO_COLORS,
     NO_COLBIND,
     NO_PREVIEW,
     NO_STATUS,
@@ -76,22 +66,10 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
 
     // Initialization of ncurses is now made inside main.
 
-    if (!ncurses::has_colors()) return DisplayError.NO_COLORS?;
-
-    if (ncurses::start_color() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::noecho() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::raw() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::curs_set(0) == ncurses::ERR) return DisplayError.INIT_FAIL?;
-
-    // TODO: make the Display theme customizable.
-    if (ncurses::init_pair(DIR, ncurses::COLOR_BLUE, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(EXE, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(LNK, ncurses::COLOR_CYAN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(ERR, ncurses::COLOR_WHITE, ncurses::COLOR_RED)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(EPB, ncurses::COLOR_RED, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
 
     self.app = app;
     self.sys = sys;
@@ -137,37 +115,37 @@ fn void Display.free(&self)
 fn void Display.dir(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(DIR));
+    ncurses::wattron(win, ncurses::color_pair(config::DIRECTORY_COLOR));
 }
 
 fn void Display.exe(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(EXE));
+    ncurses::wattron(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
 }
 
 fn void Display.link(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(LNK));
+    ncurses::wattron(win, ncurses::color_pair(config::LINK_COLOR));
 }
 
 fn void Display.pwd(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(PWD));
+    ncurses::wattron(win, ncurses::color_pair(config::PWD_COLOR));
 }
 
 fn void Display.host(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(HST));
+    ncurses::wattron(win, ncurses::color_pair(config::HOST_COLOR));
 }
 
 fn void Display.err(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(ERR));
+    ncurses::wattron(win, ncurses::color_pair(config::ERROR_COLOR));
 }
 
 macro Display.select(&self, Window *win)
@@ -180,12 +158,12 @@ fn void Display.reset(&self, Window *win)
 {
     ncurses::wattroff(win, ncurses::A_BOLD);
     ncurses::wattroff(win, ncurses::A_REVERSE);
-    ncurses::wattroff(win, ncurses::color_pair(DIR));
-    ncurses::wattroff(win, ncurses::color_pair(EXE));
-    ncurses::wattroff(win, ncurses::color_pair(LNK));
-    ncurses::wattroff(win, ncurses::color_pair(PWD));
-    ncurses::wattroff(win, ncurses::color_pair(HST));
-    ncurses::wattroff(win, ncurses::color_pair(ERR));
+    ncurses::wattroff(win, ncurses::color_pair(config::DIRECTORY_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::LINK_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::PWD_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::HOST_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::ERROR_COLOR));
 }
 
 macro Display.toggle_focus(&self, bool error = false)
@@ -807,10 +785,10 @@ fn void! Display.update(&self)
         ncurses::werase(self.error);
 
         ncurses::wattron(self.error, ncurses::A_BOLD);
-        ncurses::wattron(self.error, ncurses::color_pair(EPB));
+        ncurses::wattron(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
         ncurses::box(self.error, 0, 0);
         ncurses::wattroff(self.error, ncurses::A_BOLD);
-        ncurses::wattroff(self.error, ncurses::color_pair(EPB));
+        ncurses::wattroff(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
 
         self.draw_error_popup();
     }

@@ -24,6 +24,13 @@ fn void main()
 {
     // Doing the initalization here so the modules will load up correctly.
     ncurses::initscr();
+    if (!ncurses::has_colors())
+    {
+        ncurses::endwin();
+        io::eprintn("Your terminal emulator does not support colors.");
+        libc::exit(1);
+    }
+    ncurses::start_color();
 
     if (catch e = cfg.init())                 crash(e);
     if (catch e = app.init())                 crash(e);

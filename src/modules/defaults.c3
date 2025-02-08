@@ -56,11 +56,33 @@ const String DEFAULT_DISPLAY =
 }
 `;
 
-
-const String DEFAULT_CONFIG =
+const String DEFAULT_THEME =
 `
 {
-    "bookmarks_path" = "~/.config/rover"
+    "directory": {
+        "bg": "black",
+        "fg": "blue",
+    },
+    "executable": {
+        "bg": "black",
+        "fg": "green",
+    },
+    "link": {
+        "bg": "black",
+        "fg": "cyan",
+    },
+    "pwd": {
+        "bg": "black",
+        "fg": "yellow",
+    },
+    "host": {
+        "bg": "black",
+        "fg": "green",
+    },
+    "error": {
+        "bg": "red",
+        "fg": "white",
+    },
 }
 `;
 
