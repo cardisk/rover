@@ -127,6 +127,8 @@ fn void! Config.init(&self)
 
     // Here the result can be safely ignored.
     self.parse_theme(theme_obj)!;
+    // TODO: maybe this can be also customizable.
+    ncurses::init_pair(ERROR_POPUP_BORDER, ncurses::COLOR_RED, ncurses::COLOR_BLACK);
 
     home_env.free();
     allocator::temp().reset(tmark);
