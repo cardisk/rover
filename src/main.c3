@@ -163,7 +163,7 @@ fn void main()
                 if (!enable_action) continue;
                 if (tui.focus != Focus.BOOKMARKS) continue;
                 if (sys.bookmarks.is_empty()) continue;
-                // TODO: memory leak.
+                sys.bookmarks[tui.bookmarks_cur].free();
                 sys.bookmarks.remove_at(tui.bookmarks_cur);
                 tui.up();
 
