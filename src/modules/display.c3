@@ -10,6 +10,7 @@ const CInt EXE = 2;
 const CInt LNK = 3;
 const CInt PWD = 4;
 const CInt HST = 5;
+const CInt ERR = 6;
 
 fault DisplayError
 {
@@ -74,6 +75,7 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
     if (ncurses::init_pair(LNK, ncurses::COLOR_CYAN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
     if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
+    if (ncurses::init_pair(ERR, ncurses::COLOR_WHITE, ncurses::COLOR_RED)) return DisplayError.INIT_FAIL?;
 
     self.app = app;
     self.sys = sys;
@@ -140,6 +142,12 @@ fn void Display.host(&self, Window *win)
     ncurses::wattron(win, ncurses::color_pair(HST));
 }
 
+fn void Display.err(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(ERR));
+}
+
 macro Display.select(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
@@ -155,6 +163,7 @@ fn void Display.reset(&self, Window *win)
     ncurses::wattroff(win, ncurses::color_pair(LNK));
     ncurses::wattroff(win, ncurses::color_pair(PWD));
     ncurses::wattroff(win, ncurses::color_pair(HST));
+    ncurses::wattroff(win, ncurses::color_pair(ERR));
 }
 
 macro Display.toggle_focus(&self) => self.focus = !self.focus;
@@ -223,6 +232,9 @@ macro Display.bottom(&self)
 
 fn ZString Display.input(&self, char prefix)
 {
+    ncurses::werase(self.prompt);
+    if (self.cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+
     CInt maxx, maxy;
     ncurses::@getmaxyx(self.prompt, maxy, maxx);
 
@@ -627,7 +639,19 @@ fn void! Display.draw_status(&self)
 
 fn void Display.draw_prompt(&self)
 {
-    // Add here the code that will handle the errors.
+    if (self.app.logs.is_empty()) return;
+
+    CInt x = 2;
+    CInt maxx = ncurses::getmaxx(self.status);
+    CInt y = ncurses::getmaxy(self.status);
+
+    // It's safe to assume that at least one element is present 'cause of
+    // the first condition of this function.
+    ZString msg = self.app.logs.first()!!.zstr_tcopy();
+
+    self.err(self.prompt);
+    ncurses::mvwprintw(self.prompt, y / 2, x, "%s", msg);
+    self.reset(self.prompt);
 }
 
 fn void! Display.update(&self)
