@@ -361,13 +361,13 @@ fn void Display.draw_list(&self)
         {
             self.link(self.list);
         }
-        else if (stat::is_exe(self.sys.ls[i]))
-        {
-            self.exe(self.list);
-        }
         else if (stat::is_dir(self.sys.ls[i])) 
         {
             self.dir(self.list);
+        }
+        else if (stat::is_exe(self.sys.ls[i]))
+        {
+            self.exe(self.list);
         }
 
         if (i == self.list_cur) self.select(self.list);

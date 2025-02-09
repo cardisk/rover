@@ -25,7 +25,7 @@ fn int is_exe(Path p)
 {
     Stat stat;
     if (!read_stat(p, &stat)) return -1;
-    if (is_stat(stat, libc::S_IXUSR)) return 1;
+    if (stat.st_mode & libc::S_IXUSR) return 1;
     return 0;
 }
 
