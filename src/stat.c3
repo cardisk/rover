@@ -19,8 +19,6 @@ fn bool read_stat(Path p, Stat *s)
     $endif
 }
 
-macro bool is_stat(stat, type) => ((stat.st_mode & libc::S_IFMT) == type);
-
 fn int is_exe(Path p)
 {
     Stat stat;
@@ -33,7 +31,7 @@ fn int is_link(Path p)
 {
     Stat stat;
     if (!read_stat(p, &stat)) return -1;
-    if (is_stat(stat, libc::S_IFLNK)) return 1;
+    if ((stat.st_mode & libc::S_IFMT) == libc::S_IFLNK) return 1;
     return 0;
 }
 
