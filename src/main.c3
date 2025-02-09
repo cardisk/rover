@@ -9,6 +9,10 @@ State   app;
 System  sys;
 Display tui;
 
+// This serves to activate or deactivate actions
+// when displaying the error popup.
+bool enable_action = true;
+
 fn void crash(anyfault f) @noreturn
 {
     ncurses::endwin();
@@ -20,6 +24,13 @@ fn void main()
 {
     // Doing the initalization here so the modules will load up correctly.
     ncurses::initscr();
+    if (!ncurses::has_colors())
+    {
+        ncurses::endwin();
+        io::eprintn("Your terminal emulator does not support colors.");
+        libc::exit(1);
+    }
+    ncurses::start_color();
 
     if (catch e = cfg.init())                 crash(e);
     if (catch e = app.init())                 crash(e);
@@ -28,8 +39,6 @@ fn void main()
 
     while LOOP: (true)
     {
-        if (app.logs.len() > 10) break;
-
         app.update();
         if (catch sys.update())
         {
@@ -48,14 +57,16 @@ fn void main()
                 break LOOP;
 
             case '\n':
+                if (!enable_action) continue;
+
                 if (sys.ls.is_empty()) continue;
-                if (!stat::is_dir(sys.ls[tui.cur]))
+                if (!stat::is_dir(sys.ls[tui.list_cur]))
                 {
                     ncurses::def_prog_mode();
                     ncurses::endwin();
 
                     ZString cmd = string::new_format_zstr(
-                        "nvim %s", sys.ls[tui.cur]
+                        "nvim %s", sys.ls[tui.list_cur]
                     );
                     libc::system(cmd);
                     libc::free(cmd);
@@ -70,10 +81,10 @@ fn void main()
                 }
                 else
                 {
-                    if (catch sys.pchdir(sys.ls[tui.cur]))
+                    if (catch sys.pchdir(sys.ls[tui.list_cur]))
                     {
                         app.log(string::new_format("Unable to change directory to %s.",
-                                                    sys.ls[tui.cur].str_view()));
+                                                    sys.ls[tui.list_cur].str_view()));
                         continue;
                     }
                     if (catch sys.clear_filter())
@@ -85,6 +96,8 @@ fn void main()
                 }
 
             case '-':
+                if (!enable_action) continue;
+
                 if (catch sys.clear_filter())
                 {
                     app.log("Unable to clear the filter.");
@@ -98,6 +111,8 @@ fn void main()
                 tui.top();
 
             case '.':
+                if (!enable_action) continue;
+
                 if (catch sys.clear_filter())
                 {
                     app.log("Unable to clear the filter.");
@@ -111,6 +126,8 @@ fn void main()
                 tui.top();
 
             case 'b':
+                if (!enable_action) continue;
+
                 if (sys.history.is_empty()) break;
 
                 Path! p = sys.history.pop();
@@ -132,7 +149,9 @@ fn void main()
                 tui.top();
 
             case 's':
-                Path! p = sys.ls[tui.cur].new_absolute();
+                if (!enable_action) continue;
+
+                Path! p = sys.ls[tui.list_cur].new_absolute();
                 if (catch p)
                 {
                     app.log("Unable to get absolute path for a new bookmark.");
@@ -140,7 +159,40 @@ fn void main()
                 }
                 sys.bookmarks.push(p);
 
+            case 'd':
+                if (!enable_action) continue;
+                if (tui.focus != Focus.BOOKMARKS) continue;
+                if (sys.bookmarks.is_empty()) continue;
+                sys.bookmarks[tui.bookmarks_cur].free();
+                sys.bookmarks.remove_at(tui.bookmarks_cur);
+                tui.up();
+
+            case 'e':
+                if (app.logs.is_empty()) continue;
+                if (enable_action)
+                {
+                    // Disable every action that cannot be done with error popup.
+                    enable_action = false;
+                    tui.toggle_focus(true);
+                }
+                else
+                {
+                    enable_action = true;
+                    tui.toggle_focus();
+                }
+
+            case 'D':
+                if (app.logs.is_empty()) continue;
+                app.logs.clear();
+                if (!enable_action)
+                {
+                    enable_action = true;
+                    tui.toggle_focus();
+                }
+
             case '/':
+                if (!enable_action) continue;
+
                 ZString in = tui.input('/');
                 if (!in) continue;
 
@@ -155,11 +207,17 @@ fn void main()
                 tui.top();
 
             case '\\':
+                if (!enable_action) continue;
+
                 if (catch sys.clear_filter())
                 {
                     app.log("Unable to clear the filter.");
                     continue;
                 }
+
+            case '\t':
+                enable_action = true;
+                tui.toggle_focus();
 
             case ncurses::KEY_UP:
                 tui.up();

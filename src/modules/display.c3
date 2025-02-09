@@ -3,42 +3,58 @@ import rover::state, rover::system, rover::config, rover::stat;
 import std::io::path, std::io::file;
 import std::core::mem::allocator;
 import ncurses;
-
-const CInt DIR = 1;
-const CInt EXE = 2;
-const CInt LNK = 3;
-const CInt PWD = 4;
-const CInt HST = 5;
+import libc;
 
 fault DisplayError
 {
     INIT_FAIL,
-    NO_COLORS,
     NO_COLBIND,
     NO_PREVIEW,
+    NO_STATUS,
+}
+
+enum Focus
+{
+    LIST,
+    BOOKMARKS,
+    ERROR,
 }
 
 struct Display
 {
     // Position selected inside the list.
-    usz cur;
-    // Boundaries of the window (inclusive).
-    usz vtop;
-    usz vbot;
+    usz list_cur;
+    // Boundaries of the list window (inclusive).
+    usz list_vtop;
+    usz list_vbot;
+    // Position selected inside the bookmarks.
+    usz bookmarks_cur;
+    // Boundaries of the bookmarks window (inclusive).
+    usz bookmarks_vtop;
+    usz bookmarks_vbot;
+    // Position selected inside the error popup.
+    usz error_cur;
+    // Boundaries of the error popup (inclusive).
+    usz error_vtop;
+    usz error_vbot;
+
+    Focus focus;
+
     // Marker for the temporary allocator.
     usz tmark;
+
     // Subwindows.
+    Window *title;
     Window *list;
-    Window *prev;
-    Window *text;
+    Window *preview;
+    Window *bookmarks;
+    Window *status;
+    Window *prompt;
 
-    // Window *title;
-    // Window *list;
-    // Window *preview;
-    // Window *bookmarks;
-    // Window *status;
-    // Window *logs;
+    // Error popup, not customizable.
+    Window *error;
 
+    // Other required modules.
     State *app;
     System *sys;
     Config *cfg;
@@ -50,71 +66,86 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
 
     // Initialization of ncurses is now made inside main.
 
-    if (!ncurses::has_colors()) return DisplayError.NO_COLORS?;
-
-    if (ncurses::start_color() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::noecho() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::raw() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::curs_set(0) == ncurses::ERR) return DisplayError.INIT_FAIL?;
 
-    // TODO: make the Display theme customizable.
-    if (ncurses::init_pair(DIR, ncurses::COLOR_BLUE, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(EXE, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(LNK, ncurses::COLOR_CYAN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(PWD, ncurses::COLOR_YELLOW, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-    if (ncurses::init_pair(HST, ncurses::COLOR_GREEN, ncurses::COLOR_BLACK)) return DisplayError.INIT_FAIL?;
-
     self.app = app;
     self.sys = sys;
     self.cfg = cfg;
 
-    self.cur = 0;
-    self.vtop = 0;
-    self.vbot = 0;
+    self.list_cur = 0;
+    self.list_vtop = 0;
+    self.list_vbot = 0;
+
+    self.bookmarks_cur = 0;
+    self.bookmarks_vtop = 0;
+    self.bookmarks_vbot = 0;
+
+    self.error_cur = 0;
+    self.error_vtop = 0;
+    self.error_vbot = 0;
+
+    self.focus = Focus.LIST;
 
     self.tmark = allocator::temp().mark();
 
-    self.list = null;
-    self.prev = null;
-    self.text = null;
+    self.title     = null;
+    self.list      = null;
+    self.preview   = null;
+    self.bookmarks = null;
+    self.status    = null;
+    self.prompt    = null;
+
+    self.error = null;
 }
 
 fn void Display.free(&self)
 {
-    ncurses::delwin(self.list);
-    ncurses::delwin(self.prev);
-    ncurses::delwin(self.text);
+    Config *c = self.cfg;
+    if (c.title.is_visible)     ncurses::delwin(self.title);
+    if (c.list.is_visible)      ncurses::delwin(self.list);
+    if (c.preview.is_visible)   ncurses::delwin(self.preview);
+    if (c.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
+    if (c.status.is_visible)    ncurses::delwin(self.status);
+    if (c.prompt.is_visible)    ncurses::delwin(self.prompt);
 }
 
 fn void Display.dir(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(DIR));
+    ncurses::wattron(win, ncurses::color_pair(config::DIRECTORY_COLOR));
 }
 
 fn void Display.exe(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(EXE));
+    ncurses::wattron(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
 }
 
 fn void Display.link(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(LNK));
+    ncurses::wattron(win, ncurses::color_pair(config::LINK_COLOR));
 }
 
 fn void Display.pwd(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(PWD));
+    ncurses::wattron(win, ncurses::color_pair(config::PWD_COLOR));
 }
 
 fn void Display.host(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(HST));
+    ncurses::wattron(win, ncurses::color_pair(config::HOST_COLOR));
+}
+
+fn void Display.err(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::ERROR_COLOR));
 }
 
 macro Display.select(&self, Window *win)
@@ -127,61 +158,93 @@ fn void Display.reset(&self, Window *win)
 {
     ncurses::wattroff(win, ncurses::A_BOLD);
     ncurses::wattroff(win, ncurses::A_REVERSE);
-    ncurses::wattroff(win, ncurses::color_pair(DIR));
-    ncurses::wattroff(win, ncurses::color_pair(EXE));
-    ncurses::wattroff(win, ncurses::color_pair(LNK));
-    ncurses::wattroff(win, ncurses::color_pair(PWD));
-    ncurses::wattroff(win, ncurses::color_pair(HST));
+    ncurses::wattroff(win, ncurses::color_pair(config::DIRECTORY_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::LINK_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::PWD_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::HOST_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::ERROR_COLOR));
 }
 
-macro Display.up(&self)     => (self.cur > 0) ? self.cur-- : 0;
-macro Display.down(&self)   => (self.cur < self.sys.ls.len() - 1) ? self.cur++ : 0;
-macro Display.top(&self)    => self.cur = 0;
-macro Display.bottom(&self) => self.cur = self.sys.ls.len() - 1;
-
-fn ZString Display.input(&self, char prefix)
+macro Display.toggle_focus(&self, bool error = false)
 {
-    ncurses::curs_set(1);
-    ncurses::mvwprintw(self.text, 1, 2, "%c ", prefix);
-    
-    DString buf;
-    buf.temp_init(128);
-
-    CInt w = ncurses::getmaxx(self.text);
-
-    while LOOP: (true)
+    if (error)
     {
-        CInt in = ncurses::wgetch(self.text);
-        CInt x = ncurses::getcurx(self.text);
-
-        switch (in)
-        {
-            case 27: // ESC
-                ncurses::curs_set(0);
-                return null;
-
-            case '\n':
-                break LOOP;
-
-            case 127:
-            case '\b':
-            case ncurses::KEY_BACKSPACE:
-                if (!buf.len()) break;
-                ncurses::wprintw(self.text, "\b \b");
-                buf.delete(buf.len() - 1);
-
-            default:
-                // clamping the text inside the window.
-                if (x > w - 3) break;
-                if (!((char)in).is_print()) break;
-                ncurses::waddch(self.text, in);
-                buf.append((char) in);
-        }
+        self.focus = Focus.ERROR;
+        self.top();
+        return;
     }
 
-    ncurses::curs_set(0);
+    switch (self.focus)
+    {
+        case Focus.LIST:
+            self.focus = Focus.BOOKMARKS;
+        case Focus.BOOKMARKS:
+            self.focus = Focus.LIST;
+        case Focus.ERROR:
+            self.focus = Focus.LIST;
+    }
+}
 
-    return buf.zstr_view();
+macro Display.up(&self)
+{
+    switch (self.focus)
+    {
+        case Focus.LIST:
+            if (self.list_cur > 0) self.list_cur--;
+        case Focus.BOOKMARKS:
+            if (self.bookmarks_cur > 0) self.bookmarks_cur--;
+        case Focus.ERROR:
+            if (self.error_cur > 0) self.error_cur--;
+    }
+}
+
+macro Display.down(&self)
+{
+    switch (self.focus)
+    {
+        case Focus.LIST:
+            if (self.list_cur < self.sys.ls.len() - 1)
+            {
+                self.list_cur++;
+            }
+        case Focus.BOOKMARKS:
+            if (self.bookmarks_cur < self.sys.bookmarks.len() - 1)
+            {
+                self.bookmarks_cur++;
+            }
+        case Focus.ERROR:
+            if (self.error_cur < self.app.logs.len() - 1)
+            {
+                self.error_cur++;
+            }
+    }
+}
+
+macro Display.top(&self)
+{
+    switch (self.focus)
+    {
+        case Focus.LIST:
+            self.list_cur = 0;
+        case Focus.BOOKMARKS:
+            self.bookmarks_cur = 0;
+        case Focus.ERROR:
+            self.error_cur = 0;
+    }
+}
+
+macro Display.bottom(&self)
+{
+    switch (self.focus)
+    {
+        case Focus.LIST:
+            self.list_cur = self.sys.ls.len() - 1;
+        case Focus.BOOKMARKS:
+            self.bookmarks_cur = self.sys.bookmarks.len() - 1;
+        case Focus.ERROR:
+            self.error_cur = self.app.logs.len() - 1;
+    }
 }
 
 fn bool is_printable(String str) @private
@@ -193,36 +256,53 @@ fn bool is_printable(String str) @private
     return true;
 }
 
-// This is an hack because ncurses will segfault when accessing ACS characters.
-extern fn void winbox(Window *);
-
 fn void Display.update_screen(&self) @private
 {
-    if (self.list) ncurses::delwin(self.list);
-    if (self.prev) ncurses::delwin(self.prev);
-    if (self.text) ncurses::delwin(self.text);
+    Config *c = self.cfg;
+    if (c.title.is_visible)     ncurses::delwin(self.title);
+    if (c.list.is_visible)      ncurses::delwin(self.list);
+    if (c.preview.is_visible)   ncurses::delwin(self.preview);
+    if (c.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
+    if (c.status.is_visible)    ncurses::delwin(self.status);
+    if (c.prompt.is_visible)    ncurses::delwin(self.prompt);
 
-    self.list = ncurses::subwin(ncurses::stdscr, self.app.h - 3, self.app.w / 2, 0, 0);
-    self.prev = ncurses::subwin(ncurses::stdscr, self.app.h, self.app.w / 2, 0, self.app.w / 2);
-    self.text = ncurses::subwin(ncurses::stdscr, 3, self.app.w / 2, self.app.h - 3, 0);
+    if (c.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, c.title.h    , c.title.w    , c.title.y    , c.title.y);
+    if (c.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, c.list.h     , c.list.w     , c.list.y     , c.list.x);
+    if (c.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, c.preview.h  , c.preview.w  , c.preview.y  , c.preview.x);
+    if (c.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, c.bookmarks.h, c.bookmarks.w, c.bookmarks.y, c.bookmarks.x);
+    if (c.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, c.status.h   , c.status.w   , c.status.y   , c.status.x);
+    if (c.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, c.prompt.h   , c.prompt.w   , c.prompt.y   , c.prompt.x);
 
-    // Config *c = self.cfg;
-    // if (c.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, c.title.h    , c.title.w    , c.title.y    , c.title.y);
-    // if (c.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, c.list.h     , c.list.w     , c.list.y     , c.list.x);
-    // if (c.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, c.preview.h  , c.preview.w  , c.preview.y  , c.preview.x);
-    // if (c.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, c.bookmarks.h, c.bookmarks.w, c.bookmarks.y, c.bookmarks.x);
-    // if (c.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, c.status.h   , c.status.w   , c.status.y   , c.status.x);
-    // if (c.logs.is_visible)      self.logs      = ncurses::subwin(ncurses::stdscr, c.logs.h     , c.logs.w     , c.logs.y     , c.logs.x);
+    if (self.focus == Focus.ERROR)
+    {
+        if (self.error) ncurses::delwin(self.error);
+        self.error = ncurses::subwin(ncurses::stdscr, self.app.h / 2, self.app.w / 2, self.app.h / 4, self.app.w / 4);   
+    }
 }
 
 fn void Display.clear(&self)
 {
-    assert(self.list && self.prev && self.text);
-
     ncurses::werase(ncurses::stdscr);
-    ncurses::werase(self.list);
-    ncurses::werase(self.prev);
-    ncurses::werase(self.text);
+
+    Config *c = self.cfg;
+    if (c.title.is_visible)     ncurses::werase(self.title);
+    if (c.list.is_visible)      ncurses::werase(self.list);
+    if (c.preview.is_visible)   ncurses::werase(self.preview);
+    if (c.bookmarks.is_visible) ncurses::werase(self.bookmarks);
+    if (c.status.is_visible)    ncurses::werase(self.status);
+    if (c.prompt.is_visible)    ncurses::werase(self.prompt);
+}
+
+fn void Display.draw_title(&self)
+{
+    CInt x = 2;
+    CInt y = ncurses::getmaxy(self.title);
+
+    self.host(self.title);
+    ncurses::mvwprintw(self.title, y / 2, x, "%s@%s ", self.app.user, self.app.host);
+    self.pwd(self.title);
+    ncurses::wprintw(self.title, "%s", self.sys.cwd.as_zstr());
+    self.reset(self.title);
 }
 
 fn void Display.draw_list(&self)
@@ -232,54 +312,50 @@ fn void Display.draw_list(&self)
 
     // Cursor coordinates.
     CInt x = 2;
-    CInt y = 2;
-    
-    // Window specifiers.
-    self.host(self.list);
-    ncurses::mvwprintw(self.list, 0, 2, "%s@%s ", self.app.user, self.app.host);
-    self.pwd(self.list);
-    ncurses::wprintw(self.list, "%s", self.sys.cwd.as_zstr());
-    self.reset(self.list);
+    CInt y = 1;
 
+    CInt w_stop = w - 5;
+    CInt h_stop = h - 3;
+    
     if (self.sys.ls.is_empty())
     {
         self.select(self.list);
-        // w - 3 because it takes in account the borders and the front space.
-        ncurses::mvwprintw(self.list, y, x, " %- *s", w - 5, " <empty>");
+        // It takes in account the borders and the front space.
+        ncurses::mvwprintw(self.list, y, x, " %- *s", w_stop, "<empty>");
         self.reset(self.list);
         return;
     }
 
     if (self.app.resized()) {
         self.top();
-        self.vtop = 0;
-        self.vbot = (usz)(h - 4);
+        self.list_vtop = 0;
+        self.list_vbot = (usz) h_stop;
     }
 
-    if (self.sys.ls.len() < (usz)(h - 4)) 
+    if (self.sys.ls.len() < (usz) h_stop) 
     {
-        self.vtop = 0;
-        self.vbot = self.sys.ls.len();
+        self.list_vtop = 0;
+        self.list_vbot = self.sys.ls.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
     {
-        self.vbot = self.vtop + (usz)(h - 4);
+        self.list_vbot = self.list_vtop + (usz) h_stop;
     }
 
-    if (self.cur < self.vtop)
+    if (self.list_cur < self.list_vtop)
     {
-        self.vtop -= 1;
-        self.vbot -= 1;
+        self.list_vtop -= 1;
+        self.list_vbot -= 1;
     }
-    else if (self.cur >= self.vbot)
+    else if (self.list_cur >= self.list_vbot)
     {
-        self.vtop += 1;
-        self.vbot += 1;
+        self.list_vtop += 1;
+        self.list_vbot += 1;
     }
 
     CInt offset = 0;
-    for (usz i = self.vtop; i < self.vbot; i++)
+    for (usz i = self.list_vtop; i < self.list_vbot; i++)
     {
         if (stat::is_link(self.sys.ls[i]))
         {
@@ -294,7 +370,7 @@ fn void Display.draw_list(&self)
             self.dir(self.list);
         }
 
-        if (i == self.cur) self.select(self.list);
+        if (i == self.list_cur) self.select(self.list);
 
         String item = self.sys.ls[i].str_view().tcopy();
 
@@ -304,62 +380,71 @@ fn void Display.draw_list(&self)
             if (!c.is_print()) *c = '?';
         }
 
-        if (item.len > (usz)(w - 4))
+        if (item.len > (usz)(w_stop - 1))
         {
-            item[(usz)(w - 4)] = '\0';
+            item[(usz)(w_stop - 1)] = '\0';
         }
 
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w - 5, item);
+        ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w_stop, item);
 
         self.reset(self.list);
         offset++;
     }
 }
 
-fn void! Display.draw_prev(&self)
+fn void! Display.draw_preview(&self)
 {
     CInt w, h;
-    ncurses::@getmaxyx(self.prev, h, w);
+    ncurses::@getmaxyx(self.preview, h, w);
 
     // Cursor coordinates.
     CInt x = 2;
-    CInt y = 2;
+    CInt y = 1;
+
+    CInt w_stop = w - 4;
+    CInt h_stop = h - 3;
 
     if (self.sys.ls.is_empty()) return;
 
-    if (path::is_file(self.sys.ls[self.cur]))
+    if (path::is_file(self.sys.ls[self.list_cur]))
     {
-        switch (stat::is_exe(self.sys.ls[self.cur]))
+        switch (stat::is_exe(self.sys.ls[self.list_cur]))
         {
             case 1:
-                ncurses::mvwprintw(self.prev, y, x, "<binary>");
+                ncurses::mvwprintw(self.preview, y, x, "<binary>");
 
             case 0:
-                char[]! chars = file::load_temp(self.sys.ls[self.cur].str_view());
+                char[]! chars = file::load_temp(self.sys.ls[self.list_cur].str_view());
                 if (catch chars) break;
 
                 String content = (String) chars;
                 if (content.len == 0)
                 {
-                    ncurses::mvwprintw(self.prev, y, x, "<empty>");
+                    ncurses::mvwprintw(self.preview, y, x, "<empty>");
                     break;
                 }
                 if (!is_printable(content))
                 {
-                    ncurses::mvwprintw(self.prev, y, x, "<binary>");
+                    ncurses::mvwprintw(self.preview, y, x, "<binary>");
                     break;
                 }
                 String[] lines = content.tsplit("\n");
 
-                usz stop = (usz)(h - 4);
+                usz stop = (usz) h_stop;
                 if (lines.len < stop) stop = lines.len;
                 
                 for (int i = 0; i < stop; i++)
                 {
-                    CInt len = lines[i].len;
-                    if (len > (w - 4)) len = w - 4;
-                    ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, lines[i]);
+                    DString item;
+                    item.temp_init(1024);
+                    item.append(lines[i]);
+                    item.replace("\t", "    ");
+
+                    CInt len = (CInt) item.len();
+                    if (len > w_stop) len = w_stop; 
+
+                    ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item.zstr_view());
                 }
 
             case -1:
@@ -367,54 +452,346 @@ fn void! Display.draw_prev(&self)
         }
     }
 
-    if (stat::is_dir(self.sys.ls[self.cur]))
+    if (stat::is_dir(self.sys.ls[self.list_cur]))
     {
-        PathList! ls = path::temp_ls(self.sys.ls[self.cur]);
+        PathList! ls = path::temp_ls(self.sys.ls[self.list_cur]);
         if (catch ls)
         {
-            ncurses::mvwprintw(self.prev, y, x, "<error while loading>");
+            ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
             return;
         }
 
-        usz stop = (usz)(h - 4);
+        usz stop = (usz) h_stop;
         if (ls.len() < stop) stop = ls.len();
         
         if (ls.is_empty())
         {
-            ncurses::mvwprintw(self.prev, y, x, "<empty>");
+            ncurses::mvwprintw(self.preview, y, x, "<empty>");
         }
         else
         {
             for (int i = 0; i < stop; i++)
             {
-                CInt len = ls[i].str_view().len;
-                if (len > (w - 4)) len = w - 4;
-                ncurses::mvwprintw(self.prev, y + i, x, "%.*s", len, ls[i].str_view());
+                ZString item = ls[i].str_view().zstr_tcopy();
+                CInt len = (CInt) item.len();
+                if (len > w_stop) len = w_stop;
+                ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item);
             }
         }
     }
 }
 
-fn void Display.draw_text(&self)
+fn void Display.draw_bookmarks(&self)
 {
+    CInt w, h;
+    ncurses::@getmaxyx(self.bookmarks, h, w);
+
+    // Cursor coordinates.
+    CInt x = 2;
+    CInt y = 1;
+
+    CInt w_stop = w - 5;
+    CInt h_stop = h - 3;
+    
+    if (self.sys.bookmarks.is_empty())
+    {
+        self.select(self.bookmarks);
+        // It takes in account the borders and the front space.
+        ncurses::mvwprintw(self.bookmarks, y, x, " %- *s", w_stop, "<empty>");
+        self.reset(self.bookmarks);
+        return;
+    }
+
+    if (self.app.resized()) {
+        self.top();
+        self.bookmarks_vtop = 0;
+        self.bookmarks_vbot = (usz) h_stop;
+    }
+
+    if (self.sys.bookmarks.len() < (usz) h_stop) 
+    {
+        self.bookmarks_vtop = 0;
+        self.bookmarks_vbot = self.sys.bookmarks.len();
+        // Here there was a return statement so if something broke maybe it's the cause.
+    }
+    else 
+    {
+        self.bookmarks_vbot = self.bookmarks_vtop + (usz) h_stop;
+    }
+
+    if (self.bookmarks_cur < self.bookmarks_vtop)
+    {
+        self.bookmarks_vtop -= 1;
+        self.bookmarks_vbot -= 1;
+    }
+    else if (self.bookmarks_cur >= self.bookmarks_vbot)
+    {
+        self.bookmarks_vtop += 1;
+        self.bookmarks_vbot += 1;
+    }
+
+    CInt offset = 0;
+    for (usz i = self.bookmarks_vtop; i < self.bookmarks_vbot; i++)
+    {
+        if (stat::is_link(self.sys.bookmarks[i]))
+        {
+            self.link(self.bookmarks);
+        }
+        else if (stat::is_exe(self.sys.bookmarks[i]))
+        {
+            self.exe(self.bookmarks);
+        }
+        else if (stat::is_dir(self.sys.bookmarks[i])) 
+        {
+            self.dir(self.bookmarks);
+        }
+
+        if (i == self.bookmarks_cur) self.select(self.bookmarks);
+
+        String item = self.sys.bookmarks[i].str_view().tcopy();
+
+        // Taking in account elements with non-ascii chars.
+        foreach (&c : item)
+        {
+            if (!c.is_print()) *c = '?';
+        }
+
+        if (item.len > (usz)(w_stop - 1))
+        {
+            item[(usz)(w_stop - 1)] = '\0';
+        }
+
+        // Align text taking in account the first space and one in the middle
+        ncurses::mvwprintw(self.bookmarks, y + offset, x, " %- *s", w_stop, item);
+
+        self.reset(self.bookmarks);
+        offset++;
+    }
+}
+
+fn void! Display.draw_status(&self)
+{
+    CInt x = 2;
+    CInt maxx = ncurses::getmaxx(self.status);
+    CInt y = ncurses::getmaxy(self.status);
+
+    ZString leading, trailing;
+
+    if (self.sys.ls.is_empty())
+    {
+        leading  = string::tformat_zstr("%s @ %s %s", "----------", "---", "---");
+        trailing = string::tformat_zstr("%dB %d/%d", 0, 0, self.sys.ls.len());
+    }
+    else
+    {
+        Stat s;
+        if (!stat::read_stat(self.sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
+
+        // Needed for group name.
+        Group  *group  = rover::getgrgid(s.st_gid);
+        // Needed for user name.
+        Passwd *passwd = rover::getpwuid(s.st_uid);
+
+        ZString perm = stat::tposix_perm(s).zstr_view();
+
+        leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+        trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, self.sys.ls.len());
+    }
+
+    // Avoid printing anything if the terminal width is too short.
+    if ((CInt)(leading.len() + trailing.len()) + 3 > maxx) return;
+
+    ncurses::wattron(self.status, ncurses::A_BOLD);
+    ncurses::mvwprintw(self.status, y / 2, x, "%s", leading);
+    ncurses::mvwprintw(self.status, y / 2, maxx - (CInt) trailing.len() - 2, "%s", trailing);
+    ncurses::wattroff(self.status, ncurses::A_BOLD);
+}
+
+fn void Display.draw_prompt(&self)
+{
+    if (self.app.logs.is_empty()) return;
+
+    CInt x = 2;
+    CInt maxx = ncurses::getmaxx(self.status);
+    CInt y = ncurses::getmaxy(self.status);
+
+    // It's safe to assume that at least one element is present 'cause of
+    // the first condition of this function.
+    ZString msg = self.app.logs.first()!!.zstr_tcopy();
+
+    self.err(self.prompt);
+    ncurses::mvwprintw(self.prompt, y / 2, x, "%s", msg);
+    self.reset(self.prompt);
+}
+
+fn ZString Display.input(&self, char prefix)
+{
+    ncurses::werase(self.prompt);
+    if (self.cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+
+    CInt maxx, maxy;
+    ncurses::@getmaxyx(self.prompt, maxy, maxx);
+
+    CInt x = 2;
+    CInt y = maxy / 2;
+
+    ncurses::curs_set(1);
+    ncurses::mvwprintw(self.prompt, y, x, "%c ", prefix);
+    
+    DString buf;
+    buf.temp_init(128);
+
+    while LOOP: (true)
+    {
+        CInt in = ncurses::wgetch(self.prompt);
+        CInt cur_x = ncurses::getcurx(self.prompt);
+
+        switch (in)
+        {
+            case 27: // ESC
+                ncurses::curs_set(0);
+                return null;
+
+            case '\n':
+                break LOOP;
+
+            case 127:
+            case '\b':
+            case ncurses::KEY_BACKSPACE:
+                if (!buf.len()) break;
+                ncurses::wprintw(self.prompt, "\b \b");
+                buf.delete(buf.len() - 1);
+
+            default:
+                // clamping the text inside the window.
+                if (x > maxx - 3) break;
+                if (!((char) in).is_print()) break;
+                ncurses::waddch(self.prompt, in);
+                buf.append((char) in);
+        }
+    }
+
+    ncurses::curs_set(0);
+
+    return buf.zstr_view();
+}
+
+fn void Display.draw_error_popup(&self)
+{
+    CInt w, h;
+    ncurses::@getmaxyx(self.error, h, w);
+
+    // Cursor coordinates.
+    CInt x = 2;
+    CInt y = 1;
+
+    CInt w_stop = w - 5;
+    CInt h_stop = h - 2;
+    
+    if (self.app.resized()) {
+        self.top();
+        self.error_vtop = 0;
+        self.error_vbot = (usz) h_stop;
+    }
+
+    if (self.app.logs.len() < (usz) h_stop) 
+    {
+        self.error_vtop = 0;
+        self.error_vbot = self.app.logs.len();
+        // Here there was a return statement so if something broke maybe it's the cause.
+    }
+    else 
+    {
+        self.error_vbot = self.error_vtop + (usz) h_stop;
+    }
+
+    if (self.error_cur < self.error_vtop)
+    {
+        self.error_vtop -= 1;
+        self.error_vbot -= 1;
+    }
+    else if (self.error_cur >= self.error_vbot)
+    {
+        self.error_vtop += 1;
+        self.error_vbot += 1;
+    }
+
+    CInt offset = 0;
+    for (usz i = self.error_vtop; i < self.error_vbot; i++)
+    {
+        if (i == self.error_cur) self.select(self.error);
+
+        String item = self.app.logs[i].tcopy();
+
+        if (item.len > (usz)(w_stop - 1))
+        {
+            item[(usz)(w_stop - 1)] = '\0';
+        }
+
+        // Align text taking in account the first space and one in the middle
+        ncurses::mvwprintw(self.error, y + offset, x, " %- *s", w_stop, item);
+
+        self.reset(self.error);
+        offset++;
+    }
 }
 
 fn void! Display.update(&self)
 {
+    Config *c = self.cfg;
     allocator::temp().reset(self.tmark);
 
     self.update_screen();
     self.clear();
 
-    // TODO: redesign the interface.
-    // At the moment there are too many items on the screen and it's clear
-    // when everything is refreshed.
-    winbox(self.list);
-    winbox(self.prev);
-    winbox(self.text);
+    if (c.title.is_visible)
+    {
+        if (c.title.is_boxed) ncurses::box(self.title, 0, 0);
+        self.draw_title();
+    }
 
-    self.draw_list();
-    self.draw_prev()!;
+    if (c.list.is_visible)
+    {
+        if (c.list.is_boxed) ncurses::box(self.list, 0, 0);
+        self.draw_list();
+    }
+
+    if (c.preview.is_visible)
+    {
+        if (c.preview.is_boxed) ncurses::box(self.preview, 0, 0);
+        self.draw_preview()!;
+    }
+
+    if (c.bookmarks.is_visible)
+    {
+        if (c.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
+        self.draw_bookmarks();
+    }
+
+    if (c.status.is_visible)
+    {
+        if (c.status.is_boxed) ncurses::box(self.status, 0, 0);
+        self.draw_status()!;
+    }
+
+    if (c.prompt.is_visible)
+    {
+        if (c.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+        self.draw_prompt();
+    }
+
+    if (self.focus == Focus.ERROR)
+    {
+        ncurses::werase(self.error);
+
+        ncurses::wattron(self.error, ncurses::A_BOLD);
+        ncurses::wattron(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
+        ncurses::box(self.error, 0, 0);
+        ncurses::wattroff(self.error, ncurses::A_BOLD);
+        ncurses::wattroff(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
+
+        self.draw_error_popup();
+    }
 
     // No need to call refresh cause getch() inside the main will 
     // automatically call it. 
