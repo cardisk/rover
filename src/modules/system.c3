@@ -62,8 +62,10 @@ fn void! System.init(&self)
     String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
 
     char[]! bookmarks_content = file::load_temp(bookmarks_path);
-    if (try bookmarks_content)
+    if BOOKMARKS: (try bookmarks_content)
     {
+        if (bookmarks_content.len == 0) break BOOKMARKS;
+
         String[] lines = ((String) bookmarks_content).tsplit("\n", skip_empty: true);
         foreach (line : lines)
         {
@@ -180,26 +182,25 @@ fn void System.save_cwd(&self)
 
 fn void System.free(&self)
 {
-    if BOOKMARKS_FILE: (!self.bookmarks.is_empty())
-    {
+    {|
         usz tmark = allocator::temp().mark();
 
         String config_path = self.home.str_view().tconcat("/.config/rover");
 
         Path! dir = path::temp_new(config_path);
-        if (catch dir) break BOOKMARKS_FILE;
+        if (catch dir) return;
 
         if (!path::is_dir(dir))
         {
             bool! success = path::mkdir(dir, true);
-            if (catch success) break BOOKMARKS_FILE;
-            if (!success) break BOOKMARKS_FILE;
+            if (catch success) return;
+            if (!success) return;
         }
 
-        if (catch path::chdir(dir)) break BOOKMARKS_FILE;
+        if (catch path::chdir(dir)) return;
 
         File! f = file::open("bookmarks", "wb");
-        if (catch f) break BOOKMARKS_FILE;
+        if (catch f) return;
 
         DString bookmarks;
         bookmarks.temp_init();
@@ -210,10 +211,10 @@ fn void System.free(&self)
             bookmarks.append("\n");
         }
 
-        if (catch f.write((char[]) bookmarks.str_view())) break BOOKMARKS_FILE;
+        if (catch f.write((char[]) bookmarks.str_view())) return;
         
         allocator::temp().reset(tmark);
-    }
+    |};
 
     self.home.free();
     self.cwd.free();
