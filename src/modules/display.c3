@@ -537,13 +537,13 @@ fn void Display.draw_bookmarks(&self)
         {
             self.link(self.bookmarks);
         }
-        else if (stat::is_exe(self.sys.bookmarks[i]))
-        {
-            self.exe(self.bookmarks);
-        }
         else if (stat::is_dir(self.sys.bookmarks[i])) 
         {
             self.dir(self.bookmarks);
+        }
+        else if (stat::is_exe(self.sys.bookmarks[i]))
+        {
+            self.exe(self.bookmarks);
         }
 
         if (i == self.bookmarks_cur) self.select(self.bookmarks);

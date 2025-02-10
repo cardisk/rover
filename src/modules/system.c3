@@ -1,7 +1,7 @@
 module rover::system;
 import rover::stat;
 import std::collections::list;
-import std::io::path;
+import std::io::path, std::io::file;
 import std::os::env;
 import libc;
 
@@ -40,7 +40,8 @@ struct System
 
 fn void! System.init(&self)
 {
-    // --- THIS CODE SMELLS ---
+    usz tmark = allocator::temp().mark();
+
     String! home_env = env::get_home_dir();
     if (catch home_env) return SystemError.NO_HOME?;
 
@@ -48,7 +49,6 @@ fn void! System.init(&self)
     if (catch home) return SystemError.NO_HOME?;
 
     self.home = home;
-    // ------------------------
 
     Path! cwd = path::new_cwd();
     if (catch cwd) return SystemError.NO_CWD?;
@@ -57,12 +57,30 @@ fn void! System.init(&self)
     if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
 
     self.history.new_init();
-    
+    self.bookmarks.new_init();
+
+    String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
+
+    char[]! bookmarks_content = file::load_temp(bookmarks_path);
+    if (try bookmarks_content)
+    {
+        String[] lines = ((String) bookmarks_content).tsplit("\n", skip_empty: true);
+        foreach (line : lines)
+        {
+            Path! p = path::new(line);
+            if (catch p) continue;
+            if (!path::exists(p)) continue;
+            self.bookmarks.push(p);
+        }
+    }
+
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
     self.ls = ls;
 
     self.filter = null;
+
+    allocator::temp().reset(tmark);
 }
 
 fn void System.apply_filter(&self)
@@ -162,6 +180,41 @@ fn void System.save_cwd(&self)
 
 fn void System.free(&self)
 {
+    if BOOKMARKS_FILE: (!self.bookmarks.is_empty())
+    {
+        usz tmark = allocator::temp().mark();
+
+        String config_path = self.home.str_view().tconcat("/.config/rover");
+
+        Path! dir = path::temp_new(config_path);
+        if (catch dir) break BOOKMARKS_FILE;
+
+        if (!path::is_dir(dir))
+        {
+            bool! success = path::mkdir(dir, true);
+            if (catch success) break BOOKMARKS_FILE;
+            if (!success) break BOOKMARKS_FILE;
+        }
+
+        if (catch path::chdir(dir)) break BOOKMARKS_FILE;
+
+        File! f = file::open("bookmarks", "wb");
+        if (catch f) break BOOKMARKS_FILE;
+
+        DString bookmarks;
+        bookmarks.temp_init();
+
+        foreach (b : self.bookmarks)
+        {
+            bookmarks.append(b.str_view());
+            bookmarks.append("\n");
+        }
+
+        if (catch f.write((char[]) bookmarks.str_view())) break BOOKMARKS_FILE;
+        
+        allocator::temp().reset(tmark);
+    }
+
     self.home.free();
     self.cwd.free();
     self.history.free();
