@@ -55,7 +55,8 @@ struct Subwin
 
 struct Config
 {
-    Path bookmarks_path;
+    String editor;
+
     Subwin title;
     Subwin list;
     Subwin preview;
@@ -68,6 +69,10 @@ fn void! Config.init(&self)
 {
     usz tmark = allocator::temp().mark();
     
+    self.editor = "";
+    String! editor_env = env::get_var("EDITOR");
+    if (try editor_env) self.editor = editor_env;
+
     String! home_env = env::get_home_dir();
     if (catch home_env) return ConfigError.ERROR_HOME_DIR?;
 

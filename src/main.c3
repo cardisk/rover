@@ -85,11 +85,16 @@ fn void main()
 
                 if (!stat::is_dir((*list)[cursor]))
                 {
+                    if (cfg.editor.len == 0)
+                    {
+                        app.log("No editor specified through EDITOR environment variable.");
+                        continue;
+                    }
                     ncurses::def_prog_mode();
                     ncurses::endwin();
 
                     ZString cmd = string::new_format_zstr(
-                        "nvim %s", (*list)[cursor]
+                        "%s %s", cfg.editor, (*list)[cursor]
                     );
                     libc::system(cmd);
                     libc::free(cmd);
