@@ -1,5 +1,6 @@
 module rover;
 import rover::state, rover::system, rover::display;
+import std::collections::list;
 import std::io;
 import ncurses;
 import libc;
@@ -59,21 +60,36 @@ fn void main()
             case '\n':
                 if (!enable_action) continue;
 
-                if (sys.ls.is_empty()) continue;
-                if (!path::exists(sys.ls[tui.list_cur]))
+                List(<Path>) *list;
+                usz cursor;
+                switch (tui.focus)
+                {
+                    case Focus.LIST:
+                        list = &sys.ls;
+                        cursor = tui.list_cur;
+                    case Focus.BOOKMARKS:
+                        list = &sys.bookmarks;
+                        cursor = tui.bookmarks_cur;
+                    default:
+                        app.log(string::new_format("Unhandled focus case %s.", tui.focus));
+                        continue;
+                }
+
+                if (list.is_empty()) continue;
+                if (!path::exists((*list)[cursor]))
                 {
                     app.log(string::new_format("Attempting to access inexistent '%s' path.",
-                                                sys.ls[tui.list_cur].str_view()));
+                                                (*list)[cursor].str_view()));
                     continue;
                 }
 
-                if (!stat::is_dir(sys.ls[tui.list_cur]))
+                if (!stat::is_dir((*list)[cursor]))
                 {
                     ncurses::def_prog_mode();
                     ncurses::endwin();
 
                     ZString cmd = string::new_format_zstr(
-                        "nvim %s", sys.ls[tui.list_cur]
+                        "nvim %s", (*list)[cursor]
                     );
                     libc::system(cmd);
                     libc::free(cmd);
@@ -88,10 +104,10 @@ fn void main()
                 }
                 else
                 {
-                    if (catch sys.pchdir(sys.ls[tui.list_cur]))
+                    if (catch sys.pchdir((*list)[cursor]))
                     {
                         app.log(string::new_format("Unable to change directory to %s.",
-                                                    sys.ls[tui.list_cur].str_view()));
+                                                    (*list)[cursor].str_view()));
                         continue;
                     }
                     if (catch sys.clear_filter())
