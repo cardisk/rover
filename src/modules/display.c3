@@ -53,27 +53,16 @@ struct Display
 
     // Error popup, not customizable.
     Window *error;
-
-    // Other required modules.
-    State *app;
-    System *sys;
-    Config *cfg;
 }
 
-fn void! Display.init(&self, State *app, System *sys, Config *cfg)
+fn void! Display.init(&self)
 {
-    assert(app && sys && cfg);
-
     // Initialization of ncurses is now made inside main.
 
     if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::noecho() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::raw() == ncurses::ERR) return DisplayError.INIT_FAIL?;
     if (ncurses::curs_set(0) == ncurses::ERR) return DisplayError.INIT_FAIL?;
-
-    self.app = app;
-    self.sys = sys;
-    self.cfg = cfg;
 
     self.list_cur = 0;
     self.list_vtop = 0;
@@ -103,13 +92,12 @@ fn void! Display.init(&self, State *app, System *sys, Config *cfg)
 
 fn void Display.free(&self)
 {
-    Config *c = self.cfg;
-    if (c.title.is_visible)     ncurses::delwin(self.title);
-    if (c.list.is_visible)      ncurses::delwin(self.list);
-    if (c.preview.is_visible)   ncurses::delwin(self.preview);
-    if (c.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
-    if (c.status.is_visible)    ncurses::delwin(self.status);
-    if (c.prompt.is_visible)    ncurses::delwin(self.prompt);
+    if (rover::cfg.title.is_visible)     ncurses::delwin(self.title);
+    if (rover::cfg.list.is_visible)      ncurses::delwin(self.list);
+    if (rover::cfg.preview.is_visible)   ncurses::delwin(self.preview);
+    if (rover::cfg.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
+    if (rover::cfg.status.is_visible)    ncurses::delwin(self.status);
+    if (rover::cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
 }
 
 fn void Display.dir(&self, Window *win)
@@ -204,17 +192,17 @@ macro Display.down(&self)
     switch (self.focus)
     {
         case Focus.LIST:
-            if (self.list_cur < self.sys.ls.len() - 1)
+            if (self.list_cur < rover::sys.ls.len() - 1)
             {
                 self.list_cur++;
             }
         case Focus.BOOKMARKS:
-            if (self.bookmarks_cur < self.sys.bookmarks.len() - 1)
+            if (self.bookmarks_cur < rover::sys.bookmarks.len() - 1)
             {
                 self.bookmarks_cur++;
             }
         case Focus.ERROR:
-            if (self.error_cur < self.app.logs.len() - 1)
+            if (self.error_cur < rover::app.logs.len() - 1)
             {
                 self.error_cur++;
             }
@@ -239,11 +227,11 @@ macro Display.bottom(&self)
     switch (self.focus)
     {
         case Focus.LIST:
-            self.list_cur = self.sys.ls.len() - 1;
+            self.list_cur = rover::sys.ls.len() - 1;
         case Focus.BOOKMARKS:
-            self.bookmarks_cur = self.sys.bookmarks.len() - 1;
+            self.bookmarks_cur = rover::sys.bookmarks.len() - 1;
         case Focus.ERROR:
-            self.error_cur = self.app.logs.len() - 1;
+            self.error_cur = rover::app.logs.len() - 1;
     }
 }
 
@@ -258,25 +246,24 @@ fn bool is_printable(String str) @private
 
 fn void Display.update_screen(&self) @private
 {
-    Config *c = self.cfg;
-    if (c.title.is_visible)     ncurses::delwin(self.title);
-    if (c.list.is_visible)      ncurses::delwin(self.list);
-    if (c.preview.is_visible)   ncurses::delwin(self.preview);
-    if (c.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
-    if (c.status.is_visible)    ncurses::delwin(self.status);
-    if (c.prompt.is_visible)    ncurses::delwin(self.prompt);
+    if (rover::cfg.title.is_visible)     ncurses::delwin(self.title);
+    if (rover::cfg.list.is_visible)      ncurses::delwin(self.list);
+    if (rover::cfg.preview.is_visible)   ncurses::delwin(self.preview);
+    if (rover::cfg.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
+    if (rover::cfg.status.is_visible)    ncurses::delwin(self.status);
+    if (rover::cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
 
-    if (c.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, c.title.h    , c.title.w    , c.title.y    , c.title.y);
-    if (c.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, c.list.h     , c.list.w     , c.list.y     , c.list.x);
-    if (c.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, c.preview.h  , c.preview.w  , c.preview.y  , c.preview.x);
-    if (c.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, c.bookmarks.h, c.bookmarks.w, c.bookmarks.y, c.bookmarks.x);
-    if (c.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, c.status.h   , c.status.w   , c.status.y   , c.status.x);
-    if (c.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, c.prompt.h   , c.prompt.w   , c.prompt.y   , c.prompt.x);
+    if (rover::cfg.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, rover::cfg.title.h    , rover::cfg.title.w    , rover::cfg.title.y    , rover::cfg.title.y);
+    if (rover::cfg.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, rover::cfg.list.h     , rover::cfg.list.w     , rover::cfg.list.y     , rover::cfg.list.x);
+    if (rover::cfg.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, rover::cfg.preview.h  , rover::cfg.preview.w  , rover::cfg.preview.y  , rover::cfg.preview.x);
+    if (rover::cfg.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, rover::cfg.bookmarks.h, rover::cfg.bookmarks.w, rover::cfg.bookmarks.y, rover::cfg.bookmarks.x);
+    if (rover::cfg.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, rover::cfg.status.h   , rover::cfg.status.w   , rover::cfg.status.y   , rover::cfg.status.x);
+    if (rover::cfg.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, rover::cfg.prompt.h   , rover::cfg.prompt.w   , rover::cfg.prompt.y   , rover::cfg.prompt.x);
 
     if (self.focus == Focus.ERROR)
     {
         if (self.error) ncurses::delwin(self.error);
-        self.error = ncurses::subwin(ncurses::stdscr, self.app.h / 2, self.app.w / 2, self.app.h / 4, self.app.w / 4);   
+        self.error = ncurses::subwin(ncurses::stdscr, rover::app.h / 2, rover::app.w / 2, rover::app.h / 4, rover::app.w / 4);   
     }
 }
 
@@ -284,13 +271,12 @@ fn void Display.clear(&self)
 {
     ncurses::werase(ncurses::stdscr);
 
-    Config *c = self.cfg;
-    if (c.title.is_visible)     ncurses::werase(self.title);
-    if (c.list.is_visible)      ncurses::werase(self.list);
-    if (c.preview.is_visible)   ncurses::werase(self.preview);
-    if (c.bookmarks.is_visible) ncurses::werase(self.bookmarks);
-    if (c.status.is_visible)    ncurses::werase(self.status);
-    if (c.prompt.is_visible)    ncurses::werase(self.prompt);
+    if (rover::cfg.title.is_visible)     ncurses::werase(self.title);
+    if (rover::cfg.list.is_visible)      ncurses::werase(self.list);
+    if (rover::cfg.preview.is_visible)   ncurses::werase(self.preview);
+    if (rover::cfg.bookmarks.is_visible) ncurses::werase(self.bookmarks);
+    if (rover::cfg.status.is_visible)    ncurses::werase(self.status);
+    if (rover::cfg.prompt.is_visible)    ncurses::werase(self.prompt);
 }
 
 fn void Display.draw_title(&self)
@@ -299,9 +285,9 @@ fn void Display.draw_title(&self)
     CInt y = ncurses::getmaxy(self.title);
 
     self.host(self.title);
-    ncurses::mvwprintw(self.title, y / 2, x, "%s@%s ", self.app.user, self.app.host);
+    ncurses::mvwprintw(self.title, y / 2, x, "%s@%s ", rover::app.user, rover::app.host);
     self.pwd(self.title);
-    ncurses::wprintw(self.title, "%s", self.sys.cwd.as_zstr());
+    ncurses::wprintw(self.title, "%s", rover::sys.cwd.as_zstr());
     self.reset(self.title);
 }
 
@@ -317,7 +303,7 @@ fn void Display.draw_list(&self)
     CInt w_stop = w - 5;
     CInt h_stop = h - 3;
     
-    if (self.sys.ls.is_empty())
+    if (rover::sys.ls.is_empty())
     {
         self.select(self.list);
         // It takes in account the borders and the front space.
@@ -326,16 +312,16 @@ fn void Display.draw_list(&self)
         return;
     }
 
-    if (self.app.resized()) {
+    if (rover::app.resized()) {
         self.top();
         self.list_vtop = 0;
         self.list_vbot = (usz) h_stop;
     }
 
-    if (self.sys.ls.len() < (usz) h_stop) 
+    if (rover::sys.ls.len() < (usz) h_stop) 
     {
         self.list_vtop = 0;
-        self.list_vbot = self.sys.ls.len();
+        self.list_vbot = rover::sys.ls.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
@@ -357,22 +343,22 @@ fn void Display.draw_list(&self)
     CInt offset = 0;
     for (usz i = self.list_vtop; i < self.list_vbot; i++)
     {
-        if (stat::is_link(self.sys.ls[i]))
+        if (stat::is_link(rover::sys.ls[i]))
         {
             self.link(self.list);
         }
-        else if (stat::is_dir(self.sys.ls[i])) 
+        else if (stat::is_dir(rover::sys.ls[i])) 
         {
             self.dir(self.list);
         }
-        else if (stat::is_exe(self.sys.ls[i]))
+        else if (stat::is_exe(rover::sys.ls[i]))
         {
             self.exe(self.list);
         }
 
         if (i == self.list_cur) self.select(self.list);
 
-        String item = self.sys.ls[i].str_view().tcopy();
+        String item = rover::sys.ls[i].str_view().tcopy();
 
         // Taking in account elements with non-ascii chars.
         foreach (&c : item)
@@ -405,17 +391,17 @@ fn void! Display.draw_preview(&self)
     CInt w_stop = w - 4;
     CInt h_stop = h - 3;
 
-    if (self.sys.ls.is_empty()) return;
+    if (rover::sys.ls.is_empty()) return;
 
-    if (path::is_file(self.sys.ls[self.list_cur]))
+    if (path::is_file(rover::sys.ls[self.list_cur]))
     {
-        switch (stat::is_exe(self.sys.ls[self.list_cur]))
+        switch (stat::is_exe(rover::sys.ls[self.list_cur]))
         {
             case 1:
                 ncurses::mvwprintw(self.preview, y, x, "<binary>");
 
             case 0:
-                char[]! chars = file::load_temp(self.sys.ls[self.list_cur].str_view());
+                char[]! chars = file::load_temp(rover::sys.ls[self.list_cur].str_view());
                 if (catch chars) break;
 
                 String content = (String) chars;
@@ -452,9 +438,9 @@ fn void! Display.draw_preview(&self)
         }
     }
 
-    if (stat::is_dir(self.sys.ls[self.list_cur]))
+    if (stat::is_dir(rover::sys.ls[self.list_cur]))
     {
-        PathList! ls = path::temp_ls(self.sys.ls[self.list_cur]);
+        PathList! ls = path::temp_ls(rover::sys.ls[self.list_cur]);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
@@ -493,7 +479,7 @@ fn void Display.draw_bookmarks(&self)
     CInt w_stop = w - 5;
     CInt h_stop = h - 3;
     
-    if (self.sys.bookmarks.is_empty())
+    if (rover::sys.bookmarks.is_empty())
     {
         self.select(self.bookmarks);
         // It takes in account the borders and the front space.
@@ -502,16 +488,16 @@ fn void Display.draw_bookmarks(&self)
         return;
     }
 
-    if (self.app.resized()) {
+    if (rover::app.resized()) {
         self.top();
         self.bookmarks_vtop = 0;
         self.bookmarks_vbot = (usz) h_stop;
     }
 
-    if (self.sys.bookmarks.len() < (usz) h_stop) 
+    if (rover::sys.bookmarks.len() < (usz) h_stop) 
     {
         self.bookmarks_vtop = 0;
-        self.bookmarks_vbot = self.sys.bookmarks.len();
+        self.bookmarks_vbot = rover::sys.bookmarks.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
@@ -533,22 +519,22 @@ fn void Display.draw_bookmarks(&self)
     CInt offset = 0;
     for (usz i = self.bookmarks_vtop; i < self.bookmarks_vbot; i++)
     {
-        if (stat::is_link(self.sys.bookmarks[i]))
+        if (stat::is_link(rover::sys.bookmarks[i]))
         {
             self.link(self.bookmarks);
         }
-        else if (stat::is_dir(self.sys.bookmarks[i])) 
+        else if (stat::is_dir(rover::sys.bookmarks[i])) 
         {
             self.dir(self.bookmarks);
         }
-        else if (stat::is_exe(self.sys.bookmarks[i]))
+        else if (stat::is_exe(rover::sys.bookmarks[i]))
         {
             self.exe(self.bookmarks);
         }
 
         if (i == self.bookmarks_cur) self.select(self.bookmarks);
 
-        String item = self.sys.bookmarks[i].str_view().tcopy();
+        String item = rover::sys.bookmarks[i].str_view().tcopy();
 
         // Taking in account elements with non-ascii chars.
         foreach (&c : item)
@@ -577,15 +563,15 @@ fn void! Display.draw_status(&self)
 
     ZString leading, trailing;
 
-    if (self.sys.ls.is_empty())
+    if (rover::sys.ls.is_empty())
     {
         leading  = string::tformat_zstr("%s @ %s %s", "----------", "---", "---");
-        trailing = string::tformat_zstr("%dB %d/%d", 0, 0, self.sys.ls.len());
+        trailing = string::tformat_zstr("%dB %d/%d", 0, 0, rover::sys.ls.len());
     }
     else
     {
         Stat s;
-        if (!stat::read_stat(self.sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
+        if (!stat::read_stat(rover::sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
 
         // Needed for group name.
         Group  *group  = rover::getgrgid(s.st_gid);
@@ -595,7 +581,7 @@ fn void! Display.draw_status(&self)
         ZString perm = stat::tposix_perm(s).zstr_view();
 
         leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
-        trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, self.sys.ls.len());
+        trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, rover::sys.ls.len());
     }
 
     // Avoid printing anything if the terminal width is too short.
@@ -609,7 +595,7 @@ fn void! Display.draw_status(&self)
 
 fn void Display.draw_prompt(&self)
 {
-    if (self.app.logs.is_empty()) return;
+    if (rover::app.logs.is_empty()) return;
 
     CInt x = 2;
     CInt maxx = ncurses::getmaxx(self.status);
@@ -617,7 +603,7 @@ fn void Display.draw_prompt(&self)
 
     // It's safe to assume that at least one element is present 'cause of
     // the first condition of this function.
-    ZString msg = self.app.logs.first()!!.zstr_tcopy();
+    ZString msg = rover::app.logs.first()!!.zstr_tcopy();
 
     self.err(self.prompt);
     ncurses::mvwprintw(self.prompt, y / 2, x, "%s", msg);
@@ -627,7 +613,7 @@ fn void Display.draw_prompt(&self)
 fn ZString Display.input(&self, char prefix)
 {
     ncurses::werase(self.prompt);
-    if (self.cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+    if (rover::cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
 
     CInt maxx, maxy;
     ncurses::@getmaxyx(self.prompt, maxy, maxx);
@@ -688,16 +674,16 @@ fn void Display.draw_error_popup(&self)
     CInt w_stop = w - 5;
     CInt h_stop = h - 2;
     
-    if (self.app.resized()) {
+    if (rover::app.resized()) {
         self.top();
         self.error_vtop = 0;
         self.error_vbot = (usz) h_stop;
     }
 
-    if (self.app.logs.len() < (usz) h_stop) 
+    if (rover::app.logs.len() < (usz) h_stop) 
     {
         self.error_vtop = 0;
-        self.error_vbot = self.app.logs.len();
+        self.error_vbot = rover::app.logs.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
@@ -721,7 +707,7 @@ fn void Display.draw_error_popup(&self)
     {
         if (i == self.error_cur) self.select(self.error);
 
-        String item = self.app.logs[i].tcopy();
+        String item = rover::app.logs[i].tcopy();
 
         if (item.len > (usz)(w_stop - 1))
         {
@@ -738,45 +724,44 @@ fn void Display.draw_error_popup(&self)
 
 fn void! Display.update(&self)
 {
-    Config *c = self.cfg;
     allocator::temp().reset(self.tmark);
 
     self.update_screen();
     self.clear();
 
-    if (c.title.is_visible)
+    if (rover::cfg.title.is_visible)
     {
-        if (c.title.is_boxed) ncurses::box(self.title, 0, 0);
+        if (rover::cfg.title.is_boxed) ncurses::box(self.title, 0, 0);
         self.draw_title();
     }
 
-    if (c.list.is_visible)
+    if (rover::cfg.list.is_visible)
     {
-        if (c.list.is_boxed) ncurses::box(self.list, 0, 0);
+        if (rover::cfg.list.is_boxed) ncurses::box(self.list, 0, 0);
         self.draw_list();
     }
 
-    if (c.preview.is_visible)
+    if (rover::cfg.preview.is_visible)
     {
-        if (c.preview.is_boxed) ncurses::box(self.preview, 0, 0);
+        if (rover::cfg.preview.is_boxed) ncurses::box(self.preview, 0, 0);
         self.draw_preview()!;
     }
 
-    if (c.bookmarks.is_visible)
+    if (rover::cfg.bookmarks.is_visible)
     {
-        if (c.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
+        if (rover::cfg.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
         self.draw_bookmarks();
     }
 
-    if (c.status.is_visible)
+    if (rover::cfg.status.is_visible)
     {
-        if (c.status.is_boxed) ncurses::box(self.status, 0, 0);
+        if (rover::cfg.status.is_boxed) ncurses::box(self.status, 0, 0);
         self.draw_status()!;
     }
 
-    if (c.prompt.is_visible)
+    if (rover::cfg.prompt.is_visible)
     {
-        if (c.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+        if (rover::cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
         self.draw_prompt();
     }
 

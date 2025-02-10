@@ -33,10 +33,10 @@ fn void main()
     }
     ncurses::start_color();
 
-    if (catch e = cfg.init())                 crash(e);
-    if (catch e = app.init())                 crash(e);
-    if (catch e = sys.init())                 crash(e);
-    if (catch e = tui.init(&app, &sys, &cfg)) crash(e);
+    if (catch e = cfg.init()) crash(e);
+    if (catch e = app.init()) crash(e);
+    if (catch e = sys.init()) crash(e);
+    if (catch e = tui.init()) crash(e);
 
     while LOOP: (true)
     {
