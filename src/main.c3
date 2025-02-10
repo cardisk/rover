@@ -60,6 +60,13 @@ fn void main()
                 if (!enable_action) continue;
 
                 if (sys.ls.is_empty()) continue;
+                if (!path::exists(sys.ls[tui.list_cur]))
+                {
+                    app.log(string::new_format("Attempting to access inexistent '%s' path.",
+                                                sys.ls[tui.list_cur].str_view()));
+                    continue;
+                }
+
                 if (!stat::is_dir(sys.ls[tui.list_cur]))
                 {
                     ncurses::def_prog_mode();
