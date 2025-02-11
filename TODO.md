@@ -4,6 +4,7 @@
 [ ] Mark file to peform actions.
 [ ] Polish modules moving stuff like the config one.
 [ ] Refactor the error popup to be able to contain also other stuff.
+[ ] Group actions in categories, so it's easier to allow or not some of them.
 
 Command-line args:
 [ ] '--temp' to make the session temporary (no changes made to bookmarks and other stuff).
