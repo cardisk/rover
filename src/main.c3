@@ -5,10 +5,10 @@ import std::io;
 import ncurses;
 import libc;
 
-Config  cfg;
-State   app;
-System  sys;
-Display tui;
+Config  cfg @builtin;
+State   app @builtin;
+System  sys @builtin;
+Display tui @builtin;
 
 // This serves to activate or deactivate actions
 // when displaying the error popup.
