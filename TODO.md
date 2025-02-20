@@ -37,7 +37,7 @@ History:
 
 - [ ] Window configuration needs to be rethinked because now it's very messy.
 - [X] Global modules need to be marked like @builtin so no prefixing is needed.
-- [ ] Filtering should be case-insensitive.
+- [X] Filtering should be case-insensitive.
 
 # Things to think of
 

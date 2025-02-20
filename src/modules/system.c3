@@ -87,16 +87,23 @@ fn void! System.init(&self)
 
 fn void System.apply_filter(&self)
 {
+    usz tmark = allocator::temp().mark();
     if (!self.filter) return;
     for (int i = 0; i < self.ls.len();)
     {
-        if (!self.ls[i].str_view().contains(self.filter.str_view())) 
+        String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
+        String lower_filter = self.filter.str_view().temp_ascii_to_lower();
+
+        if (!lower_current.contains(lower_filter))
         {
             self.ls.remove_at(i);
             continue;
         }
+
         i++;
     }
+
+    allocator::temp().reset(tmark);
     // With this implementation the compiler segfaults (c3c version 0.6.6).
     // self.ls.remove_using_test(
     //     fn bool(PathImp *p, any ctx)
