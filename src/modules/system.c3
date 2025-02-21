@@ -187,6 +187,11 @@ fn void System.save_cwd(&self)
     self.history.push(p);
 }
 
+fn void! System.new_file(&self, String name)
+{
+    file::save(name, {})!;
+}
+
 fn void System.free(&self)
 {
     {|

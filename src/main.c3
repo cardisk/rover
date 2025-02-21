@@ -218,6 +218,21 @@ fn void main()
                     tui.toggle_focus();
                 }
 
+            case 'n':
+                if (!enable_action) continue;
+
+                ZString in = tui.input('>');
+                if (!in) continue;
+
+                if (in.len() != 0)
+                {
+                    if (catch sys.new_file(in.str_view()))
+                    {
+                        app.log(string::new_format("Unable to create new file %s.", in));
+                        continue;
+                    }
+                }
+
             case '/':
                 if (!enable_action) continue;
 

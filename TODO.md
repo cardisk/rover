@@ -16,7 +16,7 @@ Command-line args:
 # Small features
 
 All of this needs to work also on groups (marked files):
-- [ ] Create file.
+- [X] Create file.
 - [ ] Delete file with confirmation.
 - [ ] Move file.
 - [ ] Rename file.
