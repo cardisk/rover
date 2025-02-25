@@ -26,6 +26,12 @@ fault SystemError
     NO_CHDIR,
 }
 
+struct Target
+{
+    Path p;
+    bool marked;
+}
+
 struct System
 {
     Path home;
@@ -34,7 +40,7 @@ struct System
     List(<Path>) history;
     List(<Path>) bookmarks;
     // When filtering this List will change, clear-filter will reload the cwd.
-    PathList ls;
+    List(<Target>) ls;
     ZString filter;
 }
 
@@ -78,7 +84,11 @@ fn void! System.init(&self)
 
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
-    self.ls = ls;
+
+    foreach (p : ls)
+    {
+        self.ls.push(Target {p, false});
+    }
 
     self.filter = null;
 
@@ -91,7 +101,7 @@ fn void System.apply_filter(&self)
     if (!self.filter) return;
     for (int i = 0; i < self.ls.len();)
     {
-        String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
+        String lower_current = self.ls[i].p.str_view().temp_ascii_to_lower();
         String lower_filter = self.filter.str_view().temp_ascii_to_lower();
 
         if (!lower_current.contains(lower_filter))
@@ -131,7 +141,11 @@ fn void! System.clear_filter(&self)
     self.ls.free();
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
-    self.ls = ls;
+
+    foreach (p : ls)
+    {
+        self.ls.push(Target {p, false});
+    }
 }
 
 fn void! System.reload_cwd(&self) @private
@@ -146,7 +160,11 @@ fn void! System.reload_cwd(&self) @private
     self.ls.free();
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
-    self.ls = ls;
+
+    foreach (p : ls)
+    {
+        self.ls.push(Target {p, false});
+    }
 
     self.apply_filter();
 }

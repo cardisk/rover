@@ -343,22 +343,25 @@ fn void Display.draw_list(&self)
     CInt offset = 0;
     for (usz i = self.list_vtop; i < self.list_vbot; i++)
     {
-        if (stat::is_link(sys.ls[i]))
+        if (stat::is_link(sys.ls[i].p))
         {
             self.link(self.list);
         }
-        else if (stat::is_dir(sys.ls[i])) 
+        else if (stat::is_dir(sys.ls[i].p)) 
         {
             self.dir(self.list);
         }
-        else if (stat::is_exe(sys.ls[i]))
+        else if (stat::is_exe(sys.ls[i].p))
         {
             self.exe(self.list);
         }
 
         if (i == self.list_cur) self.select(self.list);
 
-        String item = sys.ls[i].str_view().tcopy();
+        DString item;
+        item.temp_init();
+        if (sys.ls[i].marked) item.append("* ");
+        item.append(sys.ls[i].p.str_view().tcopy());
 
         // Taking in account elements with non-ascii chars.
         foreach (&c : item)
@@ -366,13 +369,13 @@ fn void Display.draw_list(&self)
             if (!c.is_print()) *c = '?';
         }
 
-        if (item.len > (usz)(w_stop - 1))
+        if (item.len() > (usz)(w_stop - 1))
         {
             item[(usz)(w_stop - 1)] = '\0';
         }
 
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w_stop, item);
+        ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w_stop, item.zstr_view());
 
         self.reset(self.list);
         offset++;
@@ -393,15 +396,15 @@ fn void! Display.draw_preview(&self)
 
     if (sys.ls.is_empty()) return;
 
-    if (path::is_file(sys.ls[self.list_cur]))
+    if (path::is_file(sys.ls[self.list_cur].p))
     {
-        switch (stat::is_exe(sys.ls[self.list_cur]))
+        switch (stat::is_exe(sys.ls[self.list_cur].p))
         {
             case 1:
                 ncurses::mvwprintw(self.preview, y, x, "<binary>");
 
             case 0:
-                char[]! chars = file::load_temp(sys.ls[self.list_cur].str_view());
+                char[]! chars = file::load_temp(sys.ls[self.list_cur].p.str_view());
                 if (catch chars) break;
 
                 String content = (String) chars;
@@ -438,9 +441,9 @@ fn void! Display.draw_preview(&self)
         }
     }
 
-    if (stat::is_dir(sys.ls[self.list_cur]))
+    if (stat::is_dir(sys.ls[self.list_cur].p))
     {
-        PathList! ls = path::temp_ls(sys.ls[self.list_cur]);
+        PathList! ls = path::temp_ls(sys.ls[self.list_cur].p);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
@@ -571,7 +574,7 @@ fn void! Display.draw_status(&self)
     else
     {
         Stat s;
-        if (!stat::read_stat(sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
+        if (!stat::read_stat(sys.ls[self.list_cur].p, &s)) return DisplayError.NO_STATUS?;
 
         // Needed for group name.
         Group  *group  = rover::getgrgid(s.st_gid);

@@ -60,67 +60,107 @@ fn void main()
             case '\n':
                 if (!enable_action) continue;
 
-                List(<Path>) *list;
-                usz cursor;
                 switch (tui.focus)
                 {
                     case Focus.LIST:
-                        list = &sys.ls;
-                        cursor = tui.list_cur;
+                        if (sys.ls.is_empty()) continue;
+                        if (!path::exists(sys.ls[tui.list_cur].p))
+                        {
+                            app.log(string::new_format("Attempting to access inexistent '%s' path.",
+                                                        sys.ls[tui.list_cur].p.str_view()));
+                            continue;
+                        }
+
+                        if (!stat::is_dir(sys.ls[tui.list_cur].p))
+                        {
+                            if (cfg.editor.len == 0)
+                            {
+                                app.log("No editor specified through EDITOR environment variable.");
+                                continue;
+                            }
+                            ncurses::def_prog_mode();
+                            ncurses::endwin();
+
+                            ZString cmd = string::new_format_zstr(
+                                "%s %s", cfg.editor, sys.ls[tui.list_cur].p
+                            );
+                            libc::system(cmd);
+                            libc::free(cmd);
+
+                            ncurses::reset_prog_mode();
+                            
+                            // this is necessary but redundant because using CTRL-Z
+                            // outside of the main application, will cause ncurses
+                            // to CASUALLY forget about some of the configs set
+                            // during the initialization.
+                            ncurses::endwin();
+                        }
+                        else
+                        {
+                            if (catch sys.pchdir(sys.ls[tui.list_cur].p))
+                            {
+                                app.log(string::new_format("Unable to change directory to %s.",
+                                                            sys.ls[tui.list_cur].p.str_view()));
+                                continue;
+                            }
+                            if (catch sys.clear_filter())
+                            {
+                                app.log("Unable to clear the filter.");
+                                continue;
+                            }
+                            tui.top();
+                        }
                     case Focus.BOOKMARKS:
-                        list = &sys.bookmarks;
-                        cursor = tui.bookmarks_cur;
+                        if (sys.bookmarks.is_empty()) continue;
+                        if (!path::exists(sys.bookmarks[tui.bookmarks_cur]))
+                        {
+                            app.log(string::new_format("Attempting to access inexistent '%s' path.",
+                                                        sys.bookmarks[tui.bookmarks_cur].str_view()));
+                            continue;
+                        }
+
+                        if (!stat::is_dir(sys.bookmarks[tui.bookmarks_cur]))
+                        {
+                            if (cfg.editor.len == 0)
+                            {
+                                app.log("No editor specified through EDITOR environment variable.");
+                                continue;
+                            }
+                            ncurses::def_prog_mode();
+                            ncurses::endwin();
+
+                            ZString cmd = string::new_format_zstr(
+                                "%s %s", cfg.editor, sys.bookmarks[tui.bookmarks_cur]
+                            );
+                            libc::system(cmd);
+                            libc::free(cmd);
+
+                            ncurses::reset_prog_mode();
+                            
+                            // this is necessary but redundant because using CTRL-Z
+                            // outside of the main application, will cause ncurses
+                            // to CASUALLY forget about some of the configs set
+                            // during the initialization.
+                            ncurses::endwin();
+                        }
+                        else
+                        {
+                            if (catch sys.pchdir(sys.bookmarks[tui.bookmarks_cur]))
+                            {
+                                app.log(string::new_format("Unable to change directory to %s.",
+                                                            sys.bookmarks[tui.bookmarks_cur].str_view()));
+                                continue;
+                            }
+                            if (catch sys.clear_filter())
+                            {
+                                app.log("Unable to clear the filter.");
+                                continue;
+                            }
+                            tui.top();
+                        }
                     default:
                         app.log(string::new_format("Unhandled focus case %s.", tui.focus));
                         continue;
-                }
-
-                if (list.is_empty()) continue;
-                if (!path::exists((*list)[cursor]))
-                {
-                    app.log(string::new_format("Attempting to access inexistent '%s' path.",
-                                                (*list)[cursor].str_view()));
-                    continue;
-                }
-
-                if (!stat::is_dir((*list)[cursor]))
-                {
-                    if (cfg.editor.len == 0)
-                    {
-                        app.log("No editor specified through EDITOR environment variable.");
-                        continue;
-                    }
-                    ncurses::def_prog_mode();
-                    ncurses::endwin();
-
-                    ZString cmd = string::new_format_zstr(
-                        "%s %s", cfg.editor, (*list)[cursor]
-                    );
-                    libc::system(cmd);
-                    libc::free(cmd);
-
-                    ncurses::reset_prog_mode();
-                    
-                    // this is necessary but redundant because using CTRL-Z
-                    // outside of the main application, will cause ncurses
-                    // to CASUALLY forget about some of the configs set
-                    // during the initialization.
-                    ncurses::endwin();
-                }
-                else
-                {
-                    if (catch sys.pchdir((*list)[cursor]))
-                    {
-                        app.log(string::new_format("Unable to change directory to %s.",
-                                                    (*list)[cursor].str_view()));
-                        continue;
-                    }
-                    if (catch sys.clear_filter())
-                    {
-                        app.log("Unable to clear the filter.");
-                        continue;
-                    }
-                    tui.top();
                 }
 
             case '-':
@@ -179,7 +219,7 @@ fn void main()
             case 's':
                 if (!enable_action) continue;
 
-                Path! p = sys.ls[tui.list_cur].new_absolute();
+                Path! p = sys.ls[tui.list_cur].p.new_absolute();
                 if (catch p)
                 {
                     app.log("Unable to get absolute path for a new bookmark.");
@@ -206,12 +246,12 @@ fn void main()
                     if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
                     if (!confirmation) continue;
 
-                    if (catch path::delete(sys.ls[tui.list_cur]))
+                    if (catch path::delete(sys.ls[tui.list_cur].p))
                     {
-                        app.log(string::new_format("Unable to delete %s.", sys.ls[tui.list_cur]));
+                        app.log(string::new_format("Unable to delete %s.", sys.ls[tui.list_cur].p));
                         continue;
                     }
-                    sys.ls[tui.list_cur].free();
+                    sys.ls[tui.list_cur].p.free();
                     sys.ls.remove_at(tui.list_cur);
                     tui.up();
                     continue;
@@ -230,6 +270,12 @@ fn void main()
                     enable_action = true;
                     tui.toggle_focus();
                 }
+
+            case 'm':
+                if (!enable_action) continue;
+                if (tui.focus != Focus.LIST) continue;
+                if (sys.ls.is_empty()) continue;
+                sys.ls[tui.list_cur].marked = !sys.ls[tui.list_cur].marked;
 
             case 'D':
                 if (app.logs.is_empty()) continue;
