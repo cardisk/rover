@@ -610,7 +610,7 @@ fn void Display.draw_prompt(&self)
     self.reset(self.prompt);
 }
 
-fn ZString Display.input(&self, char prefix)
+fn ZString Display.input(&self, ZString prefix)
 {
     ncurses::werase(self.prompt);
     if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
@@ -622,7 +622,7 @@ fn ZString Display.input(&self, char prefix)
     CInt y = maxy / 2;
 
     ncurses::curs_set(1);
-    ncurses::mvwprintw(self.prompt, y, x, "%c ", prefix);
+    ncurses::mvwprintw(self.prompt, y, x, "%s ", prefix);
     
     DString buf;
     buf.temp_init(128);

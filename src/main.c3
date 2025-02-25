@@ -189,11 +189,33 @@ fn void main()
 
             case 'd':
                 if (!enable_action) continue;
-                if (tui.focus != Focus.BOOKMARKS) continue;
-                if (sys.bookmarks.is_empty()) continue;
-                sys.bookmarks[tui.bookmarks_cur].free();
-                sys.bookmarks.remove_at(tui.bookmarks_cur);
-                tui.up();
+                if (tui.focus == Focus.BOOKMARKS)
+                {
+                    if (sys.bookmarks.is_empty()) continue;
+                    sys.bookmarks[tui.bookmarks_cur].free();
+                    sys.bookmarks.remove_at(tui.bookmarks_cur);
+                    tui.up();
+                    continue;
+                }
+                if (tui.focus == Focus.LIST)
+                {
+                    if (sys.ls.is_empty()) continue;
+
+                    ZString in = tui.input("confirm deletion [y/N] >");
+                    bool confirmation = false;
+                    if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
+                    if (!confirmation) continue;
+
+                    if (catch path::delete(sys.ls[tui.list_cur]))
+                    {
+                        app.log(string::new_format("Unable to delete %s.", sys.ls[tui.list_cur]));
+                        continue;
+                    }
+                    sys.ls[tui.list_cur].free();
+                    sys.ls.remove_at(tui.list_cur);
+                    tui.up();
+                    continue;
+                }
 
             case 'e':
                 if (app.logs.is_empty()) continue;
@@ -221,7 +243,7 @@ fn void main()
             case 'n':
                 if (!enable_action) continue;
 
-                ZString in = tui.input('>');
+                ZString in = tui.input("filename >");
                 if (!in) continue;
 
                 if (in.len() != 0)
@@ -236,7 +258,7 @@ fn void main()
             case '/':
                 if (!enable_action) continue;
 
-                ZString in = tui.input('/');
+                ZString in = tui.input("/");
                 if (!in) continue;
 
                 if (in.len() != 0)
