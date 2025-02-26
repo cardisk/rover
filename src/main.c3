@@ -257,6 +257,20 @@ fn void main()
                     continue;
                 }
 
+            case 'r':
+                if (!enable_action) continue;
+                if (tui.focus != Focus.LIST) continue;
+
+                ZString in = tui.input("rename >");
+                if (in.len() == 0) continue;
+
+                CInt res = libc::rename(sys.ls[tui.list_cur].p.as_zstr(), in);
+                if (res)
+                {
+                    app.log(string::new_format("Unable to rename %s into %s", sys.ls[tui.list_cur].p, in));
+                    continue;
+                }
+
             case 'e':
                 if (app.logs.is_empty()) continue;
                 if (enable_action)

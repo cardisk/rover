@@ -19,7 +19,7 @@ All of this needs to work also on groups (marked files):
 - [X] Create file.
 - [X] Delete file with confirmation.
 - [ ] Move file.
-- [ ] Rename file.
+- [X] Rename file.
 
 Shell:
 - [ ] Command-line access to shell like vim.
