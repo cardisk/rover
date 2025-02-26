@@ -18,7 +18,7 @@ Command-line args:
 All of this needs to work also on groups (marked files):
 - [X] Create file.
 - [X] Delete file with confirmation.
-- [ ] Move file.
+- [X] Move file.
 - [X] Rename file.
 
 Shell:

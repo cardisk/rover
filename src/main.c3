@@ -290,12 +290,29 @@ fn void main()
                 if (tui.focus != Focus.LIST) continue;
                 if (sys.ls.is_empty()) continue;
                 sys.mark(tui.list_cur);
+                tui.down();
 
             case 'M':
                 if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
                 if (sys.ls.is_empty()) continue;
                 sys.unmark(tui.list_cur);
+
+            case 't':
+                if (!enable_action) continue;
+                if (tui.focus != Focus.LIST) continue;
+                if (!path::is_dir(sys.ls[tui.list_cur]))
+                {
+                    app.log("Target is not a directory");
+                    continue;
+                }
+                if (sys.is_marked(tui.list_cur))
+                {
+                    app.log("Target cannot be marked");
+                    continue;
+                }
+                sys.move_marks(tui.list_cur);
+                tui.top();
 
             case 'D':
                 if (app.logs.is_empty()) continue;

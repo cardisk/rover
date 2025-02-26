@@ -221,6 +221,33 @@ fn void System.unmark(&self, usz index)
     }
 }
 
+fn void System.move_marks(&self, usz index)
+{
+    usz tmark = allocator::temp().mark();
+    Path target = self.ls[index];
+    for (usz i = 0; i < self.marked_indexes.len();)
+    {
+        Path old = self.ls[self.marked_indexes[i]];
+        
+        DString new;
+        new.temp_init();
+        new.append(target.str_view());
+        new.append('/');
+        new.append(old.str_view());
+
+        CInt res = libc::rename(old.as_zstr(), new.zstr_view());
+        if (!res) 
+        {
+            self.marked_indexes.remove_at(i);
+            continue;
+        }
+
+        i++;
+    }
+
+    allocator::temp().reset(tmark);
+}
+
 fn void System.free(&self)
 {
     {|
