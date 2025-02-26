@@ -64,14 +64,14 @@ fn void main()
                 {
                     case Focus.LIST:
                         if (sys.ls.is_empty()) continue;
-                        if (!path::exists(sys.ls[tui.list_cur].p))
+                        if (!path::exists(sys.ls[tui.list_cur]))
                         {
                             app.log(string::new_format("Attempting to access inexistent '%s' path.",
-                                                        sys.ls[tui.list_cur].p.str_view()));
+                                                        sys.ls[tui.list_cur].str_view()));
                             continue;
                         }
 
-                        if (!stat::is_dir(sys.ls[tui.list_cur].p))
+                        if (!stat::is_dir(sys.ls[tui.list_cur]))
                         {
                             if (cfg.editor.len == 0)
                             {
@@ -82,7 +82,7 @@ fn void main()
                             ncurses::endwin();
 
                             ZString cmd = string::new_format_zstr(
-                                "%s %s", cfg.editor, sys.ls[tui.list_cur].p
+                                "%s %s", cfg.editor, sys.ls[tui.list_cur]
                             );
                             libc::system(cmd);
                             libc::free(cmd);
@@ -97,10 +97,10 @@ fn void main()
                         }
                         else
                         {
-                            if (catch sys.pchdir(sys.ls[tui.list_cur].p))
+                            if (catch sys.pchdir(sys.ls[tui.list_cur]))
                             {
                                 app.log(string::new_format("Unable to change directory to %s.",
-                                                            sys.ls[tui.list_cur].p.str_view()));
+                                                            sys.ls[tui.list_cur].str_view()));
                                 continue;
                             }
                             if (catch sys.clear_filter())
@@ -219,7 +219,7 @@ fn void main()
             case 's':
                 if (!enable_action) continue;
 
-                Path! p = sys.ls[tui.list_cur].p.new_absolute();
+                Path! p = sys.ls[tui.list_cur].new_absolute();
                 if (catch p)
                 {
                     app.log("Unable to get absolute path for a new bookmark.");
@@ -246,12 +246,12 @@ fn void main()
                     if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
                     if (!confirmation) continue;
 
-                    if (catch path::delete(sys.ls[tui.list_cur].p))
+                    if (catch path::delete(sys.ls[tui.list_cur]))
                     {
-                        app.log(string::new_format("Unable to delete %s.", sys.ls[tui.list_cur].p));
+                        app.log(string::new_format("Unable to delete %s.", sys.ls[tui.list_cur]));
                         continue;
                     }
-                    sys.ls[tui.list_cur].p.free();
+                    sys.ls[tui.list_cur].free();
                     sys.ls.remove_at(tui.list_cur);
                     tui.up();
                     continue;
@@ -264,10 +264,10 @@ fn void main()
                 ZString in = tui.input("rename >");
                 if (in.len() == 0) continue;
 
-                CInt res = libc::rename(sys.ls[tui.list_cur].p.as_zstr(), in);
+                CInt res = libc::rename(sys.ls[tui.list_cur].as_zstr(), in);
                 if (res)
                 {
-                    app.log(string::new_format("Unable to rename %s into %s", sys.ls[tui.list_cur].p, in));
+                    app.log(string::new_format("Unable to rename %s into %s", sys.ls[tui.list_cur], in));
                     continue;
                 }
 
@@ -289,7 +289,13 @@ fn void main()
                 if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
                 if (sys.ls.is_empty()) continue;
-                sys.ls[tui.list_cur].marked = !sys.ls[tui.list_cur].marked;
+                sys.mark(tui.list_cur);
+
+            case 'M':
+                if (!enable_action) continue;
+                if (tui.focus != Focus.LIST) continue;
+                if (sys.ls.is_empty()) continue;
+                sys.unmark(tui.list_cur);
 
             case 'D':
                 if (app.logs.is_empty()) continue;

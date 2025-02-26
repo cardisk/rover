@@ -343,15 +343,15 @@ fn void Display.draw_list(&self)
     CInt offset = 0;
     for (usz i = self.list_vtop; i < self.list_vbot; i++)
     {
-        if (stat::is_link(sys.ls[i].p))
+        if (stat::is_link(sys.ls[i]))
         {
             self.link(self.list);
         }
-        else if (stat::is_dir(sys.ls[i].p)) 
+        else if (stat::is_dir(sys.ls[i])) 
         {
             self.dir(self.list);
         }
-        else if (stat::is_exe(sys.ls[i].p))
+        else if (stat::is_exe(sys.ls[i]))
         {
             self.exe(self.list);
         }
@@ -360,8 +360,8 @@ fn void Display.draw_list(&self)
 
         DString item;
         item.temp_init();
-        if (sys.ls[i].marked) item.append("* ");
-        item.append(sys.ls[i].p.str_view().tcopy());
+        if (sys.is_marked(i)) item.append("+ ");
+        item.append(sys.ls[i].str_view().tcopy());
 
         // Taking in account elements with non-ascii chars.
         foreach (&c : item)
@@ -396,15 +396,15 @@ fn void! Display.draw_preview(&self)
 
     if (sys.ls.is_empty()) return;
 
-    if (path::is_file(sys.ls[self.list_cur].p))
+    if (path::is_file(sys.ls[self.list_cur]))
     {
-        switch (stat::is_exe(sys.ls[self.list_cur].p))
+        switch (stat::is_exe(sys.ls[self.list_cur]))
         {
             case 1:
                 ncurses::mvwprintw(self.preview, y, x, "<binary>");
 
             case 0:
-                char[]! chars = file::load_temp(sys.ls[self.list_cur].p.str_view());
+                char[]! chars = file::load_temp(sys.ls[self.list_cur].str_view());
                 if (catch chars) break;
 
                 String content = (String) chars;
@@ -441,9 +441,9 @@ fn void! Display.draw_preview(&self)
         }
     }
 
-    if (stat::is_dir(sys.ls[self.list_cur].p))
+    if (stat::is_dir(sys.ls[self.list_cur]))
     {
-        PathList! ls = path::temp_ls(sys.ls[self.list_cur].p);
+        PathList! ls = path::temp_ls(sys.ls[self.list_cur]);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
@@ -574,7 +574,7 @@ fn void! Display.draw_status(&self)
     else
     {
         Stat s;
-        if (!stat::read_stat(sys.ls[self.list_cur].p, &s)) return DisplayError.NO_STATUS?;
+        if (!stat::read_stat(sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
 
         // Needed for group name.
         Group  *group  = rover::getgrgid(s.st_gid);

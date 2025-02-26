@@ -26,12 +26,6 @@ fault SystemError
     NO_CHDIR,
 }
 
-struct Target
-{
-    Path p;
-    bool marked;
-}
-
 struct System
 {
     Path home;
@@ -40,7 +34,8 @@ struct System
     List(<Path>) history;
     List(<Path>) bookmarks;
     // When filtering this List will change, clear-filter will reload the cwd.
-    List(<Target>) ls;
+    List(<Path>) ls;
+    List(<usz>) marked_indexes;
     ZString filter;
 }
 
@@ -84,11 +79,7 @@ fn void! System.init(&self)
 
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
-
-    foreach (p : ls)
-    {
-        self.ls.push(Target {p, false});
-    }
+    self.ls = ls;
 
     self.filter = null;
 
@@ -101,7 +92,7 @@ fn void System.apply_filter(&self)
     if (!self.filter) return;
     for (int i = 0; i < self.ls.len();)
     {
-        String lower_current = self.ls[i].p.str_view().temp_ascii_to_lower();
+        String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
         String lower_filter = self.filter.str_view().temp_ascii_to_lower();
 
         if (!lower_current.contains(lower_filter))
@@ -141,11 +132,7 @@ fn void! System.clear_filter(&self)
     self.ls.free();
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
-
-    foreach (p : ls)
-    {
-        self.ls.push(Target {p, false});
-    }
+    self.ls = ls;
 }
 
 fn void! System.reload_cwd(&self) @private
@@ -160,11 +147,7 @@ fn void! System.reload_cwd(&self) @private
     self.ls.free();
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
-
-    foreach (p : ls)
-    {
-        self.ls.push(Target {p, false});
-    }
+    self.ls = ls;
 
     self.apply_filter();
 }
@@ -208,6 +191,34 @@ fn void System.save_cwd(&self)
 fn void! System.new_file(&self, String name)
 {
     file::save(name, {})!;
+}
+
+fn bool System.is_marked(&self, usz index)
+{
+    foreach (it : self.marked_indexes)
+    {
+        if (index == it) return true;
+    }
+    return false;
+}
+
+fn void System.mark(&self, usz index)
+{
+    if (self.is_marked(index)) return;
+    self.marked_indexes.push(index);
+}
+
+fn void System.unmark(&self, usz index)
+{
+    if (!self.is_marked(index)) return;
+    foreach (i, it : self.marked_indexes)
+    {
+        if (index == it)
+        {
+            self.marked_indexes.remove_at(i);
+            break;
+        }
+    }
 }
 
 fn void System.free(&self)
