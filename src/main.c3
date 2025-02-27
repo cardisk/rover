@@ -297,6 +297,7 @@ fn void main()
                 if (tui.focus != Focus.LIST) continue;
                 if (sys.ls.is_empty()) continue;
                 sys.unmark(tui.list_cur);
+                tui.up();
 
             case 't':
                 if (!enable_action) continue;
