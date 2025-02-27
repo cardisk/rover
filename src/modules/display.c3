@@ -578,7 +578,15 @@ fn void! Display.draw_status(&self)
 
         ZString perm = stat::tposix_perm(s).zstr_view();
 
-        leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+        if (sys.filter)
+        {
+            leading  = string::tformat_zstr("%s @ %s %s @ %s", perm, passwd.pw_name, group.gr_name, sys.filter);
+        }
+        else
+        {
+            leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+        }
+
         trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, sys.ls.len());
     }
 

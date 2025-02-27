@@ -30,7 +30,7 @@ History:
 - [ ] Display the list of previously visited directories.
 
 - [X] Go-to prompt to access another directory.
-- [ ] Display somewhere the active filter.
+- [X] Display somewhere the active filter.
 - [ ] Filtering can be case sensitive or not based on the action required.
 
 # Things to be fixed
