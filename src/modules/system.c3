@@ -5,17 +5,6 @@ import std::io::path, std::io::file;
 import std::os::env;
 import libc;
 
-fn bool is_root(Path p) @private
-{
-    $if env::POSIX:
-        return p.str_view() == "/";
-    $endif
-
-    $if env::WIN32:
-        return p.str_view().ends_with(":\\");
-    $endif
-}
-
 fault SystemError
 {
     NO_HOME,
@@ -86,36 +75,6 @@ fn void! System.init(&self)
     allocator::temp().reset(tmark);
 }
 
-fn void System.apply_filter(&self)
-{
-    usz tmark = allocator::temp().mark();
-    if (!self.filter) return;
-    for (int i = 0; i < self.ls.len();)
-    {
-        String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
-        String lower_filter = self.filter.str_view().temp_ascii_to_lower();
-
-        if (!lower_current.contains(lower_filter))
-        {
-            self.ls.remove_at(i);
-            continue;
-        }
-
-        i++;
-    }
-
-    allocator::temp().reset(tmark);
-    // With this implementation the compiler segfaults (c3c version 0.6.6).
-    // self.ls.remove_using_test(
-    //     fn bool(PathImp *p, any ctx)
-    //     {
-    //         return !p.str_view().contains(((ZString) ctx).str_view());
-    //     },
-
-    //     self.filter
-    // );
-}
-
 fn void! System.set_apply_filter(&self, ZString filter)
 {
     self.clear_filter()!;
@@ -133,23 +92,6 @@ fn void! System.clear_filter(&self)
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
     self.ls = ls;
-}
-
-fn void! System.reload_cwd(&self) @private
-{
-    self.cwd.free();
-    Path! cwd = path::new_cwd();
-    if (catch cwd) return SystemError.NO_CWD?;
-    self.cwd = cwd;
-
-    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
-
-    self.ls.free();
-    PathList! ls = path::new_ls(self.cwd);
-    if (catch ls) return SystemError.NO_LS?;
-    self.ls = ls;
-
-    self.apply_filter();
 }
 
 fn void! System.pchdir(&self, Path p, bool save_cwd = true)
@@ -290,4 +232,66 @@ fn void System.free(&self)
     self.bookmarks.free();
     self.ls.free();
     if (self.filter) libc::free(self.filter);
+}
+
+module rover::system @private;
+import rover::stat;
+import std::io::path;
+
+fn bool is_root(Path p)
+{
+    $if env::POSIX:
+        return p.str_view() == "/";
+    $endif
+
+    $if env::WIN32:
+        return p.str_view().ends_with(":\\");
+    $endif
+}
+
+fn void! System.reload_cwd(&self)
+{
+    self.cwd.free();
+    Path! cwd = path::new_cwd();
+    if (catch cwd) return SystemError.NO_CWD?;
+    self.cwd = cwd;
+
+    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
+
+    self.ls.free();
+    PathList! ls = path::new_ls(self.cwd);
+    if (catch ls) return SystemError.NO_LS?;
+    self.ls = ls;
+
+    self.apply_filter();
+}
+
+fn void System.apply_filter(&self)
+{
+    usz tmark = allocator::temp().mark();
+    if (!self.filter) return;
+    for (int i = 0; i < self.ls.len();)
+    {
+        String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
+        String lower_filter = self.filter.str_view().temp_ascii_to_lower();
+
+        if (!lower_current.contains(lower_filter))
+        {
+            self.ls.remove_at(i);
+            continue;
+        }
+
+        i++;
+    }
+
+    allocator::temp().reset(tmark);
+    // With this implementation the compiler segfaults (c3c version 0.6.6).
+    // self.ls.remove_using_test(
+    //     fn bool(PathImp *p, any ctx)
+    //     {
+    //         return !p.str_view().contains(((ZString) ctx).str_view());
+    //     },
+
+    //     self.filter
+    // );
 }

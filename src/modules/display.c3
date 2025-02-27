@@ -95,60 +95,6 @@ fn void Display.free(&self)
     if (cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
 }
 
-fn void Display.dir(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::DIRECTORY_COLOR));
-}
-
-fn void Display.exe(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
-}
-
-fn void Display.link(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::LINK_COLOR));
-}
-
-fn void Display.pwd(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::PWD_COLOR));
-}
-
-fn void Display.host(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::HOST_COLOR));
-}
-
-fn void Display.err(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::ERROR_COLOR));
-}
-
-macro Display.select(&self, Window *win)
-{
-    ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::A_REVERSE);
-}
-
-fn void Display.reset(&self, Window *win)
-{
-    ncurses::wattroff(win, ncurses::A_BOLD);
-    ncurses::wattroff(win, ncurses::A_REVERSE);
-    ncurses::wattroff(win, ncurses::color_pair(config::DIRECTORY_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::LINK_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::PWD_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::HOST_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::ERROR_COLOR));
-}
-
 macro Display.toggle_focus(&self, bool error = false)
 {
     if (error)
@@ -230,7 +176,177 @@ macro Display.bottom(&self)
     }
 }
 
-fn bool is_printable(String str) @private
+fn ZString Display.input(&self, ZString prefix)
+{
+    ncurses::werase(self.prompt);
+    if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+
+    CInt maxx, maxy;
+    ncurses::@getmaxyx(self.prompt, maxy, maxx);
+
+    CInt x = 2;
+    CInt y = maxy / 2;
+
+    ncurses::curs_set(1);
+    ncurses::mvwprintw(self.prompt, y, x, "%s ", prefix);
+    
+    DString buf;
+    buf.temp_init(128);
+
+    while LOOP: (true)
+    {
+        CInt in = ncurses::wgetch(self.prompt);
+        CInt cur_x = ncurses::getcurx(self.prompt);
+
+        switch (in)
+        {
+            case 27: // ESC
+                ncurses::curs_set(0);
+                return null;
+
+            case '\n':
+                break LOOP;
+
+            case 127:
+            case '\b':
+            case ncurses::KEY_BACKSPACE:
+                if (!buf.len()) break;
+                ncurses::wprintw(self.prompt, "\b \b");
+                buf.delete(buf.len() - 1);
+
+            default:
+                // clamping the text inside the window.
+                if (x > maxx - 3) break;
+                if (!((char) in).is_print()) break;
+                ncurses::waddch(self.prompt, in);
+                buf.append((char) in);
+        }
+    }
+
+    ncurses::curs_set(0);
+
+    return buf.zstr_view();
+}
+
+fn void! Display.update(&self)
+{
+    self.update_screen();
+    self.clear();
+
+    if (cfg.title.is_visible)
+    {
+        if (cfg.title.is_boxed) ncurses::box(self.title, 0, 0);
+        self.draw_title();
+    }
+
+    if (cfg.list.is_visible)
+    {
+        if (cfg.list.is_boxed) ncurses::box(self.list, 0, 0);
+        self.draw_list();
+    }
+
+    if (cfg.preview.is_visible)
+    {
+        if (cfg.preview.is_boxed) ncurses::box(self.preview, 0, 0);
+        self.draw_preview()!;
+    }
+
+    if (cfg.bookmarks.is_visible)
+    {
+        if (cfg.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
+        self.draw_bookmarks();
+    }
+
+    if (cfg.status.is_visible)
+    {
+        if (cfg.status.is_boxed) ncurses::box(self.status, 0, 0);
+        self.draw_status()!;
+    }
+
+    if (cfg.prompt.is_visible)
+    {
+        if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+        self.draw_prompt();
+    }
+
+    if (self.focus == Focus.ERROR)
+    {
+        ncurses::werase(self.error);
+
+        ncurses::wattron(self.error, ncurses::A_BOLD);
+        ncurses::wattron(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
+        ncurses::box(self.error, 0, 0);
+        ncurses::wattroff(self.error, ncurses::A_BOLD);
+        ncurses::wattroff(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
+
+        self.draw_error_popup();
+    }
+
+    // No need to call refresh cause getch() inside the main will 
+    // automatically call it. 
+}
+
+module rover::display @private;
+import std::io::path, std::io::file;
+import rover::config, rover::stat;
+import ncurses;
+import libc;
+
+fn void Display.dir(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::DIRECTORY_COLOR));
+}
+
+fn void Display.exe(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
+}
+
+fn void Display.link(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::LINK_COLOR));
+}
+
+fn void Display.pwd(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::PWD_COLOR));
+}
+
+fn void Display.host(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::HOST_COLOR));
+}
+
+fn void Display.err(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::color_pair(config::ERROR_COLOR));
+}
+
+macro Display.select(&self, Window *win)
+{
+    ncurses::wattron(win, ncurses::A_BOLD);
+    ncurses::wattron(win, ncurses::A_REVERSE);
+}
+
+fn void Display.reset(&self, Window *win)
+{
+    ncurses::wattroff(win, ncurses::A_BOLD);
+    ncurses::wattroff(win, ncurses::A_REVERSE);
+    ncurses::wattroff(win, ncurses::color_pair(config::DIRECTORY_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::LINK_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::PWD_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::HOST_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(config::ERROR_COLOR));
+}
+
+fn bool is_printable(String str)
 {
     foreach (c : str)
     {
@@ -616,58 +732,6 @@ fn void Display.draw_prompt(&self)
     self.reset(self.prompt);
 }
 
-fn ZString Display.input(&self, ZString prefix)
-{
-    ncurses::werase(self.prompt);
-    if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
-
-    CInt maxx, maxy;
-    ncurses::@getmaxyx(self.prompt, maxy, maxx);
-
-    CInt x = 2;
-    CInt y = maxy / 2;
-
-    ncurses::curs_set(1);
-    ncurses::mvwprintw(self.prompt, y, x, "%s ", prefix);
-    
-    DString buf;
-    buf.temp_init(128);
-
-    while LOOP: (true)
-    {
-        CInt in = ncurses::wgetch(self.prompt);
-        CInt cur_x = ncurses::getcurx(self.prompt);
-
-        switch (in)
-        {
-            case 27: // ESC
-                ncurses::curs_set(0);
-                return null;
-
-            case '\n':
-                break LOOP;
-
-            case 127:
-            case '\b':
-            case ncurses::KEY_BACKSPACE:
-                if (!buf.len()) break;
-                ncurses::wprintw(self.prompt, "\b \b");
-                buf.delete(buf.len() - 1);
-
-            default:
-                // clamping the text inside the window.
-                if (x > maxx - 3) break;
-                if (!((char) in).is_print()) break;
-                ncurses::waddch(self.prompt, in);
-                buf.append((char) in);
-        }
-    }
-
-    ncurses::curs_set(0);
-
-    return buf.zstr_view();
-}
-
 fn void Display.draw_error_popup(&self)
 {
     CInt w, h;
@@ -726,62 +790,4 @@ fn void Display.draw_error_popup(&self)
         self.reset(self.error);
         offset++;
     }
-}
-
-fn void! Display.update(&self)
-{
-    self.update_screen();
-    self.clear();
-
-    if (cfg.title.is_visible)
-    {
-        if (cfg.title.is_boxed) ncurses::box(self.title, 0, 0);
-        self.draw_title();
-    }
-
-    if (cfg.list.is_visible)
-    {
-        if (cfg.list.is_boxed) ncurses::box(self.list, 0, 0);
-        self.draw_list();
-    }
-
-    if (cfg.preview.is_visible)
-    {
-        if (cfg.preview.is_boxed) ncurses::box(self.preview, 0, 0);
-        self.draw_preview()!;
-    }
-
-    if (cfg.bookmarks.is_visible)
-    {
-        if (cfg.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
-        self.draw_bookmarks();
-    }
-
-    if (cfg.status.is_visible)
-    {
-        if (cfg.status.is_boxed) ncurses::box(self.status, 0, 0);
-        self.draw_status()!;
-    }
-
-    if (cfg.prompt.is_visible)
-    {
-        if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
-        self.draw_prompt();
-    }
-
-    if (self.focus == Focus.ERROR)
-    {
-        ncurses::werase(self.error);
-
-        ncurses::wattron(self.error, ncurses::A_BOLD);
-        ncurses::wattron(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
-        ncurses::box(self.error, 0, 0);
-        ncurses::wattroff(self.error, ncurses::A_BOLD);
-        ncurses::wattroff(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
-
-        self.draw_error_popup();
-    }
-
-    // No need to call refresh cause getch() inside the main will 
-    // automatically call it. 
 }
