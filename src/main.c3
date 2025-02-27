@@ -38,8 +38,12 @@ fn void main()
     if (catch e = sys.init()) crash(e);
     if (catch e = tui.init()) crash(e);
 
+    usz tmark = allocator::temp().mark();
+
     while LOOP: (true)
     {
+        allocator::temp().reset(tmark);
+
         app.update();
         if (catch sys.update())
         {
@@ -314,6 +318,17 @@ fn void main()
                 }
                 sys.move_marks(tui.list_cur);
                 tui.top();
+
+            case 'g':
+                if (!enable_action) continue;
+                ZString in = tui.input("goto >");
+                if (in.len() == 0) continue;
+                if (catch sys.schdir(in.str_view()))
+                {
+                    app.log(string::new_format("Unable to goto inside %s.", in));
+                    continue;
+                }
+
 
             case 'D':
                 if (app.logs.is_empty()) continue;

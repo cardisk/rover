@@ -29,7 +29,7 @@ History:
 - [ ] Review the history of previously done commands.
 - [ ] Display the list of previously visited directories.
 
-- [ ] Go-to prompt to access another directory.
+- [X] Go-to prompt to access another directory.
 - [ ] Display somewhere the active filter.
 - [ ] Filtering can be case sensitive or not based on the action required.
 

@@ -40,9 +40,6 @@ struct Display
 
     Focus focus;
 
-    // Marker for the temporary allocator.
-    usz tmark;
-
     // Subwindows.
     Window *title;
     Window *list;
@@ -77,8 +74,6 @@ fn void! Display.init(&self)
     self.error_vbot = 0;
 
     self.focus = Focus.LIST;
-
-    self.tmark = allocator::temp().mark();
 
     self.title     = null;
     self.list      = null;
@@ -727,8 +722,6 @@ fn void Display.draw_error_popup(&self)
 
 fn void! Display.update(&self)
 {
-    allocator::temp().reset(self.tmark);
-
     self.update_screen();
     self.clear();
 
