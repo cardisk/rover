@@ -281,7 +281,7 @@ fn void main()
                 {
                     // Disable every action that cannot be done with error popup.
                     enable_action = false;
-                    tui.toggle_focus(true);
+                    tui.toggle_popup(STRING, &app.logs);
                 }
                 else
                 {

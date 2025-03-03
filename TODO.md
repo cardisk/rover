@@ -3,7 +3,7 @@
 - [ ] Custom keybindings.
 - [X] Mark file to peform actions.
 - [X] Polish modules moving stuff like the config one.
-- [ ] Refactor the error popup to be able to contain also other stuff.
+- [X] Refactor the error popup to be able to contain also other stuff.
 - [ ] Group actions in categories, so it's easier to allow or not some of them.
 - [ ] Session tabs that store indipendent application state (cwd, bookmarks ...).
 

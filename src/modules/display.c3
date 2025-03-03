@@ -1,9 +1,6 @@
 module rover::display;
-import rover::state, rover::system, rover::config, rover::stat;
-import std::io::path, std::io::file;
-import std::core::mem::allocator;
+import std::collections::list;
 import ncurses;
-import libc;
 
 fault DisplayError
 {
@@ -17,7 +14,13 @@ enum Focus
 {
     LIST,
     BOOKMARKS,
-    ERROR,
+    POPUP,
+}
+
+enum PopupContentType
+{
+    STRING,
+    PATH,
 }
 
 struct Display
@@ -33,10 +36,10 @@ struct Display
     usz bookmarks_vtop;
     usz bookmarks_vbot;
     // Position selected inside the error popup.
-    usz error_cur;
+    usz popup_cur;
     // Boundaries of the error popup (inclusive).
-    usz error_vtop;
-    usz error_vbot;
+    usz popup_vtop;
+    usz popup_vbot;
 
     Focus focus;
 
@@ -48,8 +51,10 @@ struct Display
     Window *status;
     Window *prompt;
 
-    // Error popup, not customizable.
-    Window *error;
+    // Popup, not customizable.
+    PopupContentType popup_content_type;
+    void *popup_content;
+    Window *popup;
 }
 
 fn void! Display.init(&self)
@@ -69,11 +74,11 @@ fn void! Display.init(&self)
     self.bookmarks_vtop = 0;
     self.bookmarks_vbot = 0;
 
-    self.error_cur = 0;
-    self.error_vtop = 0;
-    self.error_vbot = 0;
+    self.popup_cur = 0;
+    self.popup_vtop = 0;
+    self.popup_vbot = 0;
 
-    self.focus = Focus.LIST;
+    self.focus = LIST;
 
     self.title     = null;
     self.list      = null;
@@ -82,7 +87,7 @@ fn void! Display.init(&self)
     self.status    = null;
     self.prompt    = null;
 
-    self.error = null;
+    self.popup = null;
 }
 
 fn void Display.free(&self)
@@ -95,36 +100,36 @@ fn void Display.free(&self)
     if (cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
 }
 
-macro Display.toggle_focus(&self, bool error = false)
+macro Display.toggle_focus(&self)
 {
-    if (error)
-    {
-        self.focus = Focus.ERROR;
-        self.top();
-        return;
-    }
-
     switch (self.focus)
     {
-        case Focus.LIST:
-            self.focus = Focus.BOOKMARKS;
-        case Focus.BOOKMARKS:
-            self.focus = Focus.LIST;
-        case Focus.ERROR:
-            self.focus = Focus.LIST;
+        case LIST:
+            self.focus = BOOKMARKS;
+        case BOOKMARKS:
+            self.focus = LIST;
+        case POPUP:
+            self.focus = LIST;
     }
+}
+
+macro Display.toggle_popup(&self, PopupContentType type, void *content)
+{
+    self.popup_content_type = type;
+    self.popup_content = content;
+    self.focus = POPUP;
 }
 
 macro Display.up(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             if (self.list_cur > 0) self.list_cur--;
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             if (self.bookmarks_cur > 0) self.bookmarks_cur--;
-        case Focus.ERROR:
-            if (self.error_cur > 0) self.error_cur--;
+        case POPUP:
+            if (self.popup_cur > 0) self.popup_cur--;
     }
 }
 
@@ -132,20 +137,20 @@ macro Display.down(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             if (self.list_cur < sys.ls.len() - 1)
             {
                 self.list_cur++;
             }
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             if (self.bookmarks_cur < sys.bookmarks.len() - 1)
             {
                 self.bookmarks_cur++;
             }
-        case Focus.ERROR:
-            if (self.error_cur < app.logs.len() - 1)
+        case POPUP:
+            if (self.popup_cur < app.logs.len() - 1)
             {
-                self.error_cur++;
+                self.popup_cur++;
             }
     }
 }
@@ -154,12 +159,12 @@ macro Display.top(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             self.list_cur = 0;
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             self.bookmarks_cur = 0;
-        case Focus.ERROR:
-            self.error_cur = 0;
+        case POPUP:
+            self.popup_cur = 0;
     }
 }
 
@@ -167,12 +172,12 @@ macro Display.bottom(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             self.list_cur = sys.ls.len() - 1;
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             self.bookmarks_cur = sys.bookmarks.len() - 1;
-        case Focus.ERROR:
-            self.error_cur = app.logs.len() - 1;
+        case POPUP:
+            self.popup_cur = app.logs.len() - 1;
     }
 }
 
@@ -269,17 +274,15 @@ fn void! Display.update(&self)
         self.draw_prompt();
     }
 
-    if (self.focus == Focus.ERROR)
+    if (self.focus == POPUP)
     {
-        ncurses::werase(self.error);
+        ncurses::werase(self.popup);
 
-        ncurses::wattron(self.error, ncurses::A_BOLD);
-        ncurses::wattron(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
-        ncurses::box(self.error, 0, 0);
-        ncurses::wattroff(self.error, ncurses::A_BOLD);
-        ncurses::wattroff(self.error, ncurses::color_pair(config::ERROR_POPUP_BORDER));
+        ncurses::wattron(self.popup, ncurses::A_BOLD);
+        ncurses::box(self.popup, 0, 0);
+        ncurses::wattroff(self.popup, ncurses::A_BOLD);
 
-        self.draw_error_popup();
+        self.draw_popup();
     }
 
     // No need to call refresh cause getch() inside the main will 
@@ -289,6 +292,7 @@ fn void! Display.update(&self)
 module rover::display @private;
 import std::io::path, std::io::file;
 import rover::config, rover::stat;
+import std::collections::list;
 import ncurses;
 import libc;
 
@@ -355,7 +359,7 @@ fn bool is_printable(String str)
     return true;
 }
 
-fn void Display.update_screen(&self) @private
+fn void Display.update_screen(&self)
 {
     if (cfg.title.is_visible)     ncurses::delwin(self.title);
     if (cfg.list.is_visible)      ncurses::delwin(self.list);
@@ -371,10 +375,10 @@ fn void Display.update_screen(&self) @private
     if (cfg.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, cfg.status.h   , cfg.status.w   , cfg.status.y   , cfg.status.x);
     if (cfg.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, cfg.prompt.h   , cfg.prompt.w   , cfg.prompt.y   , cfg.prompt.x);
 
-    if (self.focus == Focus.ERROR)
+    if (self.focus == POPUP)
     {
-        if (self.error) ncurses::delwin(self.error);
-        self.error = ncurses::subwin(ncurses::stdscr, app.h / 2, app.w / 2, app.h / 4, app.w / 4);   
+        if (self.popup) ncurses::delwin(self.popup);
+        self.popup = ncurses::subwin(ncurses::stdscr, app.h / 2, app.w / 2, app.h / 4, app.w / 4);   
     }
 }
 
@@ -732,10 +736,12 @@ fn void Display.draw_prompt(&self)
     self.reset(self.prompt);
 }
 
-fn void Display.draw_error_popup(&self)
+fn void Display.draw_popup(&self)
 {
+    assert(self.popup_content, "Programmer forgot to init the content pointer");
+    
     CInt w, h;
-    ncurses::@getmaxyx(self.error, h, w);
+    ncurses::@getmaxyx(self.popup, h, w);
 
     // Cursor coordinates.
     CInt x = 2;
@@ -746,38 +752,49 @@ fn void Display.draw_error_popup(&self)
     
     if (app.resized()) {
         self.top();
-        self.error_vtop = 0;
-        self.error_vbot = (usz) h_stop;
+        self.popup_vtop = 0;
+        self.popup_vbot = (usz) h_stop;
     }
 
     if (app.logs.len() < (usz) h_stop) 
     {
-        self.error_vtop = 0;
-        self.error_vbot = app.logs.len();
+        self.popup_vtop = 0;
+        self.popup_vbot = app.logs.len();
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 
     {
-        self.error_vbot = self.error_vtop + (usz) h_stop;
+        self.popup_vbot = self.popup_vtop + (usz) h_stop;
     }
 
-    if (self.error_cur < self.error_vtop)
+    if (self.popup_cur < self.popup_vtop)
     {
-        self.error_vtop -= 1;
-        self.error_vbot -= 1;
+        self.popup_vtop -= 1;
+        self.popup_vbot -= 1;
     }
-    else if (self.error_cur >= self.error_vbot)
+    else if (self.popup_cur >= self.popup_vbot)
     {
-        self.error_vtop += 1;
-        self.error_vbot += 1;
+        self.popup_vtop += 1;
+        self.popup_vbot += 1;
     }
 
     CInt offset = 0;
-    for (usz i = self.error_vtop; i < self.error_vbot; i++)
+    for (usz i = self.popup_vtop; i < self.popup_vbot; i++)
     {
-        if (i == self.error_cur) self.select(self.error);
+        if (i == self.popup_cur) self.select(self.popup);
 
-        String item = app.logs[i].tcopy();
+        String item;
+        switch (self.popup_content_type)
+        {
+            case STRING:
+                List(<String>) *temp = self.popup_content;
+                item = (*temp)[i].tcopy();
+            case PATH:
+                List(<Path>) *temp = self.popup_content;
+                item = (*temp)[i].str_view().tcopy();
+            default:
+                unreachable("Programmer's fault...sorry :(");
+        }
 
         if (item.len > (usz)(w_stop - 1))
         {
@@ -785,9 +802,9 @@ fn void Display.draw_error_popup(&self)
         }
 
         // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.error, y + offset, x, " %- *s", w_stop, item);
+        ncurses::mvwprintw(self.popup, y + offset, x, " %- *s", w_stop, item);
 
-        self.reset(self.error);
+        self.reset(self.popup);
         offset++;
     }
 }
