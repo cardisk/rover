@@ -54,6 +54,7 @@ struct Display
     // Popup, not customizable.
     PopupContentType popup_content_type;
     void *popup_content;
+    usz popup_content_len;
     Window *popup;
 }
 
@@ -113,10 +114,11 @@ macro Display.toggle_focus(&self)
     }
 }
 
-macro Display.toggle_popup(&self, PopupContentType type, void *content)
+macro Display.toggle_popup(&self, PopupContentType type, void *content, usz len)
 {
     self.popup_content_type = type;
     self.popup_content = content;
+    self.popup_content_len = len;
     self.focus = POPUP;
 }
 
@@ -756,10 +758,10 @@ fn void Display.draw_popup(&self)
         self.popup_vbot = (usz) h_stop;
     }
 
-    if (app.logs.len() < (usz) h_stop) 
+    if (self.popup_content_len < (usz) h_stop) 
     {
         self.popup_vtop = 0;
-        self.popup_vbot = app.logs.len();
+        self.popup_vbot = self.popup_content_len;
         // Here there was a return statement so if something broke maybe it's the cause.
     }
     else 

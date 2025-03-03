@@ -275,13 +275,27 @@ fn void main()
                     continue;
                 }
 
+            case 'h':
+                if (sys.history.is_empty()) continue;
+                if (enable_action)
+                {
+                    // Disable every action that cannot be done with the popup.
+                    enable_action = false;
+                    tui.toggle_popup(PATH, &sys.history, sys.history.len());
+                }
+                else
+                {
+                    enable_action = true;
+                    tui.toggle_focus();
+                }
+
             case 'e':
                 if (app.logs.is_empty()) continue;
                 if (enable_action)
                 {
                     // Disable every action that cannot be done with error popup.
                     enable_action = false;
-                    tui.toggle_popup(STRING, &app.logs);
+                    tui.toggle_popup(STRING, &app.logs, app.logs.len());
                 }
                 else
                 {
