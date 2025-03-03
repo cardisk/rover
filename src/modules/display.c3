@@ -17,6 +17,12 @@ enum Focus
     POPUP,
 }
 
+enum PopupContentType
+{
+    STRING,
+    PATH,
+}
+
 struct Display
 {
     // Position selected inside the list.
@@ -46,6 +52,8 @@ struct Display
     Window *prompt;
 
     // Popup, not customizable.
+    PopupContentType popup_content_type;
+    void *popup_content;
     Window *popup;
 }
 
@@ -70,7 +78,7 @@ fn void! Display.init(&self)
     self.popup_vtop = 0;
     self.popup_vbot = 0;
 
-    self.focus = Focus.LIST;
+    self.focus = LIST;
 
     self.title     = null;
     self.list      = null;
@@ -92,40 +100,35 @@ fn void Display.free(&self)
     if (cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
 }
 
-macro Display.toggle_focus(&self, bool popup = false)
+macro Display.toggle_focus(&self)
 {
-    if (popup)
-    {
-        self.focus = Focus.POPUP;
-        self.top();
-        return;
-    }
-
     switch (self.focus)
     {
-        case Focus.LIST:
-            self.focus = Focus.BOOKMARKS;
-        case Focus.BOOKMARKS:
-            self.focus = Focus.LIST;
-        case Focus.POPUP:
-            self.focus = Focus.LIST;
+        case LIST:
+            self.focus = BOOKMARKS;
+        case BOOKMARKS:
+            self.focus = LIST;
+        case POPUP:
+            self.focus = LIST;
     }
 }
 
-macro Display.toggle_popup(&self, List(<any>))
+macro Display.toggle_popup(&self, PopupContentType type, void *content)
 {
-
+    self.popup_content_type = type;
+    self.popup_content = content;
+    self.focus = POPUP;
 }
 
 macro Display.up(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             if (self.list_cur > 0) self.list_cur--;
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             if (self.bookmarks_cur > 0) self.bookmarks_cur--;
-        case Focus.POPUP:
+        case POPUP:
             if (self.popup_cur > 0) self.popup_cur--;
     }
 }
@@ -134,17 +137,17 @@ macro Display.down(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             if (self.list_cur < sys.ls.len() - 1)
             {
                 self.list_cur++;
             }
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             if (self.bookmarks_cur < sys.bookmarks.len() - 1)
             {
                 self.bookmarks_cur++;
             }
-        case Focus.POPUP:
+        case POPUP:
             if (self.popup_cur < app.logs.len() - 1)
             {
                 self.popup_cur++;
@@ -156,11 +159,11 @@ macro Display.top(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             self.list_cur = 0;
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             self.bookmarks_cur = 0;
-        case Focus.POPUP:
+        case POPUP:
             self.popup_cur = 0;
     }
 }
@@ -169,11 +172,11 @@ macro Display.bottom(&self)
 {
     switch (self.focus)
     {
-        case Focus.LIST:
+        case LIST:
             self.list_cur = sys.ls.len() - 1;
-        case Focus.BOOKMARKS:
+        case BOOKMARKS:
             self.bookmarks_cur = sys.bookmarks.len() - 1;
-        case Focus.POPUP:
+        case POPUP:
             self.popup_cur = app.logs.len() - 1;
     }
 }
@@ -271,7 +274,7 @@ fn void! Display.update(&self)
         self.draw_prompt();
     }
 
-    if (self.focus == Focus.POPUP)
+    if (self.focus == POPUP)
     {
         ncurses::werase(self.popup);
 
@@ -289,6 +292,7 @@ fn void! Display.update(&self)
 module rover::display @private;
 import std::io::path, std::io::file;
 import rover::config, rover::stat;
+import std::collections::list;
 import ncurses;
 import libc;
 
@@ -355,7 +359,7 @@ fn bool is_printable(String str)
     return true;
 }
 
-fn void Display.update_screen(&self) @private
+fn void Display.update_screen(&self)
 {
     if (cfg.title.is_visible)     ncurses::delwin(self.title);
     if (cfg.list.is_visible)      ncurses::delwin(self.list);
@@ -371,7 +375,7 @@ fn void Display.update_screen(&self) @private
     if (cfg.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, cfg.status.h   , cfg.status.w   , cfg.status.y   , cfg.status.x);
     if (cfg.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, cfg.prompt.h   , cfg.prompt.w   , cfg.prompt.y   , cfg.prompt.x);
 
-    if (self.focus == Focus.POPUP)
+    if (self.focus == POPUP)
     {
         if (self.popup) ncurses::delwin(self.popup);
         self.popup = ncurses::subwin(ncurses::stdscr, app.h / 2, app.w / 2, app.h / 4, app.w / 4);   
@@ -734,6 +738,8 @@ fn void Display.draw_prompt(&self)
 
 fn void Display.draw_popup(&self)
 {
+    assert(self.popup_content, "Programmer forgot to init the content pointer");
+    
     CInt w, h;
     ncurses::@getmaxyx(self.popup, h, w);
 
@@ -777,7 +783,18 @@ fn void Display.draw_popup(&self)
     {
         if (i == self.popup_cur) self.select(self.popup);
 
-        String item = app.logs[i].tcopy();
+        String item;
+        switch (self.popup_content_type)
+        {
+            case STRING:
+                List(<String>) *temp = self.popup_content;
+                item = (*temp)[i].tcopy();
+            case PATH:
+                List(<Path>) *temp = self.popup_content;
+                item = (*temp)[i].str_view().tcopy();
+            default:
+                unreachable("Programmer's fault...sorry :(");
+        }
 
         if (item.len > (usz)(w_stop - 1))
         {
