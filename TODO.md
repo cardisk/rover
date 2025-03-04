@@ -21,17 +21,14 @@ All of this needs to work also on groups (marked files):
 - [X] Move file.
 - [X] Rename file.
 
-Shell:
-- [ ] Command-line access to shell like vim.
-- [ ] Store the history of commands somewhere.
-
-History:
-- [ ] Review the history of previously done commands.
-- [ ] Display the list of previously visited directories.
+- [X] Display the list of previously visited directories.
 
 - [X] Go-to prompt to access another directory.
+
+Filtering:
 - [X] Display somewhere the active filter.
 - [ ] Filtering can be case sensitive or not based on the action required.
+- [ ] Grep inside files (feature flagged)
 
 # Things to be fixed
 
