@@ -198,7 +198,7 @@ fn ZString Display.input(&self, ZString prefix)
     ncurses::mvwprintw(self.prompt, y, x, "%s ", prefix);
     
     DString buf;
-    buf.temp_init(128);
+    buf.tinit(128);
 
     while LOOP: (true)
     {
@@ -476,7 +476,7 @@ fn void Display.draw_list(&self)
         if (i == self.list_cur) self.select(self.list);
 
         DString item;
-        item.temp_init();
+        item.tinit();
         if (sys.is_marked(i)) item.append("+ ");
         item.append(sys.ls[i].str_view().tcopy());
 
@@ -543,7 +543,7 @@ fn void! Display.draw_preview(&self)
                 for (int i = 0; i < stop; i++)
                 {
                     DString item;
-                    item.temp_init(1024);
+                    item.tinit(1024);
                     item.append(lines[i]);
                     item.replace("\t", "    ");
 

@@ -31,7 +31,7 @@ fn void! State.init(&self)
     self.old_w = self.w;
     self.old_h = self.h;
 
-    self.logs.new_init();
+    self.logs.init(allocator::mem);
 }
 
 macro State.update(&self)

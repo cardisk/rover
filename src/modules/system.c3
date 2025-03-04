@@ -46,8 +46,8 @@ fn void! System.init(&self)
 
     if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
 
-    self.history.new_init();
-    self.bookmarks.new_init();
+    self.history.init(allocator::mem);
+    self.bookmarks.init(allocator::mem);
 
     String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
 
@@ -172,7 +172,7 @@ fn void System.move_marks(&self, usz index)
         Path old = self.ls[self.marked_indexes[i]];
         
         DString new;
-        new.temp_init();
+        new.tinit();
         new.append(target.str_view());
         new.append('/');
         new.append(old.str_view());
@@ -192,7 +192,7 @@ fn void System.move_marks(&self, usz index)
 
 fn void System.free(&self)
 {
-    {|
+    do {
         usz tmark = allocator::temp().mark();
 
         String config_path = self.home.str_view().tconcat("/.config/rover");
@@ -213,7 +213,7 @@ fn void System.free(&self)
         if (catch f) return;
 
         DString bookmarks;
-        bookmarks.temp_init();
+        bookmarks.tinit();
 
         foreach (b : self.bookmarks)
         {
@@ -224,7 +224,7 @@ fn void System.free(&self)
         if (catch f.write((char[]) bookmarks.str_view())) return;
         
         allocator::temp().reset(tmark);
-    |};
+    };
 
     self.home.free();
     self.cwd.free();

@@ -246,6 +246,7 @@ fn void main()
                     if (sys.ls.is_empty()) continue;
 
                     ZString in = tui.input("confirm deletion [y/N] >");
+                    if (!in) continue;
                     bool confirmation = false;
                     if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
                     if (!confirmation) continue;
@@ -266,7 +267,7 @@ fn void main()
                 if (tui.focus != Focus.LIST) continue;
 
                 ZString in = tui.input("rename >");
-                if (in.len() == 0) continue;
+                if (!in || in.len() == 0) continue;
 
                 CInt res = libc::rename(sys.ls[tui.list_cur].as_zstr(), in);
                 if (res)
@@ -336,7 +337,7 @@ fn void main()
             case 'g':
                 if (!enable_action) continue;
                 ZString in = tui.input("goto >");
-                if (in.len() == 0) continue;
+                if (!in || in.len() == 0) continue;
                 if (catch sys.schdir(in.str_view()))
                 {
                     app.log(string::new_format("Unable to goto inside %s.", in));
@@ -357,30 +358,24 @@ fn void main()
                 if (!enable_action) continue;
 
                 ZString in = tui.input("filename >");
-                if (!in) continue;
+                if (!in || in.len() == 0) continue;
 
-                if (in.len() != 0)
+                if (catch sys.new_file(in.str_view()))
                 {
-                    if (catch sys.new_file(in.str_view()))
-                    {
-                        app.log(string::new_format("Unable to create new file %s.", in));
-                        continue;
-                    }
+                    app.log(string::new_format("Unable to create new file %s.", in));
+                    continue;
                 }
 
             case '/':
                 if (!enable_action) continue;
 
                 ZString in = tui.input("/");
-                if (!in) continue;
+                if (!in || in.len() == 0) continue;
 
-                if (in.len() != 0)
+                if (catch sys.set_apply_filter(in.str_view().zstr_copy()))
                 {
-                    if (catch sys.set_apply_filter(in.str_view().zstr_copy()))
-                    {
-                        app.log(string::new_format("Unable to apply filter %s.", in));
-                        continue;
-                    }
+                    app.log(string::new_format("Unable to apply filter %s.", in));
+                    continue;
                 }
                 tui.top();
 
