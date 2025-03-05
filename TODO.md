@@ -6,6 +6,7 @@
 - [X] Refactor the error popup to be able to contain also other stuff.
 - [ ] Group actions in categories, so it's easier to allow or not some of them.
 - [ ] Session tabs that store indipendent application state (cwd, bookmarks ...).
+- [ ] Vim-like find file with cursor movement
 
 Command-line args:
 - [ ] '--temp' to make the session temporary (no changes made to bookmarks and other stuff).
