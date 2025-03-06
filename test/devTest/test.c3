@@ -1,4 +1,4 @@
-module main;
+module test;
 import std::io;
 import rover::layout;
 import std::encoding::json;
@@ -191,4 +191,7 @@ fn void main()
     Object *json = json::parse_string(STRING_LAYOUT)!!;
     Component component = fromJson(json)!!;
     print_component(component);
+
+    component.box.children.free();
+    json.free();
 }
