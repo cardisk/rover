@@ -45,11 +45,16 @@ enum WindowType
     PROMPT,
 }
 
+struct Size
+{
+    CInt w, h;
+}
+
 struct Window
 {
     WindowType type;
     CInt x, y;
-    CInt w, h;
+    Size size;
     bool is_visible;
     bool is_boxed;
 }
