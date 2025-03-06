@@ -35,7 +35,7 @@ fault LayoutError
     INVALID_FIELD,
 }
 
-fn Window! windowFromJson(Object *json)
+fn Window*! windowFromJson(Object *json)
 {
     String! json_window_type = json.get_string("type");
     if (catch json_window_type) return LayoutError.MISSING_FIELD?;
@@ -44,14 +44,7 @@ fn Window! windowFromJson(Object *json)
     if (catch window_type) return LayoutError.INVALID_FIELD?;
     
     // Other fields are default initialized to 0
-    Window crafted = {
-        .type = window_type,
-        .size = {
-            .w = -1,
-            .h = -1,
-        },
-        .is_visible = true,
-    };
+    Window *crafted = layout::new_window(window_type);
 
     bool! window_is_visible = json.get_bool("is_visible");
     if (try window_is_visible)
@@ -86,7 +79,7 @@ fn Window! windowFromJson(Object *json)
     return crafted;
 }
 
-fn Box! boxFromJson(Object *json, Component *parent)
+fn Box*! boxFromJson(Object *json, Component *parent)
 {
     String! json_box_type = json.get_string("type");
     if (catch json_box_type) return LayoutError.MISSING_FIELD?;
@@ -95,16 +88,14 @@ fn Box! boxFromJson(Object *json, Component *parent)
     if (catch box_type) return LayoutError.INVALID_FIELD?;
     
     // Other fields are default initialized to 0
-    Box crafted = {
-        .type = box_type,
-    };
+    Box *crafted;
 
-    switch (crafted.type)
+    switch (box_type)
     {
         case HBOX:
-            crafted.align = LEFT;
+            crafted = layout::new_hbox();
         case VBOX:
-            crafted.align = TOP;
+            crafted = layout::new_vbox();
         default:
             unreachable("A new type of box was introduced but not handled");
     }
@@ -121,14 +112,14 @@ fn Box! boxFromJson(Object *json, Component *parent)
 
     foreach (json_child : json_children.array)
     {
-        Component child = fromJson(json_child, parent)!;
+        Component *child = fromJson(json_child, parent)!;
         crafted.children.push(child);
     }
 
     return crafted;
 }
 
-fn Component! fromJson(Object *json, Component *parent = null)
+fn Component*! fromJson(Object *json, Component *parent = null)
 {
     String! json_component_type = json.get_string("type");
     if (catch json_component_type) return LayoutError.MISSING_FIELD?;
@@ -136,19 +127,19 @@ fn Component! fromJson(Object *json, Component *parent = null)
     ComponentType! component_type = enum_by_name(ComponentType, json_component_type);
     if (catch component_type) return LayoutError.INVALID_FIELD?;
 
-    Component crafted = layout::new_component(component_type);
+    Component *crafted = layout::new_component(component_type);
     crafted.parent = parent;
     switch (crafted.type)
     {
         case WINDOW:
             Object*! json_window = json.get("win");
             if (catch json_window) return LayoutError.MISSING_FIELD?;
-            Window window = windowFromJson(json_window)!;
+            Window *window = windowFromJson(json_window)!;
             crafted.win = window;
         case LAYOUT:
             Object*! json_box = json.get("box");
             if (catch json_box) return LayoutError.MISSING_FIELD?;
-            Box box = boxFromJson(json_box, &crafted)!;
+            Box *box = boxFromJson(json_box, crafted)!;
             crafted.box = box;
         default:
             unreachable("A new type of component was introduced but not handled");
@@ -157,13 +148,32 @@ fn Component! fromJson(Object *json, Component *parent = null)
     return crafted;
 }
 
-fn void print_component(Component component, int level = 0)
+fn void component_dfs(Component *root)
+{
+    if (root.type != LAYOUT) return;
+    foreach (child : root.box.children)
+    {
+        component_dfs(child);
+
+        if (child.win.size.w > 0)
+        {
+            child.parent.box.size.w += child.win.size.w;
+        }
+
+        if (child.win.size.h > 0)
+        {
+            child.parent.box.size.h += child.win.size.h;
+        }
+    }
+}
+
+fn void print_component(Component *component, int level = 0)
 {
     for (int i = 0; i < level; i++)
     {
         io::print("-");
     }
-    io::printn(component);
+    io::printn(*component);
     switch (component.type)
     {
         case LAYOUT:
@@ -171,7 +181,7 @@ fn void print_component(Component component, int level = 0)
             {
                 io::print("-");
             }
-            io::printn(component.box);
+            io::printn(*component.box);
             foreach (child : component.box.children)
             {
                 print_component(child, level + 1);
@@ -181,7 +191,7 @@ fn void print_component(Component component, int level = 0)
             {
                 io::print("-");
             }
-            io::printn(component.win);
+            io::printn(*component.win);
         default:
             unreachable("A new type of component was introduced but not handled");
     }
@@ -190,6 +200,7 @@ fn void print_component(Component component, int level = 0)
 fn void main()
 {
     Object *json = json::parse_string(STRING_LAYOUT)!!;
-    Component component = fromJson(json)!!;
+    Component *component = fromJson(json)!!;
+    component_dfs(component);
     print_component(component);
 }

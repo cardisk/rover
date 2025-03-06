@@ -1,11 +1,17 @@
 module rover::layout;
 import std::collections::list;
+import std::core::mem;
+import libc;
 
-// IMPORTANT: all memory allocations done here that are not on stack,
-// are done inside the temporary allocator because there is no need to
-// make this component persistent every time.
+// IMPORTANT: all memory allocations done here are inside the temporary
+// allocator because there is no need to make this components persistent.
 
 // TODO: if the window is resized the configuration needs to be reloaded.
+
+struct Size
+{
+    CInt w, h;
+}
 
 enum BoxType
 {
@@ -32,7 +38,8 @@ struct Box
 {
     BoxType type;
     BoxAlign align;
-    List(<Component>) children;
+    Size size;
+    List(<Component *>) children;
 }
 
 enum WindowType
@@ -43,11 +50,6 @@ enum WindowType
     BOOKMARKS,
     STATUS,
     PROMPT,
-}
-
-struct Size
-{
-    CInt w, h;
 }
 
 struct Window
@@ -71,38 +73,64 @@ struct Component
     Component *parent;
     union
     {
-        Box box;
-        Window win;
+        Box    *box;
+        Window *win;
     }
 }
 
 // helper functions
 
-fn Component new_component(ComponentType type)
+fn Component *new_component(ComponentType type)
 {
-    return {
-        .type = type,
-    };
+    Component *new = mem::temp_new(Component);
+    libc::memset(new, 0, Component.sizeof);
+
+    new[0] = { .type = type };
+
+    return new;
 }
 
-fn Box new_hbox()
+fn Box *new_hbox()
 {
-    Box hbox = {
+    Box *new = mem::temp_new(Box);
+    libc::memset(new, 0, Box.sizeof);
+
+    new[0] = {
         .type  = HBOX,
         .align = LEFT,
     };
-    hbox.children.tinit();
+    new.children.tinit();
 
-    return hbox;
+    return new;
 }
 
-fn Box new_vbox()
+fn Box *new_vbox()
 {
-    Box vbox = {
+    Box *new = mem::temp_new(Box);
+    libc::memset(new, 0, Box.sizeof);
+    
+    new[0] = {
         .type  = VBOX,
         .align = TOP,
     };
-    vbox.children.tinit();
+    new.children.tinit();
 
-    return vbox;
+    return new;
+}
+
+fn Window *new_window(WindowType type)
+{
+    Window *new = mem::new(Window);
+    libc::memset(new, 0, Window.sizeof);
+
+    new[0] = {
+        .type = type,
+        .size = {
+            .w = -1,
+            .h = -1,
+        },
+        .is_visible = true,
+    };
+
+    return new;
 }
