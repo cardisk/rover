@@ -68,6 +68,7 @@ enum ComponentType
 struct Component
 {
     ComponentType type;
+    Component *parent;
     union
     {
         Box box;
