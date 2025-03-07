@@ -4,6 +4,8 @@ import rover::layout;
 import std::encoding::json;
 import std::collections::object;
 
+const Size MAX_SIZE = { .w = 100, .h = 100 };
+
 const String STRING_LAYOUT =
 `
 {
@@ -197,10 +199,24 @@ fn void print_component(Component *component, int level = 0)
     }
 }
 
+fn Component*! parse_layout_tree(String str)
+{
+    Object *json = json::parse_string(str)!;
+    defer json.free();
+
+    Component *root = fromJson(json)!;
+    if (root.type == LAYOUT)
+    {
+        root.box.size = MAX_SIZE;
+    }
+
+    return root;
+}
+
 fn void main()
 {
-    Object *json = json::parse_string(STRING_LAYOUT)!!;
-    Component *component = fromJson(json)!!;
+    Component *component = parse_layout_tree(STRING_LAYOUT)!!;
+    print_component(component);
     component_dfs(component);
     print_component(component);
 }
