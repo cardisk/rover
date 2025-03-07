@@ -20,10 +20,14 @@ const String STRING_LAYOUT =
                     "type": "TITLE",
                     "is_visible": true,
                     "is_boxed": true,
-                    "size": {
-                        "w": "10",
-                        "h": "10"
-                    }
+                }
+            },
+            {
+                "type": "WINDOW",
+                "win": {
+                    "type": "TITLE",
+                    "is_visible": true,
+                    "is_boxed": true,
                 }
             }
         ]
@@ -150,23 +154,82 @@ fn Component*! fromJson(Object *json, Component *parent = null)
     return crafted;
 }
 
-fn void component_dfs(Component *root)
+fn CInt boxCalculateLeftWidth(Box *box)
+{
+    CInt remaining_width = box.size.w;
+    
+    foreach (child : box.children)
+    {
+        if (child.type == WINDOW)
+        {
+            // If child.size.type == GROW its w will be 0
+            remaining_width -= child.win.size.w;
+        }
+    }
+
+    return remaining_width;
+}
+
+fn CInt boxCalculateLeftHeight(Box *box)
+{
+    CInt remaining_height = box.size.w;
+    
+    foreach (child : box.children)
+    {
+        if (child.type == WINDOW)
+        {
+            // If child.size.type == GROW its h will be 0
+            remaining_height -= child.win.size.h;
+        }
+    }
+
+    return remaining_height;
+}
+
+fn CInt boxCalculateGrowingChildrenNumber(Box *box)
+{
+    assert(!box.children.is_empty());
+
+    CInt growing_children_number = 0;
+
+    foreach(child : box.children)
+    {
+        switch (child.type)
+        {
+            case WINDOW:
+                if (child.win.size.type != GROW) continue;
+            case LAYOUT:
+                if (child.box.size.type != GROW) continue;
+            default:
+                unreachable("A new type of component was introduced but not handled");
+        }
+
+        growing_children_number++;
+    }
+
+    return growing_children_number;
+}
+
+fn void component_dfs_grow(Component *root)
 {
     if (root.type != LAYOUT) return;
+
+    CInt growing_children_number = boxCalculateGrowingChildrenNumber(root.box);
+    CInt left_w = boxCalculateLeftWidth(root.box);
+    CInt left_h = boxCalculateLeftHeight(root.box);
+    CInt grow_w = left_w / growing_children_number;
+    CInt grow_h = left_h / growing_children_number;
+    
     foreach (child : root.box.children)
     {
-        component_dfs(child);
+        component_dfs_grow(child);
 
         Window *win = child.win;
-        Box *parent = child.parent.box;
 
         if (win.size.type == GROW)
         {
-            CInt child_w = parent.size.w / (CInt) parent.children.len();
-            win.size.w = child_w;
-
-            CInt child_h = parent.size.h / (CInt) parent.children.len();
-            win.size.h = child_h;
+            win.size.w += grow_w;
+            win.size.h += grow_h;
         }
     }
 }
@@ -219,6 +282,6 @@ fn void main()
 {
     Component *component = parse_layout_tree(STRING_LAYOUT)!!;
     print_component(component);
-    component_dfs(component);
+    component_dfs_grow(component);
     print_component(component);
 }
