@@ -8,8 +8,16 @@ import libc;
 
 // TODO: if the window is resized the configuration needs to be reloaded.
 
+enum SizeType
+{
+    GROW,
+    FIT,
+    FIXED,
+}
+
 struct Size
 {
+    SizeType type;
     CInt w, h;
 }
 
@@ -98,6 +106,9 @@ fn Box *new_hbox()
     new[0] = {
         .type  = HBOX,
         .align = LEFT,
+        .size  = {
+            .type = GROW,
+        },
     };
     new.children.tinit();
 
@@ -112,6 +123,9 @@ fn Box *new_vbox()
     new[0] = {
         .type  = VBOX,
         .align = TOP,
+        .size  = {
+            .type = GROW,
+        },
     };
     new.children.tinit();
 
@@ -125,11 +139,10 @@ fn Window *new_window(WindowType type)
 
     new[0] = {
         .type = type,
-        .size = {
-            .w = -1,
-            .h = -1,
-        },
         .is_visible = true,
+        .size  = {
+            .type = GROW,
+        },
     };
 
     return new;

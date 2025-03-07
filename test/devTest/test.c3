@@ -4,7 +4,7 @@ import rover::layout;
 import std::encoding::json;
 import std::collections::object;
 
-const Size MAX_SIZE = { .w = 100, .h = 100 };
+const Size MAX_SIZE = { .type = FIXED, .w = 100, .h = 100 };
 
 const String STRING_LAYOUT =
 `
@@ -157,14 +157,16 @@ fn void component_dfs(Component *root)
     {
         component_dfs(child);
 
-        if (child.win.size.w > 0)
-        {
-            child.parent.box.size.w += child.win.size.w;
-        }
+        Window *win = child.win;
+        Box *parent = child.parent.box;
 
-        if (child.win.size.h > 0)
+        if (win.size.type == GROW)
         {
-            child.parent.box.size.h += child.win.size.h;
+            CInt child_w = parent.size.w / (CInt) parent.children.len();
+            win.size.w = child_w;
+
+            CInt child_h = parent.size.h / (CInt) parent.children.len();
+            win.size.h = child_h;
         }
     }
 }
