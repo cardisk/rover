@@ -107,7 +107,7 @@ fn Box *new_hbox()
         .type  = HBOX,
         .align = LEFT,
         .size  = {
-            .type = GROW,
+            .type = FIT,
         },
     };
     new.children.tinit();
@@ -124,7 +124,7 @@ fn Box *new_vbox()
         .type  = VBOX,
         .align = TOP,
         .size  = {
-            .type = GROW,
+            .type = FIT,
         },
     };
     new.children.tinit();

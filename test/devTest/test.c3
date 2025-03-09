@@ -20,6 +20,11 @@ const String STRING_LAYOUT =
                     "type": "TITLE",
                     "is_visible": true,
                     "is_boxed": true,
+                    "size": {
+                        "type": "FIXED",
+                        "w": "20",
+                        "h": "30",
+                    }
                 }
             },
             {
@@ -28,6 +33,11 @@ const String STRING_LAYOUT =
                     "type": "TITLE",
                     "is_visible": true,
                     "is_boxed": true,
+                    "size": {
+                        "type": "FIXED",
+                        "w": "10",
+                        "h": "40",
+                    }
                 }
             }
         ]
@@ -67,6 +77,12 @@ fn Window*! windowFromJson(Object *json)
     Object*! json_window_size = json.get("size");
     if (try json_window_size)
     {
+        String! json_size_type = json_window_size.get_string("type");
+        if (try json_size_type)
+        {
+            crafted.size.type = enum_by_name(SizeType, json_size_type)!;
+        }
+
         String! json_size_w = json_window_size.get_string("w");
         if (try json_size_w)
         {
@@ -112,6 +128,30 @@ fn Box*! boxFromJson(Object *json, Component *parent)
         crafted.align = enum_by_name(BoxAlign, json_box_align)!;
     }
 
+    Object*! json_box_size = json.get("size");
+    if (try json_box_size)
+    {
+        String! json_size_type = json_box_size.get_string("type");
+        if (try json_size_type)
+        {
+            crafted.size.type = enum_by_name(SizeType, json_size_type)!;
+        }
+
+        String! json_size_w = json_box_size.get_string("w");
+        if (try json_size_w)
+        {
+            // TODO: assuming only fixed numbers for now
+            crafted.size.w = (CInt) json_size_w.to_int()!!;
+        }
+
+        String! json_size_h = json_box_size.get_string("h");
+        if (try json_size_h)
+        {
+            // TODO: assuming only fixed numbers for now
+            crafted.size.h = (CInt) json_size_h.to_int()!!;
+        }
+    }
+
     Object*! json_children = json.get("children");
     if (catch json_children) return LayoutError.MISSING_FIELD?;
     if (!json_children.is_array()) return LayoutError.INVALID_FIELD?;
@@ -148,7 +188,7 @@ fn Component*! fromJson(Object *json, Component *parent = null)
             Box *box = boxFromJson(json_box, crafted)!;
             crafted.box = box;
         default:
-            unreachable("A new type of component was introduced but not handled");
+            unreachable("ComponentType not handled");
     }
 
     return crafted;
@@ -201,7 +241,7 @@ fn CInt boxCalculateGrowingChildrenNumber(Box *box)
             case LAYOUT:
                 if (child.box.size.type != GROW) continue;
             default:
-                unreachable("A new type of component was introduced but not handled");
+                unreachable("ComponentType not handled");
         }
 
         growing_children_number++;
@@ -234,6 +274,32 @@ fn void component_dfs_grow(Component *root)
     }
 }
 
+fn void component_dfs_calculate_sizes(Component *root)
+{
+    if (root.type != LAYOUT) return;
+    if (root.box.size.type == FIXED) return;
+
+    foreach (child : root.box.children)
+    {
+        component_dfs_calculate_sizes(child);
+
+        Box *parent = child.parent.box;
+        Window *win = child.win;
+
+        switch (parent.type)
+        {
+            case HBOX:
+                parent.size.w += win.size.w;
+                parent.size.h = max(parent.size.h, win.size.h);
+            case VBOX:
+                parent.size.w = max(parent.size.w, win.size.w);
+                parent.size.h += win.size.h;
+            default:
+                unreachable("BoxType not handled");
+        }
+    }
+}
+
 fn void print_component(Component *component, int level = 0)
 {
     for (int i = 0; i < level; i++)
@@ -260,7 +326,7 @@ fn void print_component(Component *component, int level = 0)
             }
             io::printn(*component.win);
         default:
-            unreachable("A new type of component was introduced but not handled");
+            unreachable("ComponentType not handled");
     }
 }
 
@@ -270,10 +336,12 @@ fn Component*! parse_layout_tree(String str)
     defer json.free();
 
     Component *root = fromJson(json)!;
-    if (root.type == LAYOUT)
-    {
-        root.box.size = MAX_SIZE;
-    }
+    // TODO: this behaviour is necessary to force the layout to stay
+    // inside the terminal bounds
+    // if (root.type == LAYOUT)
+    // {
+    //     root.box.size = MAX_SIZE;
+    // }
 
     return root;
 }
@@ -282,6 +350,7 @@ fn void main()
 {
     Component *component = parse_layout_tree(STRING_LAYOUT)!!;
     print_component(component);
-    component_dfs_grow(component);
+    // component_dfs_grow(component);
+    component_dfs_calculate_sizes(component);
     print_component(component);
 }
