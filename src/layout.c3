@@ -15,6 +15,7 @@ enum SizeType
     FIXED,
 }
 
+// TODO: SizeType needs to be abstracted for width and height separately.
 struct Size
 {
     SizeType type;

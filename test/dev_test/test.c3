@@ -2,6 +2,7 @@ module test;
 import std::io;
 import rover::layout;
 import std::encoding::json;
+import std::collections::list;
 import std::collections::object;
 
 const Size MAX_SIZE = { .type = FIXED, .w = 100, .h = 100 };
@@ -86,14 +87,14 @@ fn Window*! windowFromJson(Object *json)
         String! json_size_w = json_window_size.get_string("w");
         if (try json_size_w)
         {
-            // TODO: assuming only fixed numbers for now
+            // TODO: assuming only fixed numbers for now.
             crafted.size.w = (CInt) json_size_w.to_int()!!;
         }
 
         String! json_size_h = json_window_size.get_string("h");
         if (try json_size_h)
         {
-            // TODO: assuming only fixed numbers for now
+            // TODO: assuming only fixed numbers for now.
             crafted.size.h = (CInt) json_size_h.to_int()!!;
         }
     }
@@ -140,14 +141,14 @@ fn Box*! boxFromJson(Object *json, Component *parent)
         String! json_size_w = json_box_size.get_string("w");
         if (try json_size_w)
         {
-            // TODO: assuming only fixed numbers for now
+            // TODO: assuming only fixed numbers for now.
             crafted.size.w = (CInt) json_size_w.to_int()!!;
         }
 
         String! json_size_h = json_box_size.get_string("h");
         if (try json_size_h)
         {
-            // TODO: assuming only fixed numbers for now
+            // TODO: assuming only fixed numbers for now.
             crafted.size.h = (CInt) json_size_h.to_int()!!;
         }
     }
@@ -226,13 +227,12 @@ fn CInt boxCalculateLeftHeight(Box *box)
     return remaining_height;
 }
 
-fn CInt boxCalculateGrowingChildrenNumber(Box *box)
+fn List(<Component *>) box_growable_children_list(Box *box)
 {
-    assert(!box.children.is_empty());
+    List(<Component *>) growable_children;
+    growable_children.tinit();
 
-    CInt growing_children_number = 0;
-
-    foreach(child : box.children)
+    foreach (child : box.children)
     {
         switch (child.type)
         {
@@ -244,35 +244,140 @@ fn CInt boxCalculateGrowingChildrenNumber(Box *box)
                 unreachable("ComponentType not handled");
         }
 
-        growing_children_number++;
+        growable_children.push(child);
     }
 
-    return growing_children_number;
+    return growable_children;
 }
 
-fn void component_dfs_grow(Component *root)
+fn CInt component_take_width(Component *component)
 {
-    if (root.type != LAYOUT) return;
-
-    CInt growing_children_number = boxCalculateGrowingChildrenNumber(root.box);
-    CInt left_w = boxCalculateLeftWidth(root.box);
-    CInt left_h = boxCalculateLeftHeight(root.box);
-    CInt grow_w = left_w / growing_children_number;
-    CInt grow_h = left_h / growing_children_number;
-    
-    foreach (child : root.box.children)
+    switch (component.type)
     {
-        component_dfs_grow(child);
+        case LAYOUT:
+            return component.box.size.w;
+        case WINDOW:
+            return component.win.size.w;
+        default:
+            unreachable("ComponentType not handled");
+    }
+}
 
-        Window *win = child.win;
+fn CInt component_take_height(Component *component)
+{
+    switch (component.type)
+    {
+        case LAYOUT:
+            return component.box.size.h;
+        case WINDOW:
+            return component.win.size.h;
+        default:
+            unreachable("ComponentType not handled");
+    }
+}
 
-        if (win.size.type == GROW)
+fn void component_bfs_grow(Component *root)
+{
+    List(<Component *>) queue;
+    queue.tinit();
+
+    queue.push(root);
+    while (!queue.is_empty())
+    {
+        // The queue should not be empty here
+        Component *item = queue.pop_first()!!;
+        switch (item.type)
         {
-            win.size.w += grow_w;
-            win.size.h += grow_h;
+            case LAYOUT:
+                Box *box = item.box;
+
+                if (item.parent && box.size.type == GROW)
+                {
+                    Box *parent = item.parent.box;
+                    List(<Component *>) growable_children = box_growable_children_list(parent);
+                    CInt left_w = boxCalculateLeftWidth(parent);
+                    CInt left_h = boxCalculateLeftHeight(parent);
+
+                    while (left_w > 0)
+                    {
+                        CInt smallest = component_take_width(growable_children[0]); 
+                        CInt second_smallest = -1;
+                        CInt width_to_add = left_w;
+
+                        foreach (child : growable_children)
+                        {
+                            CInt child_width = component_take_width(child);
+                            if (child_width < smallest)
+                            {
+                                second_smallest = smallest;
+                                smallest = child_width;
+                            }
+                            if (child_width > smallest)
+                            {
+                                second_smallest = min(second_smallest, child_width);
+                                width_to_add = second_smallest - smallest;
+                            }
+                        }
+
+                        width_to_add = min(width_to_add, left_w / (CInt) growable_children.len());
+
+                        foreach (child : growable_children)
+                        {
+                            CInt child_width = component_take_width(child);
+                            if (child_width == smallest)
+                            {
+                                switch (child.type)
+                                {
+                                    case LAYOUT:
+                                        child.box.size.w += width_to_add;
+                                    case WINDOW:
+                                        child.win.size.w += width_to_add;
+                                    default:
+                                        unreachable("ComponentType not handled");
+                                }
+
+                                left_w -= width_to_add;
+                            }
+                        }
+                    }
+
+                    // TODO: missing same calculations for height.
+                    // TODO: distinguish between along-axis and across-axis growth.
+                }
+
+
+                foreach (child : box.children) queue.push(child);
+            case WINDOW:
+            default:
+                unreachable("ComponentType not handled");
         }
     }
 }
+
+// fn void component_dfs_grow(Component *root)
+// {
+//     if (root.type != LAYOUT) return;
+//     if (root.box.size.type != FIXED) return;
+
+//     CInt growing_children_number = boxCalculateGrowingChildrenNumber(root.box);
+//     CInt left_w = boxCalculateLeftWidth(root.box);
+//     CInt left_h = boxCalculateLeftHeight(root.box);
+//     CInt grow_w = left_w / growing_children_number;
+//     CInt grow_h = left_h / growing_children_number;
+    
+//     foreach (child : root.box.children)
+//     {
+//         component_dfs_grow(child);
+
+//         Window *win = child.win;
+
+//         if (win.size.type == GROW)
+//         {
+//             win.size.w += grow_w;
+//             win.size.h += grow_h;
+//         }
+//     }
+// }
 
 fn void component_dfs_calculate_sizes(Component *root)
 {
@@ -337,7 +442,7 @@ fn Component*! parse_layout_tree(String str)
 
     Component *root = fromJson(json)!;
     // TODO: this behaviour is necessary to force the layout to stay
-    // inside the terminal bounds
+    // inside the terminal bounds.
     // if (root.type == LAYOUT)
     // {
     //     root.box.size = MAX_SIZE;
@@ -350,7 +455,6 @@ fn void main()
 {
     Component *component = parse_layout_tree(STRING_LAYOUT)!!;
     print_component(component);
-    // component_dfs_grow(component);
     component_dfs_calculate_sizes(component);
     print_component(component);
 }
