@@ -8,18 +8,17 @@ import libc;
 
 // TODO: if the window is resized the configuration needs to be reloaded.
 
-enum SizeType
+enum AxisSizingType
 {
     GROW,
     FIT,
     FIXED,
 }
 
-// TODO: SizeType needs to be abstracted for width and height separately.
-struct Size
+struct Axis
 {
-    SizeType type;
-    CInt w, h;
+    AxisSizingType type;
+    CInt value;
 }
 
 enum BoxType
@@ -47,7 +46,6 @@ struct Box
 {
     BoxType type;
     BoxAlign align;
-    Size size;
     List(<Component *>) children;
 }
 
@@ -64,8 +62,6 @@ enum WindowType
 struct Window
 {
     WindowType type;
-    CInt x, y;
-    Size size;
     bool is_visible;
     bool is_boxed;
 }
@@ -80,6 +76,18 @@ struct Component
 {
     ComponentType type;
     Component *parent;
+    
+    struct
+    {
+        Axis width;
+        Axis height;
+    }
+
+    struct
+    {
+        CInt x, y;
+    }
+    
     union
     {
         Box    *box;
@@ -89,12 +97,20 @@ struct Component
 
 // helper functions
 
+macro Axis axis_fit()             => { .type = FIT  , .value = 0     };
+macro Axis axis_grow()            => { .type = GROW , .value = 0     };
+macro Axis axis_fixed(CInt value) => { .type = FIXED, .value = value };
+
 fn Component *new_component(ComponentType type)
 {
     Component *new = mem::temp_new(Component);
     libc::memset(new, 0, Component.sizeof);
 
-    new[0] = { .type = type };
+    *new = { 
+        .type   = type,
+        .width  = axis_fit(),
+        .height = axis_fit(),
+    };
 
     return new;
 }
@@ -104,12 +120,9 @@ fn Box *new_hbox()
     Box *new = mem::temp_new(Box);
     libc::memset(new, 0, Box.sizeof);
 
-    new[0] = {
+    *new = {
         .type  = HBOX,
         .align = LEFT,
-        .size  = {
-            .type = FIT,
-        },
     };
     new.children.tinit();
 
@@ -121,12 +134,9 @@ fn Box *new_vbox()
     Box *new = mem::temp_new(Box);
     libc::memset(new, 0, Box.sizeof);
     
-    new[0] = {
+    *new = {
         .type  = VBOX,
         .align = TOP,
-        .size  = {
-            .type = FIT,
-        },
     };
     new.children.tinit();
 
@@ -138,12 +148,9 @@ fn Window *new_window(WindowType type)
     Window *new = mem::new(Window);
     libc::memset(new, 0, Window.sizeof);
 
-    new[0] = {
+    *new = {
         .type = type,
         .is_visible = true,
-        .size  = {
-            .type = GROW,
-        },
     };
 
     return new;
