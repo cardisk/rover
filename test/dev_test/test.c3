@@ -41,13 +41,14 @@ const String STRING_LAYOUT =
 }
 `;
 
+// //// JSON PARSING STUFF START    ///////////////////////////////////////////
 fault LayoutError
 {
     MISSING_FIELD,
     INVALID_FIELD,
 }
 
-fn Window*! windowFromJson(Object *json)
+fn Component*! windowFromJson(Object *json)
 {
     String! json_window_type = json.get_string("type");
     if (catch json_window_type) return LayoutError.MISSING_FIELD?;
@@ -56,24 +57,24 @@ fn Window*! windowFromJson(Object *json)
     if (catch window_type) return LayoutError.INVALID_FIELD?;
     
     // Other fields are default initialized to 0
-    Window *crafted = layout::new_window(window_type);
+    Component *crafted = layout::new_window(window_type);
 
     bool! window_is_visible = json.get_bool("is_visible");
     if (try window_is_visible)
     {
-        crafted.is_visible = window_is_visible;
+        crafted.win.is_visible = window_is_visible;
     }
 
     bool! window_is_boxed = json.get_bool("is_boxed");
     if (try window_is_boxed)
     {
-        crafted.is_boxed = window_is_boxed;
+        crafted.win.is_boxed = window_is_boxed;
     }
 
     return crafted;
 }
 
-fn Box*! boxFromJson(Object *json, Component *parent)
+fn Component*! boxFromJson(Object *json, Component *parent)
 {
     String! json_box_type = json.get_string("type");
     if (catch json_box_type) return LayoutError.MISSING_FIELD?;
@@ -81,8 +82,7 @@ fn Box*! boxFromJson(Object *json, Component *parent)
     BoxType! box_type = enum_by_name(BoxType, json_box_type);
     if (catch box_type) return LayoutError.INVALID_FIELD?;
     
-    // Other fields are default initialized to 0
-    Box *crafted;
+    Component *crafted;
 
     switch (box_type)
     {
@@ -94,10 +94,12 @@ fn Box*! boxFromJson(Object *json, Component *parent)
             unreachable("A new type of box was introduced but not handled");
     }
 
+    crafted.parent = parent;
+
     String! json_box_align = json.get_string("align");
     if (try json_box_align)
     {
-        crafted.align = enum_by_name(BoxAlign, json_box_align)!;
+        crafted.box.align = enum_by_name(BoxAlign, json_box_align)!;
     }
 
     Object*! json_children = json.get("children");
@@ -106,8 +108,8 @@ fn Box*! boxFromJson(Object *json, Component *parent)
 
     foreach (json_child : json_children.array)
     {
-        Component *child = fromJson(json_child, parent)!;
-        crafted.children.push(child);
+        Component *child = fromJson(json_child, crafted)!;
+        crafted.box.children.push(child);
     }
 
     return crafted;
@@ -121,7 +123,22 @@ fn Component*! fromJson(Object *json, Component *parent = null)
     ComponentType! component_type = enum_by_name(ComponentType, json_component_type);
     if (catch component_type) return LayoutError.INVALID_FIELD?;
 
-    Component *crafted = layout::new_component(component_type);
+    Component *crafted;
+
+    switch (component_type)
+    {
+        case WINDOW:
+            Object*! json_window = json.get("win");
+            if (catch json_window) return LayoutError.MISSING_FIELD?;
+            crafted = windowFromJson(json_window)!;
+        case LAYOUT:
+            Object*! json_box = json.get("box");
+            if (catch json_box) return LayoutError.MISSING_FIELD?;
+            crafted = boxFromJson(json_box, crafted)!;
+        default:
+            unreachable("ComponentType not handled");
+    }
+
     crafted.parent = parent;
 
     String! json_box_width  = json.get_string("width");
@@ -156,25 +173,11 @@ fn Component*! fromJson(Object *json, Component *parent = null)
         }
     }
 
-    switch (crafted.type)
-    {
-        case WINDOW:
-            Object*! json_window = json.get("win");
-            if (catch json_window) return LayoutError.MISSING_FIELD?;
-            Window *window = windowFromJson(json_window)!;
-            crafted.win = window;
-        case LAYOUT:
-            Object*! json_box = json.get("box");
-            if (catch json_box) return LayoutError.MISSING_FIELD?;
-            Box *box = boxFromJson(json_box, crafted)!;
-            crafted.box = box;
-        default:
-            unreachable("ComponentType not handled");
-    }
-
     return crafted;
 }
+// //// JSON PARSING STUFF END      ///////////////////////////////////////////
 
+// //// GROWING CALCULATION START   ///////////////////////////////////////////
 fn CInt boxCalculateLeftWidth(Component *component)
 {
     CInt remaining_width = component.width.value;
@@ -294,29 +297,51 @@ fn void component_bfs_grow(Component *root)
         }
     }
 }
+// //// GROWING CALCULATION END     ///////////////////////////////////////////
 
-fn void component_dfs_calculate_sizes(Component *root)
+// //// SIZE CALCULATION PASS START ///////////////////////////////////////////
+fn void component_dfs_calculate_width(Component *root)
 {
     if (root.type != LAYOUT) return;
-    if (root.width.type == FIXED && root.height.type == FIXED) return;
+    if (root.width.type == FIXED) return;
 
     foreach (child : root.box.children)
     {
-        component_dfs_calculate_sizes(child);
+        component_dfs_calculate_width(child);
 
         switch (root.box.type)
         {
             case HBOX:
                 if (root.width.type != FIXED) root.width.value += child.width.value;
-                if (root.height.type != FIXED) root.height.value = max(root.height.value, child.height.value);
             case VBOX:
                 if (root.width.type != FIXED) root.width.value = max(root.width.value, child.width.value);
+            default:
+                unreachable("BoxType not handled");
+        }
+    }
+}
+
+fn void component_dfs_calculate_height(Component *root)
+{
+    if (root.type != LAYOUT) return;
+    if (root.height.type == FIXED) return;
+
+    foreach (child : root.box.children)
+    {
+        component_dfs_calculate_height(child);
+
+        switch (root.box.type)
+        {
+            case HBOX:
+                if (root.height.type != FIXED) root.height.value = max(root.height.value, child.height.value);
+            case VBOX:
                 if (root.height.type != FIXED) root.height.value += child.height.value;
             default:
                 unreachable("BoxType not handled");
         }
     }
 }
+// //// SIZE CALCULATION PASS END   ///////////////////////////////////////////
 
 fn void print_component(Component *component, int level = 0)
 {
@@ -333,6 +358,7 @@ fn void print_component(Component *component, int level = 0)
                 io::print("-");
             }
             io::printn(*component.box);
+            io::printn("#########");
             foreach (child : component.box.children)
             {
                 print_component(child, level + 1);
@@ -343,6 +369,7 @@ fn void print_component(Component *component, int level = 0)
                 io::print("-");
             }
             io::printn(*component.win);
+            io::printn("#########");
         default:
             unreachable("ComponentType not handled");
     }
@@ -353,21 +380,22 @@ fn Component*! parse_layout_tree(String str)
     Object *json = json::parse_string(str)!;
     defer json.free();
 
+    // To make the component fill the entire screen, its size must
+    // be specified inside the json.
     Component *root = fromJson(json)!;
-    // TODO: this behaviour is necessary to force the layout to stay
-    // inside the terminal bounds.
-    // if (root.type == LAYOUT)
-    // {
-    //     root.box.size = MAX_SIZE;
-    // }
-
     return root;
 }
 
 fn void main()
 {
     Component *component = parse_layout_tree(STRING_LAYOUT)!!;
+    io::printn("#################");
     print_component(component);
-    component_dfs_calculate_sizes(component);
+    component_dfs_calculate_width(component);
+    component_bfs_grow_width(component);
+
+    component_dfs_calculate_height(component);
+    // component_bfs_grow_height(component);
+    io::printn("#################");
     print_component(component);
 }

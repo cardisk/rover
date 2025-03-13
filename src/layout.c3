@@ -115,43 +115,54 @@ fn Component *new_component(ComponentType type)
     return new;
 }
 
-fn Box *new_hbox()
+fn Component *new_hbox()
 {
-    Box *new = mem::temp_new(Box);
-    libc::memset(new, 0, Box.sizeof);
+    Component *new = new_component(LAYOUT);
 
-    *new = {
+    Box *hbox = mem::temp_new(Box);
+    libc::memset(hbox, 0, Box.sizeof);
+
+    *hbox = {
         .type  = HBOX,
         .align = LEFT,
     };
-    new.children.tinit();
+    hbox.children.tinit();
 
+    new.box = hbox;
     return new;
 }
 
-fn Box *new_vbox()
+fn Component *new_vbox()
 {
-    Box *new = mem::temp_new(Box);
-    libc::memset(new, 0, Box.sizeof);
+    Component *new = new_component(LAYOUT);
+
+    Box *vbox = mem::temp_new(Box);
+    libc::memset(vbox, 0, Box.sizeof);
     
-    *new = {
+    *vbox = {
         .type  = VBOX,
         .align = TOP,
     };
-    new.children.tinit();
+    vbox.children.tinit();
 
+    new.box = vbox;
     return new;
 }
 
-fn Window *new_window(WindowType type)
+fn Component *new_window(WindowType type)
 {
-    Window *new = mem::new(Window);
-    libc::memset(new, 0, Window.sizeof);
+    Component *new = new_component(WINDOW);
+    new.width  = axis_grow();
+    new.height = axis_grow();
 
-    *new = {
+    Window *win = mem::new(Window);
+    libc::memset(win, 0, Window.sizeof);
+
+    *win = {
         .type = type,
         .is_visible = true,
     };
 
+    new.win = win;
     return new;
 }
