@@ -8,7 +8,7 @@ import std::collections::object;
 const Axis MAX_WIDTH  = { .type = FIXED, .value = 100 };
 const Axis MAX_HEIGHT = { .type = FIXED, .value = 100 };
 
-const String STRING_LAYOUT =
+const String STRING_LAYOUT_FIT =
 `
 {
     "type": "LAYOUT",
@@ -34,6 +34,41 @@ const String STRING_LAYOUT =
                     "type": "TITLE",
                     "is_visible": true,
                     "is_boxed": true,
+                }
+            }
+        ]
+    }
+}
+`;
+
+const String STRING_LAYOUT_GROW =
+`
+{
+    "type": "LAYOUT",
+    "width": "100",
+    "box": {
+        "type": "HBOX",
+        "align": "CENTER",
+        "children": [
+            {
+                "type": "LAYOUT",
+                "width": "GROW",
+                "box": {
+                    "type": "HBOX",
+                }
+            },
+            {
+                "type": "LAYOUT",
+                "width": "GROW",
+                "box": {
+                    "type": "HBOX",
+                }
+            },
+            {
+                "type": "LAYOUT",
+                "width": "GROW",
+                "box": {
+                    "type": "HBOX",
                 }
             }
         ]
@@ -102,14 +137,18 @@ fn Component*! boxFromJson(Object *json, Component *parent)
         crafted.box.align = enum_by_name(BoxAlign, json_box_align)!;
     }
 
+    // Forced to omit the attribute because if the json parser encounters
+    // an empty array it never sets the Object type to List.
     Object*! json_children = json.get("children");
-    if (catch json_children) return LayoutError.MISSING_FIELD?;
-    if (!json_children.is_array()) return LayoutError.INVALID_FIELD?;
-
-    foreach (json_child : json_children.array)
+    if (try json_children)
     {
-        Component *child = fromJson(json_child, crafted)!;
-        crafted.box.children.push(child);
+        if (!json_children.is_array()) return LayoutError.INVALID_FIELD?;
+
+        foreach (json_child : json_children.array)
+        {
+            Component *child = fromJson(json_child, crafted)!;
+            crafted.box.children.push(child);
+        }
     }
 
     return crafted;
@@ -184,10 +223,7 @@ fn CInt boxCalculateLeftWidth(Component *component)
     
     foreach (child : component.box.children)
     {
-        if (child.type == WINDOW)
-        {
-            remaining_width -= child.width.value;
-        }
+        remaining_width -= child.width.value;
     }
 
     return remaining_width;
@@ -199,10 +235,7 @@ fn CInt boxCalculateLeftHeight(Component *component)
     
     foreach (child : component.box.children)
     {
-        if (child.type == WINDOW)
-        {
-            remaining_height -= child.height.value;
-        }
+        remaining_height -= child.height.value;
     }
 
     return remaining_height;
@@ -232,7 +265,7 @@ fn CInt component_take_height(Component *component)
     return component.height.value;
 }
 
-fn void component_bfs_grow(Component *root)
+fn void component_bfs_grow_width(Component *root)
 {
     List(<Component *>) queue;
     queue.tinit();
@@ -275,6 +308,14 @@ fn void component_bfs_grow(Component *root)
 
                         width_to_add = min(width_to_add, left_w / (CInt) growable_children.len());
 
+                        // It means that the left_w is not divisible by the number of 
+                        // growable_children so add it to the first one and go.
+                        if (width_to_add == 0)
+                        {
+                            item.width.value += left_w;
+                            break;
+                        }
+
                         foreach (child : growable_children)
                         {
                             CInt child_width = component_take_width(child);
@@ -292,6 +333,7 @@ fn void component_bfs_grow(Component *root)
 
                 foreach (child : box.children) queue.push(child);
             case WINDOW:
+                break;
             default:
                 unreachable("ComponentType not handled");
         }
@@ -388,7 +430,7 @@ fn Component*! parse_layout_tree(String str)
 
 fn void main()
 {
-    Component *component = parse_layout_tree(STRING_LAYOUT)!!;
+    Component *component = parse_layout_tree(STRING_LAYOUT_GROW)!!;
     io::printn("#################");
     print_component(component);
     component_dfs_calculate_width(component);
