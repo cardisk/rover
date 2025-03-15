@@ -41,7 +41,7 @@ const String STRING_LAYOUT_FIT =
 }
 `;
 
-const String STRING_LAYOUT_GROW =
+const String STRING_LAYOUT_LAYOUT_GROW =
 `
 {
     "type": "LAYOUT",
@@ -69,6 +69,39 @@ const String STRING_LAYOUT_GROW =
                 "width": "GROW",
                 "box": {
                     "type": "HBOX",
+                }
+            }
+        ]
+    }
+}
+`;
+
+const String STRING_LAYOUT_MIXED_GROW =
+`
+{
+    "type": "LAYOUT",
+    "width": "100",
+    "box": {
+        "type": "HBOX",
+        "align": "CENTER",
+        "children": [
+            {
+                "type": "LAYOUT",
+                "width": "GROW",
+                "box": {
+                    "type": "HBOX",
+                }
+            },
+            {
+                "type": "WINDOW",
+                "win": {
+                    "type": "TITLE",
+                }
+            },
+            {
+                "type": "WINDOW",
+                "win": {
+                    "type": "TITLE",
                 }
             }
         ]
@@ -275,67 +308,61 @@ fn void component_bfs_grow_width(Component *root)
     {
         // The queue should not be empty here
         Component *item = queue.pop_first()!!;
-        switch (item.type)
+
+        if (item.parent && item.width.type == GROW)
         {
-            case LAYOUT:
-                Box *box = item.box;
+            List(<Component *>) growable_children = box_growable_width_children_list(item.parent.box);
+            CInt left_w = boxCalculateLeftWidth(item.parent);
 
-                if (item.parent && item.width.type == GROW)
+            while (left_w > 0)
+            {
+                CInt smallest = component_take_width(growable_children[0]); 
+                CInt second_smallest = -1;
+                CInt width_to_add = left_w;
+
+                foreach (child : growable_children)
                 {
-                    List(<Component *>) growable_children = box_growable_width_children_list(item.parent.box);
-                    CInt left_w = boxCalculateLeftWidth(item.parent);
-
-                    while (left_w > 0)
+                    CInt child_width = component_take_width(child);
+                    if (child_width < smallest)
                     {
-                        CInt smallest = component_take_width(growable_children[0]); 
-                        CInt second_smallest = -1;
-                        CInt width_to_add = left_w;
-
-                        foreach (child : growable_children)
-                        {
-                            CInt child_width = component_take_width(child);
-                            if (child_width < smallest)
-                            {
-                                second_smallest = smallest;
-                                smallest = child_width;
-                            }
-                            if (child_width > smallest)
-                            {
-                                second_smallest = min(second_smallest, child_width);
-                                width_to_add = second_smallest - smallest;
-                            }
-                        }
-
-                        width_to_add = min(width_to_add, left_w / (CInt) growable_children.len());
-
-                        // It means that the left_w is not divisible by the number of 
-                        // growable_children so add it to the first one and go.
-                        if (width_to_add == 0)
-                        {
-                            item.width.value += left_w;
-                            break;
-                        }
-
-                        foreach (child : growable_children)
-                        {
-                            CInt child_width = component_take_width(child);
-                            if (child_width == smallest)
-                            {
-                                child.width.value += width_to_add;
-                                left_w -= width_to_add;
-                            }
-                        }
+                        second_smallest = smallest;
+                        smallest = child_width;
+                    }
+                    if (child_width > smallest)
+                    {
+                        second_smallest = min(second_smallest, child_width);
+                        width_to_add = second_smallest - smallest;
                     }
                 }
 
-                // TODO: missing same calculations for height.
-                // TODO: distinguish between along-axis and across-axis growth.
+                width_to_add = min(width_to_add, left_w / (CInt) growable_children.len());
 
-                foreach (child : box.children) queue.push(child);
-            case WINDOW:
-                break;
-            default:
-                unreachable("ComponentType not handled");
+                // It means that the left_w is not divisible by the number of 
+                // growable_children so add it to the first one and go.
+                if (width_to_add == 0)
+                {
+                    item.width.value += left_w;
+                    break;
+                }
+
+                foreach (child : growable_children)
+                {
+                    CInt child_width = component_take_width(child);
+                    if (child_width == smallest)
+                    {
+                        child.width.value += width_to_add;
+                        left_w -= width_to_add;
+                    }
+                }
+            }
+        }
+
+        // TODO: missing same calculations for height.
+        // TODO: distinguish between along-axis and across-axis growth.
+
+        if (item.type == LAYOUT)
+        {
+            foreach (child : item.box.children) queue.push(child);
         }
     }
 }
@@ -430,7 +457,7 @@ fn Component*! parse_layout_tree(String str)
 
 fn void main()
 {
-    Component *component = parse_layout_tree(STRING_LAYOUT_GROW)!!;
+    Component *component = parse_layout_tree(STRING_LAYOUT_MIXED_GROW)!!;
     io::printn("#################");
     print_component(component);
     component_dfs_calculate_width(component);
