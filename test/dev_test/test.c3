@@ -81,6 +81,7 @@ const String STRING_LAYOUT_MIXED_GROW =
 {
     "type": "LAYOUT",
     "width": "100",
+    "height": "100",
     "box": {
         "type": "HBOX",
         "align": "CENTER",
@@ -88,6 +89,7 @@ const String STRING_LAYOUT_MIXED_GROW =
             {
                 "type": "LAYOUT",
                 "width": "GROW",
+                "height": "GROW",
                 "box": {
                     "type": "HBOX",
                 }
@@ -288,6 +290,20 @@ fn List(<Component *>) box_growable_width_children_list(Box *box)
     return growable_children;
 }
 
+fn List(<Component *>) box_growable_height_children_list(Box *box)
+{
+    List(<Component *>) growable_children;
+    growable_children.tinit();
+
+    foreach (child : box.children)
+    {
+        if (child.height.type != GROW) continue;
+        growable_children.push(child);
+    }
+
+    return growable_children;
+}
+
 fn CInt component_take_width(Component *component)
 {
     return component.width.value;
@@ -368,6 +384,88 @@ fn void component_bfs_grow_width(Component *root)
                     {
                         child.width.value += width_to_add;
                         left_w -= width_to_add;
+                    }
+                }
+            }
+        }
+
+        if (item.type == LAYOUT)
+        {
+            foreach (child : item.box.children) queue.push(child);
+        }
+    }
+}
+
+fn void component_bfs_grow_height(Component *root)
+{
+    List(<Component *>) queue;
+    queue.tinit();
+
+    queue.push(root);
+    while (!queue.is_empty())
+    {
+        // The queue should not be empty here
+        Component *item = queue.pop_first()!!;
+
+        if GROW: (item.parent && item.height.type == GROW)
+        {
+            List(<Component *>) growable_children = box_growable_height_children_list(item.parent.box);
+            CInt left_h;
+
+            // Across-axis growth: expand to fill the height of the parent.
+            if (item.parent.box.type == HBOX)
+            {
+                left_h = item.parent.height.value;
+
+                foreach (child : growable_children)
+                {
+                    child.height.value = left_h;
+                }
+
+                break GROW;
+            }
+
+            // Along-axis growth: grow the children to fill the parent height equally.
+            left_h = boxCalculateLeftHeight(item.parent);
+
+            while (left_h > 0)
+            {
+                CInt smallest = component_take_height(growable_children[0]); 
+                CInt second_smallest = -1;
+                CInt height_to_add = left_h;
+
+                foreach (child : growable_children)
+                {
+                    CInt child_height = component_take_height(child);
+                    if (child_height < smallest)
+                    {
+                        second_smallest = smallest;
+                        smallest = child_height;
+                    }
+                    if (child_height > smallest)
+                    {
+                        second_smallest = min(second_smallest, child_height);
+                        height_to_add = second_smallest - smallest;
+                    }
+                }
+
+                height_to_add = min(height_to_add, left_h / (CInt) growable_children.len());
+
+                // It means that the left_h is not divisible by the number of 
+                // growable_children so add it to the first one and go.
+                if (height_to_add == 0)
+                {
+                    item.height.value += left_h;
+                    break;
+                }
+
+                foreach (child : growable_children)
+                {
+                    CInt child_height = component_take_height(child);
+                    if (child_height == smallest)
+                    {
+                        child.height.value += height_to_add;
+                        left_h -= height_to_add;
                     }
                 }
             }
@@ -473,11 +571,13 @@ fn void main()
     Component *component = parse_layout_tree(STRING_LAYOUT_MIXED_GROW)!!;
     io::printn("#################");
     print_component(component);
+
     component_dfs_calculate_width(component);
     component_bfs_grow_width(component);
 
     component_dfs_calculate_height(component);
-    // component_bfs_grow_height(component);
+    component_bfs_grow_height(component);
+
     io::printn("#################");
     print_component(component);
 }
