@@ -309,10 +309,26 @@ fn void component_bfs_grow_width(Component *root)
         // The queue should not be empty here
         Component *item = queue.pop_first()!!;
 
-        if (item.parent && item.width.type == GROW)
+        if GROW: (item.parent && item.width.type == GROW)
         {
             List(<Component *>) growable_children = box_growable_width_children_list(item.parent.box);
-            CInt left_w = boxCalculateLeftWidth(item.parent);
+            CInt left_w;
+
+            // Across-axis growth: expand to fill the width of the parent.
+            if (item.parent.box.type == VBOX)
+            {
+                left_w = item.parent.width.value;
+
+                foreach (child : growable_children)
+                {
+                    child.width.value = left_w;
+                }
+
+                break GROW;
+            }
+
+            // Along-axis growth: grow the children to fill the parent width equally.
+            left_w = boxCalculateLeftWidth(item.parent);
 
             while (left_w > 0)
             {
@@ -356,9 +372,6 @@ fn void component_bfs_grow_width(Component *root)
                 }
             }
         }
-
-        // TODO: missing same calculations for height.
-        // TODO: distinguish between along-axis and across-axis growth.
 
         if (item.type == LAYOUT)
         {
