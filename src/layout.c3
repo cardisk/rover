@@ -86,6 +86,7 @@ struct Component
     struct
     {
         CInt x, y;
+        CInt offset;
     }
     
     union

@@ -523,6 +523,43 @@ fn void component_dfs_calculate_height(Component *root)
 }
 // //// SIZE CALCULATION PASS END   ///////////////////////////////////////////
 
+// //// POSITION CALCULATION PASS START ///////////////////////////////////////////
+fn void component_bfs_calculate_positions(Component *root)
+{
+    List(<Component *>) queue;
+    queue.tinit();
+
+    queue.push(root);
+    while (!queue.is_empty())
+    {
+        // The queue should not be empty here
+        Component *item = queue.pop_first()!!;
+
+        if (item.parent)
+        {
+            switch (item.parent.box.type)
+            {
+                case HBOX:
+                    item.x = item.parent.x + item.parent.offset;
+                    item.y = item.parent.y;
+                    item.parent.offset += item.width.value;
+                case VBOX:
+                    item.x = item.parent.x;
+                    item.y = item.parent.y + item.parent.offset;
+                    item.parent.offset += item.height.value;
+                default:
+                    unreachable("BoxType not handled");
+            }
+        }
+
+        if (item.type == LAYOUT)
+        {
+            foreach (child : item.box.children) queue.push(child);
+        }
+    }
+}
+// //// POSITION CALCULATION PASS END   ///////////////////////////////////////////
+
 fn void print_component(Component *component, int level = 0)
 {
     for (int i = 0; i < level; i++)
@@ -577,6 +614,8 @@ fn void main()
 
     component_dfs_calculate_height(component);
     component_bfs_grow_height(component);
+
+    component_bfs_calculate_positions(component);
 
     io::printn("#################");
     print_component(component);
