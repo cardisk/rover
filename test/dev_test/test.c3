@@ -5,9 +5,6 @@ import std::encoding::json;
 import std::collections::list;
 import std::collections::object;
 
-const Axis MAX_WIDTH  = { .type = FIXED, .value = 100 };
-const Axis MAX_HEIGHT = { .type = FIXED, .value = 100 };
-
 const String STRING_LAYOUT_FIT =
 `
 {
@@ -479,7 +476,7 @@ fn void component_bfs_grow_height(Component *root)
 }
 // //// GROWING CALCULATION END     ///////////////////////////////////////////
 
-// //// SIZE CALCULATION PASS START ///////////////////////////////////////////
+// //// SIZE CALCULATION START      ///////////////////////////////////////////
 fn void component_dfs_calculate_width(Component *root)
 {
     if (root.type != LAYOUT) return;
@@ -521,9 +518,9 @@ fn void component_dfs_calculate_height(Component *root)
         }
     }
 }
-// //// SIZE CALCULATION PASS END   ///////////////////////////////////////////
+// //// SIZE CALCULATION END        ///////////////////////////////////////////
 
-// //// POSITION CALCULATION PASS START ///////////////////////////////////////////
+// //// POSITION CALCULATION START  ///////////////////////////////////////////
 fn void component_bfs_calculate_positions(Component *root)
 {
     List(<Component *>) queue;
@@ -558,7 +555,7 @@ fn void component_bfs_calculate_positions(Component *root)
         }
     }
 }
-// //// POSITION CALCULATION PASS END   ///////////////////////////////////////////
+// //// POSITION CALCULATION END    ///////////////////////////////////////////
 
 fn void print_component(Component *component, int level = 0)
 {
