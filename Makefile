@@ -12,7 +12,7 @@ run: build
 
 dev:
 	mkdir -p build
-	c3c compile-run -l ncurses -o build/dev $(test_sources) src/layout.c3 
+	c3c compile-run -l ncurses -o build/dev $(test_sources) src/layout.c3 src/ncurses.c3 
 
 test:
 	mkdir -p build

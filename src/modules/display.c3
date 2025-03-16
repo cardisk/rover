@@ -93,12 +93,12 @@ fn void! Display.init(&self)
 
 fn void Display.free(&self)
 {
-    if (cfg.title.is_visible)     ncurses::delwin(self.title);
-    if (cfg.list.is_visible)      ncurses::delwin(self.list);
-    if (cfg.preview.is_visible)   ncurses::delwin(self.preview);
-    if (cfg.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
-    if (cfg.status.is_visible)    ncurses::delwin(self.status);
-    if (cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
+    if (self.title)     ncurses::delwin(self.title);
+    if (self.list)      ncurses::delwin(self.list);
+    if (self.preview)   ncurses::delwin(self.preview);
+    if (self.bookmarks) ncurses::delwin(self.bookmarks);
+    if (self.status)    ncurses::delwin(self.status);
+    if (self.prompt)    ncurses::delwin(self.prompt);
 }
 
 macro Display.toggle_focus(&self)
@@ -185,8 +185,15 @@ macro Display.bottom(&self)
 
 fn ZString Display.input(&self, ZString prefix)
 {
+    if (!self.prompt) return null;
+
     ncurses::werase(self.prompt);
-    if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
+    
+    foreach (item : cfg.windows)
+    {
+        if (item.win.type != PROMPT) continue;
+        if (item.win.is_boxed) ncurses::box(self.prompt, 0, 0);
+    }
 
     CInt maxx, maxy;
     ncurses::@getmaxyx(self.prompt, maxy, maxx);
@@ -240,40 +247,35 @@ fn void! Display.update(&self)
     self.update_screen();
     self.clear();
 
-    if (cfg.title.is_visible)
+    foreach (item : cfg.windows)
     {
-        if (cfg.title.is_boxed) ncurses::box(self.title, 0, 0);
-        self.draw_title();
-    }
+        if (!item.win.is_visible) continue;
 
-    if (cfg.list.is_visible)
-    {
-        if (cfg.list.is_boxed) ncurses::box(self.list, 0, 0);
-        self.draw_list();
-    }
+        bool boxed = item.win.is_boxed;
 
-    if (cfg.preview.is_visible)
-    {
-        if (cfg.preview.is_boxed) ncurses::box(self.preview, 0, 0);
-        self.draw_preview()!;
-    }
-
-    if (cfg.bookmarks.is_visible)
-    {
-        if (cfg.bookmarks.is_boxed) ncurses::box(self.bookmarks, 0, 0);
-        self.draw_bookmarks();
-    }
-
-    if (cfg.status.is_visible)
-    {
-        if (cfg.status.is_boxed) ncurses::box(self.status, 0, 0);
-        self.draw_status()!;
-    }
-
-    if (cfg.prompt.is_visible)
-    {
-        if (cfg.prompt.is_boxed) ncurses::box(self.prompt, 0, 0);
-        self.draw_prompt();
+        switch (item.win.type)
+        {
+            case TITLE:
+                if (boxed) ncurses::box(self.title, 0, 0);
+                self.draw_title();
+            case LIST:
+                if (boxed) ncurses::box(self.list, 0, 0);
+                self.draw_list();
+            case PREVIEW:
+                if (boxed) ncurses::box(self.preview, 0, 0);
+                self.draw_preview()!;
+            case BOOKMARKS:
+                if (boxed) ncurses::box(self.bookmarks, 0, 0);
+                self.draw_bookmarks();
+            case STATUS:
+                if (boxed) ncurses::box(self.status, 0, 0);
+                self.draw_status()!;
+            case PROMPT:
+                if (boxed) ncurses::box(self.prompt, 0, 0);
+                self.draw_prompt();
+            default:
+                unreachable("WindowType not supported by renderer.");
+        }
     }
 
     if (self.focus == POPUP)
@@ -363,23 +365,53 @@ fn bool is_printable(String str)
 
 fn void Display.update_screen(&self)
 {
-    if (cfg.title.is_visible)     ncurses::delwin(self.title);
-    if (cfg.list.is_visible)      ncurses::delwin(self.list);
-    if (cfg.preview.is_visible)   ncurses::delwin(self.preview);
-    if (cfg.bookmarks.is_visible) ncurses::delwin(self.bookmarks);
-    if (cfg.status.is_visible)    ncurses::delwin(self.status);
-    if (cfg.prompt.is_visible)    ncurses::delwin(self.prompt);
-
-    if (cfg.title.is_visible)     self.title     = ncurses::subwin(ncurses::stdscr, cfg.title.h    , cfg.title.w    , cfg.title.y    , cfg.title.y);
-    if (cfg.list.is_visible)      self.list      = ncurses::subwin(ncurses::stdscr, cfg.list.h     , cfg.list.w     , cfg.list.y     , cfg.list.x);
-    if (cfg.preview.is_visible)   self.preview   = ncurses::subwin(ncurses::stdscr, cfg.preview.h  , cfg.preview.w  , cfg.preview.y  , cfg.preview.x);
-    if (cfg.bookmarks.is_visible) self.bookmarks = ncurses::subwin(ncurses::stdscr, cfg.bookmarks.h, cfg.bookmarks.w, cfg.bookmarks.y, cfg.bookmarks.x);
-    if (cfg.status.is_visible)    self.status    = ncurses::subwin(ncurses::stdscr, cfg.status.h   , cfg.status.w   , cfg.status.y   , cfg.status.x);
-    if (cfg.prompt.is_visible)    self.prompt    = ncurses::subwin(ncurses::stdscr, cfg.prompt.h   , cfg.prompt.w   , cfg.prompt.y   , cfg.prompt.x);
-
-    if (self.focus == POPUP)
+    if (app.resized)
     {
-        if (self.popup) ncurses::delwin(self.popup);
+        // TODO: cfg.reload_windows();
+        
+        if (self.title)     ncurses::delwin(self.title);
+        if (self.list)      ncurses::delwin(self.list);
+        if (self.preview)   ncurses::delwin(self.preview);
+        if (self.bookmarks) ncurses::delwin(self.bookmarks);
+        if (self.status)    ncurses::delwin(self.status);
+        if (self.prompt)    ncurses::delwin(self.prompt);
+        if (self.popup)     ncurses::delwin(self.popup);
+
+        self.title     = null;
+        self.list      = null;
+        self.preview   = null;
+        self.bookmarks = null;
+        self.status    = null;
+        self.prompt    = null;
+        self.popup     = null;
+
+        foreach (item : cfg.windows)
+        {
+            if (!item.win.is_visible) continue;
+
+            Window *win;
+
+            switch (item.win.type)
+            {
+                case TITLE:
+                    win = self.title;
+                case LIST:
+                    win = self.list;
+                case PREVIEW:
+                    win = self.preview;
+                case BOOKMARKS:
+                    win = self.bookmarks;
+                case STATUS:
+                    win = self.status;
+                case PROMPT:
+                    win = self.prompt;
+                default:
+                    unreachable("WindowType not supported by renderer.");
+            }
+
+            win = ncurses::subwin(ncurses::stdscr, item.height.value, item.width.value, item.y, item.x);
+        }
+
         self.popup = ncurses::subwin(ncurses::stdscr, app.h / 2, app.w / 2, app.h / 4, app.w / 4);   
     }
 }
@@ -388,12 +420,12 @@ fn void Display.clear(&self)
 {
     ncurses::werase(ncurses::stdscr);
 
-    if (cfg.title.is_visible)     ncurses::werase(self.title);
-    if (cfg.list.is_visible)      ncurses::werase(self.list);
-    if (cfg.preview.is_visible)   ncurses::werase(self.preview);
-    if (cfg.bookmarks.is_visible) ncurses::werase(self.bookmarks);
-    if (cfg.status.is_visible)    ncurses::werase(self.status);
-    if (cfg.prompt.is_visible)    ncurses::werase(self.prompt);
+    if (self.title)     ncurses::werase(self.title);
+    if (self.list)      ncurses::werase(self.list);
+    if (self.preview)   ncurses::werase(self.preview);
+    if (self.bookmarks) ncurses::werase(self.bookmarks);
+    if (self.status)    ncurses::werase(self.status);
+    if (self.prompt)    ncurses::werase(self.prompt);
 }
 
 fn void Display.draw_title(&self)
@@ -429,7 +461,7 @@ fn void Display.draw_list(&self)
         return;
     }
 
-    if (app.resized()) {
+    if (app.resized) {
         self.top();
         self.list_vtop = 0;
         self.list_vbot = (usz) h_stop;
@@ -608,7 +640,7 @@ fn void Display.draw_bookmarks(&self)
         return;
     }
 
-    if (app.resized()) {
+    if (app.resized) {
         self.top();
         self.bookmarks_vtop = 0;
         self.bookmarks_vbot = (usz) h_stop;
@@ -752,7 +784,7 @@ fn void Display.draw_popup(&self)
     CInt w_stop = w - 5;
     CInt h_stop = h - 2;
     
-    if (app.resized()) {
+    if (app.resized) {
         self.top();
         self.popup_vtop = 0;
         self.popup_vbot = (usz) h_stop;

@@ -3,56 +3,63 @@ module rover::defaults;
 const String DEFAULT_DISPLAY = 
 `
 {
-    "type": "vbox",
-    "content": [
-        {
-            "type": "win",
-            "name": "title",
-            "boxed": false,
-            "w": "w",
-            "h": "3"
-        },
-        {
-            "type": "hbox",
-            "content": [
-                {
-                    "type": "win",
-                    "name": "list",
-                    "boxed": false,
-                    "w": "(/ w 3)",
-                    "h": "(- h 9)"
-                },
-                {
-                    "type": "win",
-                    "name": "preview",
-                    "boxed": false,
-                    "w": "(/ w 3)",
-                    "h": "(- h 9)"
-                },
-                {
-                    "type": "win",
-                    "name": "bookmarks",
-                    "boxed": false,
-                    "w": "(/ w 3)",
-                    "h": "(- h 9)"
-                },
-            ],
-        },
-        {
-            "type": "win",
-            "name": "status",
-            "boxed": false,
-            "w": "w",
-            "h": "3"
-        },
-        {
-            "type": "win",
-            "name": "prompt",
-            "boxed": false,
-            "w": "w",
-            "h": "3"
-        },
-    ],
+    "type": "LAYOUT",
+    "width": "W",
+    "height": "H",
+    "box": {
+        "type": "VBOX",
+        "children": [
+            {
+                "type": "WINDOW",
+                "height": "3",
+                "win": {
+                    "type": "TITLE",
+                }
+            },
+            {
+                "type": "LAYOUT",
+                "width": "GROW",
+                "height": "(- H 9)",
+                "box": {
+                    "type": "HBOX",
+                    "children": [
+                        {
+                            "type": "WINDOW",
+                            "win": {
+                                "type": "LIST",
+                            }
+                        },
+                        {
+                            "type": "WINDOW",
+                            "win": {
+                                "type": "PREVIEW",
+                            }
+                        },
+                        {
+                            "type": "WINDOW",
+                            "win": {
+                                "type": "BOOKMARKS",
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "type": "WINDOW",
+                "height": "3",
+                "win": {
+                    "type": "STATUS",
+                }
+            },
+            {
+                "type": "WINDOW",
+                "height": "3",
+                "win": {
+                    "type": "PROMPT",
+                }
+            }
+        ]
+    }
 }
 `;
 

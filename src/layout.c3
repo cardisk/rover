@@ -3,6 +3,10 @@ import std::collections::object;
 import std::collections::list;
 import std::encoding::json;
 
+// TODO: is not a good idea to store those info inside the temporary
+// allocator because with the new renderer it needs to know how the
+// structure is made. Recreating a copy only for the windows is redundant.
+
 // IMPORTANT: all memory allocations done here are inside the temporary
 // allocator because there is no need to make this components persistent.
 
@@ -105,6 +109,7 @@ fn Component*! parse_tree(String str)
 module rover::layout @private;
 import std::collections::object;
 import std::collections::list;
+import ncurses;
 import libc;
 
 // //// HELPER FUNCTIONS START      ///////////////////////////////////////////
@@ -170,30 +175,117 @@ fn Component *new_window(WindowType type)
     *win = {
         .type = type,
         .is_visible = true,
+        .is_boxed = true,
     };
 
     new.win = win;
     return new;
+}
+
+fault EvalError
+{
+    INVALID_EVAL_START,
+    INVALID_EVAL_END,
+    INVALID_EVAL_EXPR,
+    INVALID_EVAL_OPERATION,
+    INVALID_EVAL_OPERAND,
+}
+
+fn CInt! evaluate_s_expression(String expr)
+{
+    if (expr.tsplit(" ").len < 3) return EvalError.INVALID_EVAL_EXPR?;
+    if (expr[0] != '(') return EvalError.INVALID_EVAL_START?;
+    if (expr[expr.len - 1] != ')') return EvalError.INVALID_EVAL_END?;
+
+    int i = 1;
+    while (expr[i] == ' ') i++;
+
+    int cur = i;
+    CInt res;
+    CInt operand;
+    
+    char op = expr[cur];
+    cur++;
+
+    bool initted = false;
+
+    for (i = cur; i < expr.len - 1; i++)
+    {
+        if (expr[i] == ' ') 
+        {
+            cur = i;
+            continue;
+        }
+
+        if (i == expr.len - 1 && expr[i] != ')') return EvalError.INVALID_EVAL_END?;
+        if (i == expr.len - 1 && expr[i] == ')') break;
+
+        CInt val;
+        if (!expr[i].is_digit() && expr[i] != 'h' && expr[i] != 'H' && expr[i] != 'w' && expr[i] != 'W') return EvalError.INVALID_EVAL_OPERAND?;
+        
+        // After h or w there must be a space.
+        if (!expr[i].is_digit() && (long)(i + 1) < expr.len - 1 && expr[i + 1] != ' ') return EvalError.INVALID_EVAL_OPERAND?; 
+
+        switch (expr[i])
+        {
+            case 'w':
+            case 'W':
+                val = ncurses::getmaxx(ncurses::stdscr);
+
+            case 'h':
+            case 'H':
+                val = ncurses::getmaxy(ncurses::stdscr);
+
+            default:
+                if ((long)(i + 1) < expr.len - 1 && expr[i + 1].is_digit()) continue; 
+                CInt! x = (CInt) expr[cur + 1: i - cur].to_int();
+                if (catch x) return EvalError.INVALID_EVAL_OPERAND?;
+                val = x;
+        }
+
+        if (!initted)
+        {
+            res = val;
+            initted = true;
+            continue;
+        }
+
+        switch (op)
+        {
+            case '+':
+                res += val;
+            case '-':
+                res -= val;
+            case '*':
+                res *= val;
+            case '/':
+                res /= val;
+            default:
+                return EvalError.INVALID_EVAL_OPERATION?;
+        }
+    }
+
+    return res;
 }
 // //// HELPER FUNCTIONS END        ///////////////////////////////////////////
 
 // //// JSON PARSING STUFF START    ///////////////////////////////////////////
 fault LayoutError
 {
-    MISSING_FIELD,
-    INVALID_FIELD,
+    LAYOUT_MISSING_FIELD,
+    LAYOUT_INVALID_FIELD,
 }
 
 fn Component*! windowFromJson(Object *json)
 {
     String! json_window_type = json.get_string("type");
-    if (catch json_window_type) return LayoutError.MISSING_FIELD?;
+    if (catch json_window_type) return LayoutError.LAYOUT_MISSING_FIELD?;
 
     WindowType! window_type = enum_by_name(WindowType, json_window_type);
-    if (catch window_type) return LayoutError.INVALID_FIELD?;
+    if (catch window_type) return LayoutError.LAYOUT_INVALID_FIELD?;
     
     // Other fields are default initialized to 0
-    Component *crafted = layout::new_window(window_type);
+    Component *crafted = new_window(window_type);
 
     bool! window_is_visible = json.get_bool("is_visible");
     if (try window_is_visible)
@@ -213,19 +305,19 @@ fn Component*! windowFromJson(Object *json)
 fn Component*! boxFromJson(Object *json, Component *parent)
 {
     String! json_box_type = json.get_string("type");
-    if (catch json_box_type) return LayoutError.MISSING_FIELD?;
+    if (catch json_box_type) return LayoutError.LAYOUT_MISSING_FIELD?;
 
     BoxType! box_type = enum_by_name(BoxType, json_box_type);
-    if (catch box_type) return LayoutError.INVALID_FIELD?;
+    if (catch box_type) return LayoutError.LAYOUT_INVALID_FIELD?;
     
     Component *crafted;
 
     switch (box_type)
     {
         case HBOX:
-            crafted = layout::new_hbox();
+            crafted = new_hbox();
         case VBOX:
-            crafted = layout::new_vbox();
+            crafted = new_vbox();
         default:
             unreachable("A new type of box was introduced but not handled");
     }
@@ -237,7 +329,7 @@ fn Component*! boxFromJson(Object *json, Component *parent)
     Object*! json_children = json.get("children");
     if (try json_children)
     {
-        if (!json_children.is_array()) return LayoutError.INVALID_FIELD?;
+        if (!json_children.is_array()) return LayoutError.LAYOUT_INVALID_FIELD?;
 
         foreach (json_child : json_children.array)
         {
@@ -252,10 +344,10 @@ fn Component*! boxFromJson(Object *json, Component *parent)
 fn Component*! fromJson(Object *json, Component *parent = null)
 {
     String! json_component_type = json.get_string("type");
-    if (catch json_component_type) return LayoutError.MISSING_FIELD?;
+    if (catch json_component_type) return LayoutError.LAYOUT_MISSING_FIELD?;
 
     ComponentType! component_type = enum_by_name(ComponentType, json_component_type);
-    if (catch component_type) return LayoutError.INVALID_FIELD?;
+    if (catch component_type) return LayoutError.LAYOUT_INVALID_FIELD?;
 
     Component *crafted;
 
@@ -263,11 +355,11 @@ fn Component*! fromJson(Object *json, Component *parent = null)
     {
         case WINDOW:
             Object*! json_window = json.get("win");
-            if (catch json_window) return LayoutError.MISSING_FIELD?;
+            if (catch json_window) return LayoutError.LAYOUT_MISSING_FIELD?;
             crafted = windowFromJson(json_window)!;
         case LAYOUT:
             Object*! json_box = json.get("box");
-            if (catch json_box) return LayoutError.MISSING_FIELD?;
+            if (catch json_box) return LayoutError.LAYOUT_MISSING_FIELD?;
             crafted = boxFromJson(json_box, crafted)!;
         default:
             unreachable("ComponentType not handled");
@@ -275,19 +367,34 @@ fn Component*! fromJson(Object *json, Component *parent = null)
 
     crafted.parent = parent;
 
-    String! json_box_width  = json.get_string("width");
+    String! json_box_width = json.get_string("width");
     if (try json_box_width)
     {
         switch (json_box_width)
         {
             case "GROW":
-                crafted.width = layout::axis_grow();
+                crafted.width = axis_grow();
             case "FIT":
-                crafted.width = layout::axis_fit();
+                crafted.width = axis_fit();
+            case "W":
+                CInt value = ncurses::getmaxx(ncurses::stdscr);
+                crafted.width = axis_fixed(value);
+            case "H":
+                CInt value = ncurses::getmaxy(ncurses::stdscr);
+                crafted.width = axis_fixed(value);
             default:
-                // TODO: handling ncurses width and height.
-                CInt value = json_box_width.to_int()!!;
-                crafted.width = layout::axis_fixed(value);
+                if (json_box_width.len == 0) break;
+
+                if (json_box_width.starts_with("("))
+                {
+                    CInt value = evaluate_s_expression(json_box_width)!;
+                    crafted.width = axis_fixed(value);
+                }
+                else
+                {
+                    CInt value = json_box_width.to_int()!;
+                    crafted.width = axis_fixed(value);
+                }
         }
     }
 
@@ -297,13 +404,30 @@ fn Component*! fromJson(Object *json, Component *parent = null)
         switch (json_box_height)
         {
             case "GROW":
-                crafted.height = layout::axis_grow();
+                crafted.height = axis_grow();
             case "FIT":
-                crafted.height = layout::axis_fit();
+                crafted.height = axis_fit();
+            case "w":
+            case "W":
+                CInt value = ncurses::getmaxx(ncurses::stdscr);
+                crafted.height = axis_fixed(value);
+            case "h":
+            case "H":
+                CInt value = ncurses::getmaxy(ncurses::stdscr);
+                crafted.height = axis_fixed(value);
             default:
-                // TODO: handling ncurses width and height.
-                CInt value = json_box_height.to_int()!!;
-                crafted.height = layout::axis_fixed(value);
+                if (json_box_height.len == 0) break;
+
+                if (json_box_height.starts_with("("))
+                {
+                    CInt value = evaluate_s_expression(json_box_height)!;
+                    crafted.height = axis_fixed(value);
+                }
+                else
+                {
+                    CInt value = json_box_height.to_int()!;
+                    crafted.height = axis_fixed(value);
+                }
         }
     }
 

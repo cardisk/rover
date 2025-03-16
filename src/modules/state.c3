@@ -13,6 +13,7 @@ struct State
 {
     CInt w, h;
     CInt old_w, old_h;
+    bool resized;
     ZString user;
     char[255] host;
 
@@ -28,26 +29,26 @@ fn void! State.init(&self)
     if (rover::gethostname((ZString) &self.host, 255) != 0) return StateError.NO_HOST?;
 
     ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
-    self.old_w = self.w;
-    self.old_h = self.h;
+    self.old_w = 0;
+    self.old_h = 0;
 
     self.logs.init(allocator::mem);
 }
 
 macro State.update(&self)
 {
+    ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
+
+    self.resized = false;
+
+    if (self.old_w != self.w) self.resized = true;
+    if (self.old_h != self.h) self.resized = true;
+
     self.old_w = self.w;
     self.old_h = self.h;
-    ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
 }
 
-macro State.shrinkedw(&self) => self.w < self.old_w;
-macro State.shrinkedh(&self) => self.h < self.old_h;
-macro State.shrinked(&self) => self.shrinkedw() && self.shrinkedh();
-macro State.scaledw(&self) => self.w > self.old_w;
-macro State.scaledh(&self) => self.h > self.old_h;
-macro State.scaled(&self) => self.scaledw() && self.scaledh();
-macro State.resized(&self) => self.shrinked() || self.scaled();
+macro State.resized(&self) => self.resized;
 
 macro State.log(&self, String str) => self.logs.push(str);
 

@@ -1,4 +1,5 @@
 module test;
+import ncurses;
 import std::io;
 import rover::layout;
 
@@ -106,8 +107,8 @@ const String STRING_REAL_LAYOUT =
 `
 {
     "type": "LAYOUT",
-    "width": "171",
-    "height": "69",
+    "width": "W",
+    "height": "H",
     "box": {
         "type": "VBOX",
         "children": [
@@ -127,6 +128,7 @@ const String STRING_REAL_LAYOUT =
                     "children": [
                         {
                             "type": "WINDOW",
+                            "width": "(/ w 2)",
                             "win": {
                                 "type": "LIST",
                             }
@@ -199,6 +201,8 @@ fn void print_component(Component *component, int level = 0)
 
 fn void main()
 {
+    ncurses::initscr();
     Component *component = layout::parse_tree(STRING_REAL_LAYOUT)!!;
+    ncurses::endwin();
     print_component(component);
 }
