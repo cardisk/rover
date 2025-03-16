@@ -48,7 +48,7 @@ fn void! Config.init(&self)
     String! home_env = env::get_home_dir();
     if (catch home_env) return ConfigError.ERROR_HOME_DIR?;
 
-    self.load_display_string();
+    self.load_display_string(home_env);
 
     self.windows.init(allocator::mem);
 
@@ -76,7 +76,7 @@ fn void! Config.init(&self)
         {
             String fsrc = (String) file_src;
             if (!fsrc.len) break THEME_FILE;
-            display_config_src = fsrc;
+            theme_config_src = fsrc;
         }
     }
 
@@ -91,7 +91,7 @@ fn void! Config.init(&self)
     allocator::temp().reset(tmark);
 }
 
-fn void reload_windows(&self)
+fn void Config.reload_windows(&self)
 {
     // TODO: free the component tree.
     // TODO: reload the display string.
@@ -102,11 +102,12 @@ module rover::config @private;
 import std::collections::object;
 import std::encoding::hex;
 import std::core::array;
+import rover::defaults;
 import rover::layout;
 import std::io;
 import ncurses;
 
-fn void Config.load_display_string(&self)
+fn void Config.load_display_string(&self, String home_env)
 {
     self.display_config_src = defaults::DEFAULT_DISPLAY;
 

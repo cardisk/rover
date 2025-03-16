@@ -119,7 +119,7 @@ macro Axis axis_fixed(CInt value) => { .type = FIXED, .value = value };
 
 fn Component *new_component(ComponentType type)
 {
-    Component *new = mem::temp_new(Component);
+    Component *new = mem::new(Component);
     libc::memset(new, 0, Component.sizeof);
 
     *new = { 
@@ -135,7 +135,7 @@ fn Component *new_hbox()
 {
     Component *new = new_component(LAYOUT);
 
-    Box *hbox = mem::temp_new(Box);
+    Box *hbox = mem::new(Box);
     libc::memset(hbox, 0, Box.sizeof);
 
     *hbox = {
@@ -151,7 +151,7 @@ fn Component *new_vbox()
 {
     Component *new = new_component(LAYOUT);
 
-    Box *vbox = mem::temp_new(Box);
+    Box *vbox = mem::new(Box);
     libc::memset(vbox, 0, Box.sizeof);
     
     *vbox = {

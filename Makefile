@@ -16,4 +16,4 @@ dev:
 
 test:
 	mkdir -p build
-	c3c compile-test -o build/tester $(sources) $(test_sources)
+	c3c compile-test -l ncurses -o build/tester $(sources) $(test_sources)
