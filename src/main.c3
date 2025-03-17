@@ -404,6 +404,7 @@ fn void main()
 
     app.show_logs();
 
+    cfg.free();
     app.free();
     sys.free();
     tui.free();

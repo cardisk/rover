@@ -35,6 +35,11 @@ const String STRING_LAYOUT_FIT =
 
 fn void memory_leak()
 {
-    Component *component = layout::parse_tree(STRING_LAYOUT_FIT)!!;
-    layout::free_tree(component);
+    DynamicArenaAllocator arena;
+    arena.init(1024, allocator::mem);
+    mem::@scoped(&arena)
+    {
+        Component *component = layout::parse_tree(STRING_LAYOUT_FIT)!!;
+    };
+    arena.free();
 }

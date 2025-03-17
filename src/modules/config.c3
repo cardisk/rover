@@ -34,7 +34,10 @@ struct Config
 {
     String editor;
     String display_config_src;
+
+    DynamicArenaAllocator display_tree_arena;
     Component *display_tree;
+
     List(<Component *>) windows;
 }
 
@@ -52,6 +55,8 @@ fn void! Config.init(&self)
     self.load_display_string(home_env);
 
     self.windows.init(allocator::mem);
+
+    self.display_tree_arena.init(1024, allocator::mem);
 
     self.display_tree = null;
     self.reload_windows()!;
@@ -92,10 +97,27 @@ fn void! Config.init(&self)
     allocator::temp().reset(tmark);
 }
 
+fn void Config.free(&self)
+{
+    self.editor.free();
+    self.display_config_src.free();
+
+    self.display_tree_arena.free();
+    // No need to free self.display_tree because
+    // its content is allocated inside self.display_tree_arena
+
+    self.windows.free();
+}
+
 fn void! Config.reload_windows(&self)
 {
-    if (self.display_tree) layout::free_tree(self.display_tree);
-    self.display_tree = layout::parse_tree(self.display_config_src)!;
+    self.display_tree_arena.reset();
+
+    mem::@scoped(&self.display_tree_arena)
+    {
+        self.display_tree = layout::parse_tree(self.display_config_src)!;
+    };
+
     self.extract_subwins(self.display_tree);
 }
 

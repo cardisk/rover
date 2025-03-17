@@ -3,14 +3,8 @@ import std::collections::object;
 import std::collections::list;
 import std::encoding::json;
 
-// TODO: is not a good idea to store those info inside the temporary
-// allocator because with the new renderer it needs to know how the
-// structure is made. Recreating a copy only for the windows is redundant.
-
-// IMPORTANT: all memory allocations done here are inside the temporary
-// allocator because there is no need to make this components persistent.
-
-// TODO: if the window is resized the configuration needs to be reloaded.
+// IMPORTANT: memory allocations done inside this module are inside
+// the allocator::thread_allocator.
 
 enum AxisSizingType
 {
@@ -104,25 +98,6 @@ fn Component*! parse_tree(String str)
     component_bfs_calculate_positions(root);
 
     return root;
-}
-
-fn void free_tree(Component *root)
-{
-    if (root.type == WINDOW)
-    {
-        mem::free(root.win);
-        mem::free(root);
-        return;
-    }
-
-    foreach (child : root.box.children)
-    {
-        free_tree(child);
-    }
-
-    root.box.children.free();
-    mem::free(root.box);
-    mem::free(root);
 }
 
 module rover::layout @private;

@@ -199,6 +199,8 @@ fn void print_component(Component *component, int level = 0)
     }
 }
 
+import std::io::file;
+
 fn void main()
 {
     ncurses::initscr();
