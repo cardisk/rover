@@ -106,6 +106,25 @@ fn Component*! parse_tree(String str)
     return root;
 }
 
+fn void free_tree(Component *root)
+{
+    if (root.type == WINDOW)
+    {
+        mem::free(root.win);
+        mem::free(root);
+        return;
+    }
+
+    foreach (child : root.box.children)
+    {
+        free_tree(child);
+    }
+
+    root.box.children.free();
+    mem::free(root.box);
+    mem::free(root);
+}
+
 module rover::layout @private;
 import std::collections::object;
 import std::collections::list;
@@ -141,7 +160,7 @@ fn Component *new_hbox()
     *hbox = {
         .type  = HBOX,
     };
-    hbox.children.tinit();
+    hbox.children.init(allocator::mem);
 
     new.box = hbox;
     return new;
@@ -157,7 +176,7 @@ fn Component *new_vbox()
     *vbox = {
         .type  = VBOX,
     };
-    vbox.children.tinit();
+    vbox.children.init(allocator::mem);
 
     new.box = vbox;
     return new;

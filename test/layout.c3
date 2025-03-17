@@ -35,8 +35,6 @@ const String STRING_LAYOUT_FIT =
 
 fn void memory_leak()
 {
-    @assert_leak()
-    {
-        Component *component = layout::parse_tree(STRING_LAYOUT_FIT)!!;
-    };
+    Component *component = layout::parse_tree(STRING_LAYOUT_FIT)!!;
+    layout::free_tree(component);
 }

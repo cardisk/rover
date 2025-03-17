@@ -34,6 +34,7 @@ struct Config
 {
     String editor;
     String display_config_src;
+    Component *display_tree;
     List(<Component *>) windows;
 }
 
@@ -52,8 +53,8 @@ fn void! Config.init(&self)
 
     self.windows.init(allocator::mem);
 
-    Component *display_tree = layout::parse_tree(self.display_config_src)!;
-    self.extract_subwins(display_tree);
+    self.display_tree = null;
+    self.reload_windows()!;
 
     // FIXME: DEBUG ----
     ncurses::endwin();
@@ -91,11 +92,11 @@ fn void! Config.init(&self)
     allocator::temp().reset(tmark);
 }
 
-fn void Config.reload_windows(&self)
+fn void! Config.reload_windows(&self)
 {
-    // TODO: free the component tree.
-    // TODO: reload the display string.
-    // TODO: extract subwins from the component tree.
+    if (self.display_tree) layout::free_tree(self.display_tree);
+    self.display_tree = layout::parse_tree(self.display_config_src)!;
+    self.extract_subwins(self.display_tree);
 }
 
 module rover::config @private;

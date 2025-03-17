@@ -367,7 +367,9 @@ fn void Display.update_screen(&self)
 {
     if (app.resized)
     {
-        // TODO: cfg.reload_windows();
+        // This is safe to assume because if something fails, it should
+        // crash when the config module is loaded.
+        cfg.reload_windows()!!;
         
         if (self.title)     ncurses::delwin(self.title);
         if (self.list)      ncurses::delwin(self.list);
@@ -389,27 +391,27 @@ fn void Display.update_screen(&self)
         {
             if (!item.win.is_visible) continue;
 
-            Window *win;
+            Window **win;
 
             switch (item.win.type)
             {
                 case TITLE:
-                    win = self.title;
+                    win = &self.title;
                 case LIST:
-                    win = self.list;
+                    win = &self.list;
                 case PREVIEW:
-                    win = self.preview;
+                    win = &self.preview;
                 case BOOKMARKS:
-                    win = self.bookmarks;
+                    win = &self.bookmarks;
                 case STATUS:
-                    win = self.status;
+                    win = &self.status;
                 case PROMPT:
-                    win = self.prompt;
+                    win = &self.prompt;
                 default:
                     unreachable("WindowType not supported by renderer.");
             }
 
-            win = ncurses::subwin(ncurses::stdscr, item.height.value, item.width.value, item.y, item.x);
+            *win = ncurses::subwin(ncurses::stdscr, item.height.value, item.width.value, item.y, item.x);
         }
 
         self.popup = ncurses::subwin(ncurses::stdscr, app.h / 2, app.w / 2, app.h / 4, app.w / 4);   
