@@ -43,58 +43,50 @@ struct Config
 
 fn void! Config.init(&self)
 {
-    usz tmark = allocator::temp().mark();
-    
-    self.editor = "";
-    String! editor_env = env::get_var("EDITOR");
-    if (try editor_env) self.editor = editor_env;
-
-    String! home_env = env::get_home_dir();
-    if (catch home_env) return ConfigError.ERROR_HOME_DIR?;
-
-    self.load_display_string(home_env);
-
-    self.windows.init(allocator::mem);
-
-    self.display_tree_arena.init(1024, allocator::mem);
-
-    self.display_tree = null;
-    self.reload_windows()!;
-
-    // FIXME: DEBUG ----
-    ncurses::endwin();
-    foreach (item : self.windows)
+    @pool()
     {
-        io::printn(*item);
-        io::printn(*item.win);
-    }
-    ncurses::refresh();
-    // -----------------
+        self.editor = "";
+        String! editor_env = env::get_var("EDITOR");
+        if (try editor_env) self.editor = editor_env;
 
-    String theme_config_src = defaults::DEFAULT_THEME;
+        // TODO: maybe expand this to use the current thread temp allocator.
+        String! home_env = env::get_home_dir();
+        if (catch home_env) return ConfigError.ERROR_HOME_DIR?;
+        defer home_env.free();
 
-    String theme_path = home_env.tconcat("/.config/rover/theme.json");
+        self.load_display_string(home_env);
 
-    if THEME_FILE: (file::is_file(theme_path))
-    {
-        char[]! file_src = file::load_temp(theme_path);
-        if (try file_src)
+        self.windows.init(allocator::mem);
+
+        self.display_tree_arena.init(1024, allocator::mem);
+
+        self.display_tree = null;
+        self.reload_windows()!;
+
+        // TODO: not sure that this will be dangerous.
+        String theme_config_src = defaults::DEFAULT_THEME;
+
+        String theme_path = home_env.tconcat("/.config/rover/theme.json");
+
+        if THEME_FILE: (file::is_file(theme_path))
         {
-            String fsrc = (String) file_src;
-            if (!fsrc.len) break THEME_FILE;
-            theme_config_src = fsrc;
+            char[]! file_src = file::load_temp(theme_path);
+            if (try file_src)
+            {
+                String fsrc = (String) file_src;
+                if (!fsrc.len) break THEME_FILE;
+                theme_config_src = fsrc;
+            }
         }
-    }
+        // --------
 
-    Object *theme_obj = json::temp_parse_string(theme_config_src)!;
+        Object *theme_obj = json::temp_parse_string(theme_config_src)!;
 
-    // Here the result can be safely ignored.
-    self.parse_theme(theme_obj)!;
-    // TODO: maybe this can be also customizable.
-    ncurses::init_pair(ERROR_POPUP_BORDER, ncurses::COLOR_RED, ncurses::COLOR_BLACK);
-
-    home_env.free();
-    allocator::temp().reset(tmark);
+        // Here the result can be safely ignored.
+        self.parse_theme(theme_obj)!;
+        // TODO: maybe this can be also customizable.
+        ncurses::init_pair(ERROR_POPUP_BORDER, ncurses::COLOR_RED, ncurses::COLOR_BLACK);
+    };
 }
 
 fn void Config.free(&self)
@@ -132,7 +124,7 @@ import ncurses;
 
 fn void Config.load_display_string(&self, String home_env)
 {
-    self.display_config_src = defaults::DEFAULT_DISPLAY;
+    self.display_config_src = defaults::DEFAULT_DISPLAY.copy();
 
     String config_path = home_env.tconcat("/.config/rover/display.json");
 
@@ -143,7 +135,7 @@ fn void Config.load_display_string(&self, String home_env)
         {
             String fsrc = (String) file_src;
             if (!fsrc.len) break DISPLAY_FILE;
-            self.display_config_src = fsrc;
+            self.display_config_src = fsrc.copy();
         }
     }
 }

@@ -88,7 +88,8 @@ fn Component*! parse_tree(String str)
     Component *root = fromJson(json)!;
 
     // Multiple passes to calculate the necessary information.
-    // Thanks to https://github.com/nicbarker/clay for inspiration.
+    // Thanks to https://github.com/nicbarker/clay for inspiration
+    // and explanation.
     component_dfs_calculate_width(root);
     component_bfs_grow_width(root);
 
@@ -169,7 +170,6 @@ fn Component *new_window(WindowType type)
     *win = {
         .type = type,
         .is_visible = true,
-        .is_boxed = true,
     };
 
     new.win = win;

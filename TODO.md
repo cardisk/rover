@@ -33,7 +33,7 @@ Filtering:
 
 # Things to be fixed
 
-- [ ] Every time a String is reassigned, it needs to be freed or copied.
+- [X] Every time a String is reassigned, it needs to be freed or copied.
 - [X] Window configuration needs to be rethinked because now it's very messy.
 - [X] Global modules need to be marked like @builtin so no prefixing is needed.
 - [X] Filtering should be case-insensitive.

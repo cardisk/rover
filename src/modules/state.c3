@@ -66,5 +66,7 @@ fn void State.show_logs(&self)
 
 fn void State.free(&self)
 {
+    // No need to free self.user & self.host 'cause they are
+    // references to statically allocated memory.
     self.logs.free();
 }
