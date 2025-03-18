@@ -290,6 +290,20 @@ fn void main()
                     tui.toggle_focus();
                 }
 
+            case 'B':
+                if (sys.bookmarks.is_empty()) continue;
+                if (enable_action)
+                {
+                    // Disable every action that cannot be done with the popup.
+                    enable_action = false;
+                    tui.toggle_popup(PATH, &sys.bookmarks, sys.bookmarks.len());
+                }
+                else
+                {
+                    enable_action = true;
+                    tui.toggle_focus();
+                }
+
             case 'e':
                 if (app.logs.is_empty()) continue;
                 if (enable_action)
