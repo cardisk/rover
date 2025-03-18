@@ -28,7 +28,7 @@ All of this needs to work also on groups (marked files):
 
 Filtering:
 - [X] Display somewhere the active filter.
-- [ ] Filtering can be case sensitive or not based on the action required.
+- [X] Filtering can be case sensitive or not based on the action required.
 - [ ] Grep inside files (feature flagged)
 
 # Things to be fixed

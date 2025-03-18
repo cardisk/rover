@@ -25,6 +25,8 @@ struct System
     // When filtering this List will change, clear-filter will reload the cwd.
     List(<Path>) ls;
     List(<usz>) marked_indexes;
+
+    bool filter_case_sensitive;
     ZString filter;
 }
 
@@ -77,7 +79,7 @@ fn void! System.init(&self)
     allocator::temp().reset(tmark);
 }
 
-fn void! System.set_apply_filter(&self, ZString filter)
+fn void! System.set_apply_filter(&self, ZString filter, bool case_sensitive = false)
 {
     if (catch err = self.clear_filter())
     {
@@ -85,6 +87,7 @@ fn void! System.set_apply_filter(&self, ZString filter)
         return err?;
     }
     self.filter = filter;
+    self.filter_case_sensitive = case_sensitive;
     self.apply_filter();
 }
 
@@ -291,7 +294,18 @@ fn void System.apply_filter(&self)
             String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
             String lower_filter = self.filter.str_view().temp_ascii_to_lower();
 
-            if (!lower_current.contains(lower_filter))
+            String current = lower_current;
+            String filter  = lower_filter;
+
+            // No need to make copies here because String is a pointer with a length,
+            // str_view() just crafts the String type filling its fields.
+            if (self.filter_case_sensitive)
+            {
+                current = self.ls[i].str_view();
+                filter  = self.filter.str_view();
+            }
+
+            if (!current.contains(filter))
             {
                 self.ls.remove_at(i);
                 continue;

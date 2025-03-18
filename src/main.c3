@@ -379,6 +379,19 @@ fn void main()
                 }
                 tui.top();
 
+            case 'F':
+                if (!enable_action) continue;
+
+                ZString in = tui.input("/");
+                if (!in || in.len() == 0) continue;
+
+                if (catch sys.set_apply_filter(in.str_view().zstr_copy(), true))
+                {
+                    app.log(string::new_format("Unable to apply filter %s.", in));
+                    continue;
+                }
+                tui.top();
+
             case '\\':
                 if (!enable_action) continue;
 
