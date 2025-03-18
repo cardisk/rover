@@ -52,8 +52,8 @@ fn int is_modified(Path p, Stat last_seen)
 fn DString tposix_perm(Stat s)
 {
     DString perm;
-    // Only 10 slots are needed, round to the next power of 2.
-    perm.temp_init(16);
+    // Only 10 slots are needed, round to the next power of 2 (default 16).
+    perm.tinit();
 
     $if env::POSIX:
         perm.append(libc_S_ISTYPE(s.st_mode, libc::S_IFDIR) ? "d" : "-");

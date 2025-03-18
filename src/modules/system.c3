@@ -46,8 +46,8 @@ fn void! System.init(&self)
 
     if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
 
-    self.history.new_init();
-    self.bookmarks.new_init();
+    self.history.init(allocator::mem);
+    self.bookmarks.init(allocator::mem);
 
     String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
 
@@ -68,6 +68,8 @@ fn void! System.init(&self)
 
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
+    // No undefined behaviour because self.ls points to
+    // the content of ls.
     self.ls = ls;
 
     self.filter = null;
@@ -77,7 +79,11 @@ fn void! System.init(&self)
 
 fn void! System.set_apply_filter(&self, ZString filter)
 {
-    self.clear_filter()!;
+    if (catch err = self.clear_filter())
+    {
+        libc::free(filter);
+        return err?;
+    }
     self.filter = filter;
     self.apply_filter();
 }
@@ -88,9 +94,13 @@ fn void! System.clear_filter(&self)
     libc::free(self.filter);
     self.filter = null;
 
+    // No need to free its content, everything is done
+    // by std::collections::list::free() method.
     self.ls.free();
     PathList! ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
+    // No undefined behaviour because self.ls points to
+    // the content of ls.
     self.ls = ls;
 }
 
@@ -172,7 +182,7 @@ fn void System.move_marks(&self, usz index)
         Path old = self.ls[self.marked_indexes[i]];
         
         DString new;
-        new.temp_init();
+        new.tinit();
         new.append(target.str_view());
         new.append('/');
         new.append(old.str_view());
@@ -192,9 +202,10 @@ fn void System.move_marks(&self, usz index)
 
 fn void System.free(&self)
 {
-    {|
-        usz tmark = allocator::temp().mark();
-
+    // Allocations inside this block are made inside the temporary
+    // allocator that at the end of the scope is automatically freed.
+    @pool()
+    {
         String config_path = self.home.str_view().tconcat("/.config/rover");
 
         Path! dir = path::temp_new(config_path);
@@ -213,7 +224,7 @@ fn void System.free(&self)
         if (catch f) return;
 
         DString bookmarks;
-        bookmarks.temp_init();
+        bookmarks.tinit();
 
         foreach (b : self.bookmarks)
         {
@@ -222,15 +233,17 @@ fn void System.free(&self)
         }
 
         if (catch f.write((char[]) bookmarks.str_view())) return;
-        
-        allocator::temp().reset(tmark);
-    |};
+    };
 
     self.home.free();
     self.cwd.free();
+
+    // No undefined behaviour because the content gets
+    // invalidated with the container free.
     self.history.free();
     self.bookmarks.free();
     self.ls.free();
+
     if (self.filter) libc::free(self.filter);
 }
 
@@ -254,6 +267,8 @@ fn void! System.reload_cwd(&self)
     self.cwd.free();
     Path! cwd = path::new_cwd();
     if (catch cwd) return SystemError.NO_CWD?;
+    // No undefined behaviour because the cwd.path_string.ptr
+    // is assigned to self.cwd
     self.cwd = cwd;
 
     if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
@@ -268,23 +283,23 @@ fn void! System.reload_cwd(&self)
 
 fn void System.apply_filter(&self)
 {
-    usz tmark = allocator::temp().mark();
-    if (!self.filter) return;
-    for (int i = 0; i < self.ls.len();)
+    @pool()
     {
-        String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
-        String lower_filter = self.filter.str_view().temp_ascii_to_lower();
-
-        if (!lower_current.contains(lower_filter))
+        if (!self.filter) return;
+        for (int i = 0; i < self.ls.len();)
         {
-            self.ls.remove_at(i);
-            continue;
+            String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
+            String lower_filter = self.filter.str_view().temp_ascii_to_lower();
+
+            if (!lower_current.contains(lower_filter))
+            {
+                self.ls.remove_at(i);
+                continue;
+            }
+
+            i++;
         }
-
-        i++;
-    }
-
-    allocator::temp().reset(tmark);
+    };
     // With this implementation the compiler segfaults (c3c version 0.6.6).
     // self.ls.remove_using_test(
     //     fn bool(PathImp *p, any ctx)

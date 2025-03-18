@@ -6,6 +6,7 @@
 - [X] Refactor the error popup to be able to contain also other stuff.
 - [ ] Group actions in categories, so it's easier to allow or not some of them.
 - [ ] Session tabs that store indipendent application state (cwd, bookmarks ...).
+- [ ] Vim-like find file with cursor movement
 
 Command-line args:
 - [ ] '--temp' to make the session temporary (no changes made to bookmarks and other stuff).
@@ -32,7 +33,8 @@ Filtering:
 
 # Things to be fixed
 
-- [ ] Window configuration needs to be rethinked because now it's very messy.
+- [X] Every time a String is reassigned, it needs to be freed or copied.
+- [X] Window configuration needs to be rethinked because now it's very messy.
 - [X] Global modules need to be marked like @builtin so no prefixing is needed.
 - [X] Filtering should be case-insensitive.
 
