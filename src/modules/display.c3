@@ -150,7 +150,7 @@ macro Display.down(&self)
                 self.bookmarks_cur++;
             }
         case POPUP:
-            if (self.popup_cur < app.logs.len() - 1)
+            if (self.popup_cur < self.popup_content_len - 1)
             {
                 self.popup_cur++;
             }
@@ -179,7 +179,7 @@ macro Display.bottom(&self)
         case BOOKMARKS:
             self.bookmarks_cur = sys.bookmarks.len() - 1;
         case POPUP:
-            self.popup_cur = app.logs.len() - 1;
+            self.popup_cur = self.popup_content_len - 1;
     }
 }
 
