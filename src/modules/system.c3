@@ -5,44 +5,42 @@ import std::io::path, std::io::file;
 import std::os::env;
 import libc;
 
-fault SystemError
-{
+faultdef
     NO_HOME,
     NO_CWD,
     NO_LS,
     NO_STAT,
     NO_PATH,
-    NO_CHDIR,
-}
+    NO_CHDIR;
 
 struct System
 {
     Path home;
     Stat cwd_stat;
     Path cwd;
-    List(<Path>) history;
-    List(<Path>) bookmarks;
+    List{Path} history;
+    List{Path} bookmarks;
     // When filtering this List will change, clear-filter will reload the cwd.
-    List(<Path>) ls;
-    List(<usz>) marked_indexes;
+    List{Path} ls;
+    List{usz} marked_indexes;
 
     bool filter_case_sensitive;
     ZString filter;
 }
 
-fn void! System.init(&self)
+fn void? System.init(&self)
 {
     usz tmark = allocator::temp().mark();
 
-    String! home_env = env::get_home_dir();
+    String? home_env = env::get_home_dir();
     if (catch home_env) return SystemError.NO_HOME?;
 
-    Path! home = path::new(home_env);
+    Path? home = path::new(home_env);
     if (catch home) return SystemError.NO_HOME?;
 
     self.home = home;
 
-    Path! cwd = path::new_cwd();
+    Path? cwd = path::new_cwd();
     if (catch cwd) return SystemError.NO_CWD?;
     self.cwd = cwd;
 
@@ -53,7 +51,7 @@ fn void! System.init(&self)
 
     String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
 
-    char[]! bookmarks_content = file::load_temp(bookmarks_path);
+    char[]? bookmarks_content = file::load_temp(bookmarks_path);
     if BOOKMARKS: (try bookmarks_content)
     {
         if (bookmarks_content.len == 0) break BOOKMARKS;
@@ -61,14 +59,14 @@ fn void! System.init(&self)
         String[] lines = ((String) bookmarks_content).tsplit("\n", skip_empty: true);
         foreach (line : lines)
         {
-            Path! p = path::new(line);
+            Path? p = path::new(line);
             if (catch p) continue;
             if (!path::exists(p)) continue;
             self.bookmarks.push(p);
         }
     }
 
-    PathList! ls = path::new_ls(self.cwd);
+    PathList? ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
     // No undefined behaviour because self.ls points to
     // the content of ls.
@@ -79,7 +77,7 @@ fn void! System.init(&self)
     allocator::temp().reset(tmark);
 }
 
-fn void! System.set_apply_filter(&self, ZString filter, bool case_sensitive = false)
+fn void? System.set_apply_filter(&self, ZString filter, bool case_sensitive = false)
 {
     if (catch err = self.clear_filter())
     {
@@ -91,7 +89,7 @@ fn void! System.set_apply_filter(&self, ZString filter, bool case_sensitive = fa
     self.apply_filter();
 }
 
-fn void! System.clear_filter(&self)
+fn void? System.clear_filter(&self)
 {
     if (!self.filter) return;
     libc::free(self.filter);
@@ -100,14 +98,14 @@ fn void! System.clear_filter(&self)
     // No need to free its content, everything is done
     // by std::collections::list::free() method.
     self.ls.free();
-    PathList! ls = path::new_ls(self.cwd);
+    PathList? ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
     // No undefined behaviour because self.ls points to
     // the content of ls.
     self.ls = ls;
 }
 
-fn void! System.pchdir(&self, Path p, bool save_cwd = true)
+fn void? System.pchdir(&self, Path p, bool save_cwd = true)
 {
     if (is_root(self.cwd) && p.str_view() == "..") return;
     if (catch path::chdir(p)) return SystemError.NO_CHDIR?;
@@ -116,10 +114,10 @@ fn void! System.pchdir(&self, Path p, bool save_cwd = true)
     self.reload_cwd()!;
 }
 
-fn void! System.schdir(&self, String p, bool save_cwd = true)
+fn void? System.schdir(&self, String p, bool save_cwd = true)
 {
     if (is_root(self.cwd) && p == "..") return;
-    Path! path = path::new(p);
+    Path? path = path::new(p);
     if (catch path) return SystemError.NO_PATH?;
 
     if (catch path::chdir(path)) return SystemError.NO_CHDIR?;
@@ -128,7 +126,7 @@ fn void! System.schdir(&self, String p, bool save_cwd = true)
     self.reload_cwd()!;
 }
 
-fn void! System.update(&self)
+fn void? System.update(&self)
 {
     if (stat::is_modified(self.cwd, self.cwd_stat) < 0) return SystemError.NO_STAT?;
     if (!stat::is_modified(self.cwd, self.cwd_stat)) return;
@@ -143,7 +141,7 @@ fn void System.save_cwd(&self)
     self.history.push(p);
 }
 
-fn void! System.new_file(&self, String name)
+fn void? System.new_file(&self, String name)
 {
     file::save(name, {})!;
 }
@@ -211,19 +209,19 @@ fn void System.free(&self)
     {
         String config_path = self.home.str_view().tconcat("/.config/rover");
 
-        Path! dir = path::temp_new(config_path);
+        Path? dir = path::temp_new(config_path);
         if (catch dir) return;
 
         if (!path::is_dir(dir))
         {
-            bool! success = path::mkdir(dir, true);
+            bool? success = path::mkdir(dir, true);
             if (catch success) return;
             if (!success) return;
         }
 
         if (catch path::chdir(dir)) return;
 
-        File! f = file::open("bookmarks", "wb");
+        File? f = file::open("bookmarks", "wb");
         if (catch f) return;
 
         DString bookmarks;
@@ -265,10 +263,10 @@ fn bool is_root(Path p)
     $endif
 }
 
-fn void! System.reload_cwd(&self)
+fn void? System.reload_cwd(&self)
 {
     self.cwd.free();
-    Path! cwd = path::new_cwd();
+    Path? cwd = path::new_cwd();
     if (catch cwd) return SystemError.NO_CWD?;
     // No undefined behaviour because the cwd.path_string.ptr
     // is assigned to self.cwd
@@ -277,7 +275,7 @@ fn void! System.reload_cwd(&self)
     if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
 
     self.ls.free();
-    PathList! ls = path::new_ls(self.cwd);
+    PathList? ls = path::new_ls(self.cwd);
     if (catch ls) return SystemError.NO_LS?;
     self.ls = ls;
 
@@ -314,13 +312,4 @@ fn void System.apply_filter(&self)
             i++;
         }
     };
-    // With this implementation the compiler segfaults (c3c version 0.6.6).
-    // self.ls.remove_using_test(
-    //     fn bool(PathImp *p, any ctx)
-    //     {
-    //         return !p.str_view().contains(((ZString) ctx).str_view());
-    //     },
-
-    //     self.filter
-    // );
 }

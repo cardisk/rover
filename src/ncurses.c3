@@ -4,8 +4,8 @@ import std::io;
 const ERR = -1;
 const OK = 0;
 
-def Chtype = CUInt;
-def Mmask_t = CUInt;
+alias Chtype = CUInt;
+alias Mmask_t = CUInt;
 
 /*
  * X/Open attributes.  In the ncurses implementation, they are identical to the
@@ -138,9 +138,9 @@ const _NEWINDEX = -1;
 // FIXME: this is an hack, may cause some problems in the future.
 // ORIGINAL: typedef struct screen SCREEN;
 // struct screen has no reference over ncurses.h
-def Screen = void;
+alias Screen = void;
 
-def Attr_t = Chtype;
+alias Attr_t = Chtype;
 
 /*
  * cchar_t stores an array of CCHARW_MAX wide characters.  The first is
@@ -209,13 +209,13 @@ struct _Win_st
 	CInt	_color;		/* current color-pair for non-space character */
 }
 
-def Window = _Win_st;
+alias Window = _Win_st;
 
 /*
  * Curses uses a helper function.  Define our type for this to simplify
  * extending it for the sp-funcs feature.
  */
-def OutC = fn CInt(CInt);
+alias OutC = fn CInt(CInt);
 
 /*
  * Function prototypes.  This is the complete X/Open Curses list of required
@@ -386,7 +386,7 @@ extern fn CInt reset_prog_mode();
 extern fn CInt reset_shell_mode();
 // ---
 // Callback for this specific function.
-def RipOffline_CB = fn CInt(Window *, CInt);
+alias RipOffline_CB = fn CInt(Window *, CInt);
 extern fn CInt ripoffline(CInt, RipOffline_CB);
 // ---
 extern fn CInt savetty();
@@ -528,8 +528,8 @@ extern fn CInt getpary(Window *);
  */
 const EXT_FUNCS = 20240427;
 
-def Window_CB = fn int(Window *, void *);
-def Screen_CB = fn int(Screen *, void *);
+alias Window_CB = fn int(Window *, void *);
+alias Screen_CB = fn int(Screen *, void *);
 
 extern fn CInt alloc_pair(CInt, CInt);
 extern fn CInt assume_default_colors(CInt, CInt);
@@ -593,7 +593,7 @@ extern fn CInt wgetscrreg(Window *, CInt *, CInt *);
 const SP_FUNCS = 20240427;
 
 /* Define the sp-funcs helper function */
-def OutC_Sp = fn CInt(Screen *, CInt);
+alias OutC_Sp = fn CInt(Screen *, CInt);
 
 extern fn Screen *new_prescr();
 

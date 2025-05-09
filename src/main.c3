@@ -14,7 +14,7 @@ Display tui @builtin;
 // when displaying the error popup.
 bool enable_action = true;
 
-fn void crash(anyfault f) @noreturn
+fn void crash(fault f) @noreturn
 {
     ncurses::endwin();
     io::eprintfn("Unattended error happened: %s", f);
@@ -202,7 +202,7 @@ fn void main()
 
                 if (sys.history.is_empty()) break;
 
-                Path! p = sys.history.pop();
+                Path? p = sys.history.pop();
                 if (catch p)
                 {
                     app.log("Unable to create a new path from the history.");
@@ -223,7 +223,7 @@ fn void main()
             case 's':
                 if (!enable_action) continue;
 
-                Path! p = sys.ls[tui.list_cur].new_absolute();
+                Path? p = sys.ls[tui.list_cur].new_absolute();
                 if (catch p)
                 {
                     app.log("Unable to get absolute path for a new bookmark.");

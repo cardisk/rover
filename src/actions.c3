@@ -6,7 +6,6 @@ bool allow_marking             = true;
 bool allow_cursor_navigation   = true;
 bool allow_relative_navigation = true;
 bool allow_focus_changes       = true;
-bool allow_focus_changes       = true;
 bool allow_errors              = true;
 bool allow_filtering           = true;
 bool allow_cursor_movements    = true;
@@ -120,6 +119,6 @@ fn void cursor_top()
 {
 }
 
-fn void cursor_down()
+fn void cursor_bottom()
 {
 }

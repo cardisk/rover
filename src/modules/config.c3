@@ -17,18 +17,14 @@ const CShort ERROR_POPUP_BORDER = 7;
 
 CShort color_index = 8;
 
-fault ConfigError
-{
+faultdef
     ERROR_HOME_DIR,
-
     INVALID_COLOR_HEX,
     INVALID_COLOR_FOREGROUND,
     INVALID_COLOR_BACKGROUND,
-
     MISSING_COLOR_PAIR,
     MISSING_COLOR_FOREGROUND,
-    MISSING_COLOR_BACKGROUND,
-}
+    MISSING_COLOR_BACKGROUND;
 
 struct Config
 {
@@ -38,19 +34,19 @@ struct Config
     DynamicArenaAllocator display_tree_arena;
     Component *display_tree;
 
-    List(<Component *>) windows;
+    List{Component *} windows;
 }
 
-fn void! Config.init(&self)
+fn void? Config.init(&self)
 {
     @pool()
     {
         self.editor = "";
-        String! editor_env = env::get_var("EDITOR");
+        String? editor_env = env::get_var("EDITOR");
         if (try editor_env) self.editor = editor_env;
 
         // TODO: maybe expand this to use the current thread temp allocator.
-        String! home_env = env::get_home_dir();
+        String? home_env = env::get_home_dir();
         if (catch home_env) return ConfigError.ERROR_HOME_DIR?;
         defer home_env.free();
 
@@ -70,7 +66,7 @@ fn void! Config.init(&self)
 
         if THEME_FILE: (file::is_file(theme_path))
         {
-            char[]! file_src = file::load_temp(theme_path);
+            char[]? file_src = file::load_temp(theme_path);
             if (try file_src)
             {
                 String fsrc = (String) file_src;
@@ -101,7 +97,7 @@ fn void Config.free(&self)
     self.windows.free();
 }
 
-fn void! Config.reload_windows(&self)
+fn void? Config.reload_windows(&self)
 {
     self.display_tree_arena.reset();
 
@@ -130,7 +126,7 @@ fn void Config.load_display_string(&self, String home_env)
 
     if DISPLAY_FILE: (file::is_file(config_path))
     {
-        char[]! file_src = file::load_temp(config_path);
+        char[]? file_src = file::load_temp(config_path);
         if (try file_src)
         {
             String fsrc = (String) file_src;
@@ -159,14 +155,14 @@ fn CInt map(CInt x, CInt in_min, CInt in_max, CInt out_min, CInt out_max)
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-fn void! Config.parse_color(&self, String name, Object *color)
+fn void? Config.parse_color(&self, String name, Object *color)
 {
     CShort foreground;
     CShort background;
 
-    String! fg = color.get_string("fg");
+    String? fg = color.get_string("fg");
     if (catch fg) return ConfigError.MISSING_COLOR_FOREGROUND?;
-    String! bg = color.get_string("bg");
+    String? bg = color.get_string("bg");
     if (catch bg) return ConfigError.MISSING_COLOR_BACKGROUND?;
 
     switch (fg)
@@ -191,7 +187,7 @@ fn void! Config.parse_color(&self, String name, Object *color)
             // Hex foreground.
             if (fg.starts_with("#"))
             {
-                char[]! rgb = hex::decode_temp((char[]) fg[1..]);
+                char[]? rgb = hex::decode_temp((char[]) fg[1..]);
                 if (catch rgb) return ConfigError.INVALID_COLOR_HEX?;
                 if (rgb.len < 3) return ConfigError.INVALID_COLOR_HEX?;
                 CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
@@ -227,7 +223,7 @@ fn void! Config.parse_color(&self, String name, Object *color)
             // Hex background.
             if (bg.starts_with("#"))
             {
-                char[]! rgb = hex::decode_temp((char[]) bg[1..]);
+                char[]? rgb = hex::decode_temp((char[]) bg[1..]);
                 if (catch rgb) return ConfigError.INVALID_COLOR_HEX?;
                 if (rgb.len < 3) return ConfigError.INVALID_COLOR_HEX?;
                 CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
@@ -261,7 +257,7 @@ fn void! Config.parse_color(&self, String name, Object *color)
     ncurses::init_pair(pair, foreground, background);
 }
 
-fn void! Config.parse_theme(&self, Object *json)
+fn void? Config.parse_theme(&self, Object *json)
 {
     String[*] keycodes = { 
         "directory", 
@@ -274,7 +270,7 @@ fn void! Config.parse_theme(&self, Object *json)
 
     foreach (k : keycodes)
     {
-        Object*! color = json.get(k);
+        Object*? color = json.get(k);
         if (catch color) return ConfigError.MISSING_COLOR_PAIR?;
         self.parse_color(k, color)!;
     }

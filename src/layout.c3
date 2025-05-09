@@ -28,7 +28,7 @@ enum BoxType
 struct Box
 {
     BoxType type;
-    List(<Component *>) children;
+    List{Component *} children;
 }
 
 enum WindowType
@@ -78,7 +78,7 @@ struct Component
     }
 }
 
-fn Component*! parse_tree(String str)
+fn Component*? parse_tree(String str)
 {
     Object *json = json::parse_string(str)!;
     defer json.free();
@@ -176,16 +176,15 @@ fn Component *new_window(WindowType type)
     return new;
 }
 
-fault EvalError
-{
+faultdef
     INVALID_EVAL_START,
     INVALID_EVAL_END,
     INVALID_EVAL_EXPR,
     INVALID_EVAL_OPERATION,
-    INVALID_EVAL_OPERAND,
-}
+    INVALID_EVAL_OPERAND;
 
-fn CInt! evaluate_s_expression(String expr)
+
+fn CInt? evaluate_s_expression(String expr)
 {
     if (expr.tsplit(" ").len < 3) return EvalError.INVALID_EVAL_EXPR?;
     if (expr[0] != '(') return EvalError.INVALID_EVAL_START?;
@@ -232,7 +231,7 @@ fn CInt! evaluate_s_expression(String expr)
 
             default:
                 if ((long)(i + 1) < expr.len - 1 && expr[i + 1].is_digit()) continue; 
-                CInt! x = (CInt) expr[cur + 1: i - cur].to_int();
+                CInt? x = (CInt) expr[cur + 1: i - cur].to_int();
                 if (catch x) return EvalError.INVALID_EVAL_OPERAND?;
                 val = x;
         }
@@ -264,30 +263,28 @@ fn CInt! evaluate_s_expression(String expr)
 // //// HELPER FUNCTIONS END        ///////////////////////////////////////////
 
 // //// JSON PARSING STUFF START    ///////////////////////////////////////////
-fault LayoutError
-{
+faultdef
     LAYOUT_MISSING_FIELD,
-    LAYOUT_INVALID_FIELD,
-}
+    LAYOUT_INVALID_FIELD;
 
-fn Component*! windowFromJson(Object *json)
+fn Component*? windowFromJson(Object *json)
 {
-    String! json_window_type = json.get_string("type");
+    String? json_window_type = json.get_string("type");
     if (catch json_window_type) return LayoutError.LAYOUT_MISSING_FIELD?;
 
-    WindowType! window_type = enum_by_name(WindowType, json_window_type);
+    WindowType? window_type = enum_by_name(WindowType, json_window_type);
     if (catch window_type) return LayoutError.LAYOUT_INVALID_FIELD?;
     
     // Other fields are default initialized to 0
     Component *crafted = new_window(window_type);
 
-    bool! window_is_visible = json.get_bool("is_visible");
+    bool? window_is_visible = json.get_bool("is_visible");
     if (try window_is_visible)
     {
         crafted.win.is_visible = window_is_visible;
     }
 
-    bool! window_is_boxed = json.get_bool("is_boxed");
+    bool? window_is_boxed = json.get_bool("is_boxed");
     if (try window_is_boxed)
     {
         crafted.win.is_boxed = window_is_boxed;
@@ -296,12 +293,12 @@ fn Component*! windowFromJson(Object *json)
     return crafted;
 }
 
-fn Component*! boxFromJson(Object *json, Component *parent)
+fn Component*? boxFromJson(Object *json, Component *parent)
 {
-    String! json_box_type = json.get_string("type");
+    String? json_box_type = json.get_string("type");
     if (catch json_box_type) return LayoutError.LAYOUT_MISSING_FIELD?;
 
-    BoxType! box_type = enum_by_name(BoxType, json_box_type);
+    BoxType? box_type = enum_by_name(BoxType, json_box_type);
     if (catch box_type) return LayoutError.LAYOUT_INVALID_FIELD?;
     
     Component *crafted;
@@ -320,7 +317,7 @@ fn Component*! boxFromJson(Object *json, Component *parent)
 
     // Forced to omit the attribute because if the json parser encounters
     // an empty array it never sets the Object type to List.
-    Object*! json_children = json.get("children");
+    Object*? json_children = json.get("children");
     if (try json_children)
     {
         if (!json_children.is_array()) return LayoutError.LAYOUT_INVALID_FIELD?;
@@ -335,12 +332,12 @@ fn Component*! boxFromJson(Object *json, Component *parent)
     return crafted;
 }
 
-fn Component*! fromJson(Object *json, Component *parent = null)
+fn Component*? fromJson(Object *json, Component *parent = null)
 {
-    String! json_component_type = json.get_string("type");
+    String? json_component_type = json.get_string("type");
     if (catch json_component_type) return LayoutError.LAYOUT_MISSING_FIELD?;
 
-    ComponentType! component_type = enum_by_name(ComponentType, json_component_type);
+    ComponentType? component_type = enum_by_name(ComponentType, json_component_type);
     if (catch component_type) return LayoutError.LAYOUT_INVALID_FIELD?;
 
     Component *crafted;
@@ -348,11 +345,11 @@ fn Component*! fromJson(Object *json, Component *parent = null)
     switch (component_type)
     {
         case WINDOW:
-            Object*! json_window = json.get("win");
+            Object*? json_window = json.get("win");
             if (catch json_window) return LayoutError.LAYOUT_MISSING_FIELD?;
             crafted = windowFromJson(json_window)!;
         case LAYOUT:
-            Object*! json_box = json.get("box");
+            Object*? json_box = json.get("box");
             if (catch json_box) return LayoutError.LAYOUT_MISSING_FIELD?;
             crafted = boxFromJson(json_box, crafted)!;
         default:
@@ -361,7 +358,7 @@ fn Component*! fromJson(Object *json, Component *parent = null)
 
     crafted.parent = parent;
 
-    String! json_box_width = json.get_string("width");
+    String? json_box_width = json.get_string("width");
     if (try json_box_width)
     {
         switch (json_box_width)
@@ -392,7 +389,7 @@ fn Component*! fromJson(Object *json, Component *parent = null)
         }
     }
 
-    String! json_box_height = json.get_string("height");
+    String? json_box_height = json.get_string("height");
     if (try json_box_height)
     {
         switch (json_box_height)
@@ -454,9 +451,9 @@ fn CInt boxCalculateLeftHeight(Component *component)
     return remaining_height;
 }
 
-fn List(<Component *>) box_growable_width_children_list(Box *box)
+fn List{Component *} box_growable_width_children_list(Box *box)
 {
-    List(<Component *>) growable_children;
+    List{Component *} growable_children;
     growable_children.tinit();
 
     foreach (child : box.children)
@@ -468,9 +465,9 @@ fn List(<Component *>) box_growable_width_children_list(Box *box)
     return growable_children;
 }
 
-fn List(<Component *>) box_growable_height_children_list(Box *box)
+fn List{Component *} box_growable_height_children_list(Box *box)
 {
-    List(<Component *>) growable_children;
+    List{Component *} growable_children;
     growable_children.tinit();
 
     foreach (child : box.children)
@@ -494,7 +491,7 @@ fn CInt component_take_height(Component *component)
 
 fn void component_bfs_grow_width(Component *root)
 {
-    List(<Component *>) queue;
+    List{Component *} queue;
     queue.tinit();
 
     queue.push(root);
@@ -505,7 +502,7 @@ fn void component_bfs_grow_width(Component *root)
 
         if GROW: (item.parent && item.width.type == GROW)
         {
-            List(<Component *>) growable_children = box_growable_width_children_list(item.parent.box);
+            List{Component *} growable_children = box_growable_width_children_list(item.parent.box);
             CInt left_w;
 
             // Across-axis growth: expand to fill the width of the parent.
@@ -576,7 +573,7 @@ fn void component_bfs_grow_width(Component *root)
 
 fn void component_bfs_grow_height(Component *root)
 {
-    List(<Component *>) queue;
+    List{Component *} queue;
     queue.tinit();
 
     queue.push(root);
@@ -587,7 +584,7 @@ fn void component_bfs_grow_height(Component *root)
 
         if GROW: (item.parent && item.height.type == GROW)
         {
-            List(<Component *>) growable_children = box_growable_height_children_list(item.parent.box);
+            List{Component *} growable_children = box_growable_height_children_list(item.parent.box);
             CInt left_h;
 
             // Across-axis growth: expand to fill the height of the parent.
@@ -704,7 +701,7 @@ fn void component_dfs_calculate_height(Component *root)
 // //// POSITION CALCULATION START  ///////////////////////////////////////////
 fn void component_bfs_calculate_positions(Component *root)
 {
-    List(<Component *>) queue;
+    List{Component *} queue;
     queue.tinit();
 
     queue.push(root);

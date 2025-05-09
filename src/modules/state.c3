@@ -3,11 +3,9 @@ import std::collections::list;
 import std::io;
 import ncurses;
 
-fault StateError
-{
+faultdef
     NO_USER,
-    NO_HOST,
-}
+    NO_HOST;
 
 struct State
 {
@@ -17,10 +15,10 @@ struct State
     ZString user;
     char[255] host;
 
-    List(<String>) logs;
+    List{String} logs;
 }
 
-fn void! State.init(&self)
+fn void? State.init(&self)
 {
     // From c-bindings.
     self.user = rover::getlogin();

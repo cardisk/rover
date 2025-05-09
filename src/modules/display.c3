@@ -2,13 +2,11 @@ module rover::display;
 import std::collections::list;
 import ncurses;
 
-fault DisplayError
-{
+faultdef
     INIT_FAIL,
     NO_COLBIND,
     NO_PREVIEW,
-    NO_STATUS,
-}
+    NO_STATUS;
 
 enum Focus
 {
@@ -58,7 +56,7 @@ struct Display
     Window *popup;
 }
 
-fn void! Display.init(&self)
+fn void? Display.init(&self)
 {
     // Initialization of ncurses is now made inside main.
 
@@ -242,7 +240,7 @@ fn ZString Display.input(&self, ZString prefix)
     return buf.zstr_view();
 }
 
-fn void! Display.update(&self)
+fn void? Display.update(&self)
 {
     self.update_screen();
     self.clear();
@@ -533,7 +531,7 @@ fn void Display.draw_list(&self)
     }
 }
 
-fn void! Display.draw_preview(&self)
+fn void? Display.draw_preview(&self)
 {
     CInt w, h;
     ncurses::@getmaxyx(self.preview, h, w);
@@ -555,7 +553,7 @@ fn void! Display.draw_preview(&self)
                 ncurses::mvwprintw(self.preview, y, x, "<binary>");
 
             case 0:
-                char[]! chars = file::load_temp(sys.ls[self.list_cur].str_view());
+                char[]? chars = file::load_temp(sys.ls[self.list_cur].str_view());
                 if (catch chars) break;
 
                 String content = (String) chars;
@@ -594,7 +592,7 @@ fn void! Display.draw_preview(&self)
 
     if (stat::is_dir(sys.ls[self.list_cur]))
     {
-        PathList! ls = path::temp_ls(sys.ls[self.list_cur]);
+        PathList? ls = path::temp_ls(sys.ls[self.list_cur]);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
@@ -709,7 +707,7 @@ fn void Display.draw_bookmarks(&self)
     }
 }
 
-fn void! Display.draw_status(&self)
+fn void? Display.draw_status(&self)
 {
     CInt x = 2;
     CInt maxx = ncurses::getmaxx(self.status);
@@ -823,10 +821,10 @@ fn void Display.draw_popup(&self)
         switch (self.popup_content_type)
         {
             case STRING:
-                List(<String>) *temp = self.popup_content;
+                List{String} *temp = self.popup_content;
                 item = (*temp)[i].tcopy();
             case PATH:
-                List(<Path>) *temp = self.popup_content;
+                List{Path} *temp = self.popup_content;
                 item = (*temp)[i].str_view().tcopy();
             default:
                 unreachable("Programmer's fault...sorry :(");
