@@ -22,9 +22,9 @@ fn void? State.init(&self)
 {
     // From c-bindings.
     self.user = rover::getlogin();
-    if (!self.user) return StateError.NO_USER?;
+    if (!self.user) return NO_USER?;
 
-    if (rover::gethostname((ZString) &self.host, 255) != 0) return StateError.NO_HOST?;
+    if (rover::gethostname((ZString) &self.host, 255) != 0) return NO_HOST?;
 
     ncurses::@getmaxyx(ncurses::stdscr, self.h, self.w);
     self.old_w = 0;

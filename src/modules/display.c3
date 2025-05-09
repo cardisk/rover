@@ -60,10 +60,10 @@ fn void? Display.init(&self)
 {
     // Initialization of ncurses is now made inside main.
 
-    if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return DisplayError.INIT_FAIL?;
-    if (ncurses::noecho() == ncurses::ERR) return DisplayError.INIT_FAIL?;
-    if (ncurses::raw() == ncurses::ERR) return DisplayError.INIT_FAIL?;
-    if (ncurses::curs_set(0) == ncurses::ERR) return DisplayError.INIT_FAIL?;
+    if (ncurses::keypad(ncurses::stdscr, true) == ncurses::ERR) return INIT_FAIL?;
+    if (ncurses::noecho() == ncurses::ERR) return INIT_FAIL?;
+    if (ncurses::raw() == ncurses::ERR) return INIT_FAIL?;
+    if (ncurses::curs_set(0) == ncurses::ERR) return INIT_FAIL?;
 
     self.list_cur = 0;
     self.list_vtop = 0;
@@ -586,7 +586,7 @@ fn void? Display.draw_preview(&self)
                 }
 
             case -1:
-                return DisplayError.NO_PREVIEW?;
+                return NO_PREVIEW?;
         }
     }
 
@@ -723,7 +723,7 @@ fn void? Display.draw_status(&self)
     else
     {
         Stat s;
-        if (!stat::read_stat(sys.ls[self.list_cur], &s)) return DisplayError.NO_STATUS?;
+        if (!stat::read_stat(sys.ls[self.list_cur], &s)) return NO_STATUS?;
 
         // Needed for group name.
         Group  *group  = rover::getgrgid(s.st_gid);

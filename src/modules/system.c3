@@ -33,18 +33,18 @@ fn void? System.init(&self)
     usz tmark = allocator::temp().mark();
 
     String? home_env = env::get_home_dir();
-    if (catch home_env) return SystemError.NO_HOME?;
+    if (catch home_env) return NO_HOME?;
 
     Path? home = path::new(home_env);
-    if (catch home) return SystemError.NO_HOME?;
+    if (catch home) return NO_HOME?;
 
     self.home = home;
 
     Path? cwd = path::new_cwd();
-    if (catch cwd) return SystemError.NO_CWD?;
+    if (catch cwd) return NO_CWD?;
     self.cwd = cwd;
 
-    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
+    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return NO_STAT?;
 
     self.history.init(allocator::mem);
     self.bookmarks.init(allocator::mem);
@@ -67,7 +67,7 @@ fn void? System.init(&self)
     }
 
     PathList? ls = path::new_ls(self.cwd);
-    if (catch ls) return SystemError.NO_LS?;
+    if (catch ls) return NO_LS?;
     // No undefined behaviour because self.ls points to
     // the content of ls.
     self.ls = ls;
@@ -99,7 +99,7 @@ fn void? System.clear_filter(&self)
     // by std::collections::list::free() method.
     self.ls.free();
     PathList? ls = path::new_ls(self.cwd);
-    if (catch ls) return SystemError.NO_LS?;
+    if (catch ls) return NO_LS?;
     // No undefined behaviour because self.ls points to
     // the content of ls.
     self.ls = ls;
@@ -108,7 +108,7 @@ fn void? System.clear_filter(&self)
 fn void? System.pchdir(&self, Path p, bool save_cwd = true)
 {
     if (is_root(self.cwd) && p.str_view() == "..") return;
-    if (catch path::chdir(p)) return SystemError.NO_CHDIR?;
+    if (catch path::chdir(p)) return NO_CHDIR?;
     if (save_cwd) self.save_cwd();
 
     self.reload_cwd()!;
@@ -118,9 +118,9 @@ fn void? System.schdir(&self, String p, bool save_cwd = true)
 {
     if (is_root(self.cwd) && p == "..") return;
     Path? path = path::new(p);
-    if (catch path) return SystemError.NO_PATH?;
+    if (catch path) return NO_PATH?;
 
-    if (catch path::chdir(path)) return SystemError.NO_CHDIR?;
+    if (catch path::chdir(path)) return NO_CHDIR?;
     if (save_cwd) self.save_cwd();
 
     self.reload_cwd()!;
@@ -128,7 +128,7 @@ fn void? System.schdir(&self, String p, bool save_cwd = true)
 
 fn void? System.update(&self)
 {
-    if (stat::is_modified(self.cwd, self.cwd_stat) < 0) return SystemError.NO_STAT?;
+    if (stat::is_modified(self.cwd, self.cwd_stat) < 0) return NO_STAT?;
     if (!stat::is_modified(self.cwd, self.cwd_stat)) return;
 
     self.reload_cwd()!;
@@ -267,16 +267,16 @@ fn void? System.reload_cwd(&self)
 {
     self.cwd.free();
     Path? cwd = path::new_cwd();
-    if (catch cwd) return SystemError.NO_CWD?;
+    if (catch cwd) return NO_CWD?;
     // No undefined behaviour because the cwd.path_string.ptr
     // is assigned to self.cwd
     self.cwd = cwd;
 
-    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return SystemError.NO_STAT?;
+    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return NO_STAT?;
 
     self.ls.free();
     PathList? ls = path::new_ls(self.cwd);
-    if (catch ls) return SystemError.NO_LS?;
+    if (catch ls) return NO_LS?;
     self.ls = ls;
 
     self.apply_filter();

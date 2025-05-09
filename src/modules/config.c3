@@ -47,7 +47,7 @@ fn void? Config.init(&self)
 
         // TODO: maybe expand this to use the current thread temp allocator.
         String? home_env = env::get_home_dir();
-        if (catch home_env) return ConfigError.ERROR_HOME_DIR?;
+        if (catch home_env) return ERROR_HOME_DIR?;
         defer home_env.free();
 
         self.load_display_string(home_env);
@@ -161,9 +161,9 @@ fn void? Config.parse_color(&self, String name, Object *color)
     CShort background;
 
     String? fg = color.get_string("fg");
-    if (catch fg) return ConfigError.MISSING_COLOR_FOREGROUND?;
+    if (catch fg) return MISSING_COLOR_FOREGROUND?;
     String? bg = color.get_string("bg");
-    if (catch bg) return ConfigError.MISSING_COLOR_BACKGROUND?;
+    if (catch bg) return MISSING_COLOR_BACKGROUND?;
 
     switch (fg)
     {
@@ -188,8 +188,8 @@ fn void? Config.parse_color(&self, String name, Object *color)
             if (fg.starts_with("#"))
             {
                 char[]? rgb = hex::decode_temp((char[]) fg[1..]);
-                if (catch rgb) return ConfigError.INVALID_COLOR_HEX?;
-                if (rgb.len < 3) return ConfigError.INVALID_COLOR_HEX?;
+                if (catch rgb) return INVALID_COLOR_HEX?;
+                if (rgb.len < 3) return INVALID_COLOR_HEX?;
                 CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
                 CShort g = (CShort) map(rgb[1], 0, 255, 0, 1000);
                 CShort b = (CShort) map(rgb[2], 0, 255, 0, 1000);
@@ -198,7 +198,7 @@ fn void? Config.parse_color(&self, String name, Object *color)
                 color_index++;
                 break;
             }
-            return ConfigError.INVALID_COLOR_FOREGROUND?;
+            return INVALID_COLOR_FOREGROUND?;
     }
 
     switch (bg)
@@ -224,8 +224,8 @@ fn void? Config.parse_color(&self, String name, Object *color)
             if (bg.starts_with("#"))
             {
                 char[]? rgb = hex::decode_temp((char[]) bg[1..]);
-                if (catch rgb) return ConfigError.INVALID_COLOR_HEX?;
-                if (rgb.len < 3) return ConfigError.INVALID_COLOR_HEX?;
+                if (catch rgb) return INVALID_COLOR_HEX?;
+                if (rgb.len < 3) return INVALID_COLOR_HEX?;
                 CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
                 CShort g = (CShort) map(rgb[1], 0, 255, 0, 1000);
                 CShort b = (CShort) map(rgb[2], 0, 255, 0, 1000);
@@ -234,7 +234,7 @@ fn void? Config.parse_color(&self, String name, Object *color)
                 color_index++;
                 break;
             }
-            return ConfigError.INVALID_COLOR_BACKGROUND?;
+            return INVALID_COLOR_BACKGROUND?;
     }
 
     CShort pair;
@@ -271,7 +271,7 @@ fn void? Config.parse_theme(&self, Object *json)
     foreach (k : keycodes)
     {
         Object*? color = json.get(k);
-        if (catch color) return ConfigError.MISSING_COLOR_PAIR?;
+        if (catch color) return MISSING_COLOR_PAIR?;
         self.parse_color(k, color)!;
     }
 }

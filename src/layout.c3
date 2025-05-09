@@ -186,9 +186,9 @@ faultdef
 
 fn CInt? evaluate_s_expression(String expr)
 {
-    if (expr.tsplit(" ").len < 3) return EvalError.INVALID_EVAL_EXPR?;
-    if (expr[0] != '(') return EvalError.INVALID_EVAL_START?;
-    if (expr[expr.len - 1] != ')') return EvalError.INVALID_EVAL_END?;
+    if (expr.tsplit(" ").len < 3) return INVALID_EVAL_EXPR?;
+    if (expr[0] != '(') return INVALID_EVAL_START?;
+    if (expr[expr.len - 1] != ')') return INVALID_EVAL_END?;
 
     int i = 1;
     while (expr[i] == ' ') i++;
@@ -210,14 +210,14 @@ fn CInt? evaluate_s_expression(String expr)
             continue;
         }
 
-        if (i == expr.len - 1 && expr[i] != ')') return EvalError.INVALID_EVAL_END?;
+        if (i == expr.len - 1 && expr[i] != ')') return INVALID_EVAL_END?;
         if (i == expr.len - 1 && expr[i] == ')') break;
 
         CInt val;
-        if (!expr[i].is_digit() && expr[i] != 'h' && expr[i] != 'H' && expr[i] != 'w' && expr[i] != 'W') return EvalError.INVALID_EVAL_OPERAND?;
+        if (!expr[i].is_digit() && expr[i] != 'h' && expr[i] != 'H' && expr[i] != 'w' && expr[i] != 'W') return INVALID_EVAL_OPERAND?;
         
         // After h or w there must be a space.
-        if (!expr[i].is_digit() && (long)(i + 1) < expr.len - 1 && expr[i + 1] != ' ') return EvalError.INVALID_EVAL_OPERAND?; 
+        if (!expr[i].is_digit() && (long)(i + 1) < expr.len - 1 && expr[i + 1] != ' ') return INVALID_EVAL_OPERAND?; 
 
         switch (expr[i])
         {
@@ -232,7 +232,7 @@ fn CInt? evaluate_s_expression(String expr)
             default:
                 if ((long)(i + 1) < expr.len - 1 && expr[i + 1].is_digit()) continue; 
                 CInt? x = (CInt) expr[cur + 1: i - cur].to_int();
-                if (catch x) return EvalError.INVALID_EVAL_OPERAND?;
+                if (catch x) return INVALID_EVAL_OPERAND?;
                 val = x;
         }
 
@@ -254,7 +254,7 @@ fn CInt? evaluate_s_expression(String expr)
             case '/':
                 res /= val;
             default:
-                return EvalError.INVALID_EVAL_OPERATION?;
+                return INVALID_EVAL_OPERATION?;
         }
     }
 
@@ -270,10 +270,10 @@ faultdef
 fn Component*? windowFromJson(Object *json)
 {
     String? json_window_type = json.get_string("type");
-    if (catch json_window_type) return LayoutError.LAYOUT_MISSING_FIELD?;
+    if (catch json_window_type) return LAYOUT_MISSING_FIELD?;
 
     WindowType? window_type = enum_by_name(WindowType, json_window_type);
-    if (catch window_type) return LayoutError.LAYOUT_INVALID_FIELD?;
+    if (catch window_type) return LAYOUT_INVALID_FIELD?;
     
     // Other fields are default initialized to 0
     Component *crafted = new_window(window_type);
@@ -296,10 +296,10 @@ fn Component*? windowFromJson(Object *json)
 fn Component*? boxFromJson(Object *json, Component *parent)
 {
     String? json_box_type = json.get_string("type");
-    if (catch json_box_type) return LayoutError.LAYOUT_MISSING_FIELD?;
+    if (catch json_box_type) return LAYOUT_MISSING_FIELD?;
 
     BoxType? box_type = enum_by_name(BoxType, json_box_type);
-    if (catch box_type) return LayoutError.LAYOUT_INVALID_FIELD?;
+    if (catch box_type) return LAYOUT_INVALID_FIELD?;
     
     Component *crafted;
 
@@ -320,7 +320,7 @@ fn Component*? boxFromJson(Object *json, Component *parent)
     Object*? json_children = json.get("children");
     if (try json_children)
     {
-        if (!json_children.is_array()) return LayoutError.LAYOUT_INVALID_FIELD?;
+        if (!json_children.is_array()) return LAYOUT_INVALID_FIELD?;
 
         foreach (json_child : json_children.array)
         {
@@ -335,10 +335,10 @@ fn Component*? boxFromJson(Object *json, Component *parent)
 fn Component*? fromJson(Object *json, Component *parent = null)
 {
     String? json_component_type = json.get_string("type");
-    if (catch json_component_type) return LayoutError.LAYOUT_MISSING_FIELD?;
+    if (catch json_component_type) return LAYOUT_MISSING_FIELD?;
 
     ComponentType? component_type = enum_by_name(ComponentType, json_component_type);
-    if (catch component_type) return LayoutError.LAYOUT_INVALID_FIELD?;
+    if (catch component_type) return LAYOUT_INVALID_FIELD?;
 
     Component *crafted;
 
@@ -346,11 +346,11 @@ fn Component*? fromJson(Object *json, Component *parent = null)
     {
         case WINDOW:
             Object*? json_window = json.get("win");
-            if (catch json_window) return LayoutError.LAYOUT_MISSING_FIELD?;
+            if (catch json_window) return LAYOUT_MISSING_FIELD?;
             crafted = windowFromJson(json_window)!;
         case LAYOUT:
             Object*? json_box = json.get("box");
-            if (catch json_box) return LayoutError.LAYOUT_MISSING_FIELD?;
+            if (catch json_box) return LAYOUT_MISSING_FIELD?;
             crafted = boxFromJson(json_box, crafted)!;
         default:
             unreachable("ComponentType not handled");
