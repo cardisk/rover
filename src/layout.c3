@@ -80,7 +80,7 @@ struct Component
 
 fn Component*? parse_tree(String str)
 {
-    Object *json = json::parse_string(str)!;
+    Object *json = json::parse_string(allocator::mem, str)!;
     defer json.free();
 
     // To make the component fill the entire screen, its size must

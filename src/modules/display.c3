@@ -592,7 +592,7 @@ fn void? Display.draw_preview(&self)
 
     if (stat::is_dir(sys.ls[self.list_cur]))
     {
-        PathList? ls = path::temp_ls(sys.ls[self.list_cur]);
+        PathList? ls = path::ls(allocator::tmem, sys.ls[self.list_cur]);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");

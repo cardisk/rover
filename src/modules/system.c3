@@ -32,15 +32,15 @@ fn void? System.init(&self)
 {
     usz tmark = allocator::temp().mark();
 
-    String? home_env = env::get_home_dir();
+    String? home_env = env::get_home_dir(allocator::tmem);
     if (catch home_env) return NO_HOME?;
 
-    Path? home = path::new(home_env);
+    Path? home = path::new(allocator::mem, home_env);
     if (catch home) return NO_HOME?;
 
     self.home = home;
 
-    Path? cwd = path::new_cwd();
+    Path? cwd = path::cwd(allocator::mem);
     if (catch cwd) return NO_CWD?;
     self.cwd = cwd;
 
@@ -59,14 +59,14 @@ fn void? System.init(&self)
         String[] lines = ((String) bookmarks_content).tsplit("\n", skip_empty: true);
         foreach (line : lines)
         {
-            Path? p = path::new(line);
+            Path? p = path::new(allocator::mem, line);
             if (catch p) continue;
             if (!path::exists(p)) continue;
             self.bookmarks.push(p);
         }
     }
 
-    PathList? ls = path::new_ls(self.cwd);
+    PathList? ls = path::ls(allocator::mem, self.cwd);
     if (catch ls) return NO_LS?;
     // No undefined behaviour because self.ls points to
     // the content of ls.
@@ -98,7 +98,7 @@ fn void? System.clear_filter(&self)
     // No need to free its content, everything is done
     // by std::collections::list::free() method.
     self.ls.free();
-    PathList? ls = path::new_ls(self.cwd);
+    PathList? ls = path::ls(allocator::mem, self.cwd);
     if (catch ls) return NO_LS?;
     // No undefined behaviour because self.ls points to
     // the content of ls.
@@ -117,7 +117,7 @@ fn void? System.pchdir(&self, Path p, bool save_cwd = true)
 fn void? System.schdir(&self, String p, bool save_cwd = true)
 {
     if (is_root(self.cwd) && p == "..") return;
-    Path? path = path::new(p);
+    Path? path = path::new(allocator::mem, p);
     if (catch path) return NO_PATH?;
 
     if (catch path::chdir(path)) return NO_CHDIR?;
@@ -137,7 +137,7 @@ fn void? System.update(&self)
 fn void System.save_cwd(&self)
 {
     // Assuming that creating a new path from an existing one will never fail.
-    Path p = path::new(self.cwd.as_zstr().copy())!!;
+    Path p = path::new(allocator::mem, self.cwd.as_zstr().copy(allocator::tmem))!!;
     self.history.push(p);
 }
 

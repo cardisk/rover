@@ -70,7 +70,7 @@ fn void main()
                         if (sys.ls.is_empty()) continue;
                         if (!path::exists(sys.ls[tui.list_cur]))
                         {
-                            app.log(string::new_format("Attempting to access inexistent '%s' path.",
+                            app.log(string::format(allocator::mem, "Attempting to access inexistent '%s' path.",
                                                         sys.ls[tui.list_cur].str_view()));
                             continue;
                         }
@@ -85,11 +85,10 @@ fn void main()
                             ncurses::def_prog_mode();
                             ncurses::endwin();
 
-                            ZString cmd = string::new_format_zstr(
-                                "%s %s", cfg.editor, sys.ls[tui.list_cur]
-                            );
-                            libc::system(cmd);
-                            libc::free(cmd);
+                            DString cmd = dstring::new(allocator::mem);
+                            cmd.appendf("%s %s", cfg.editor, sys.ls[tui.list_cur]);
+                            libc::system(cmd.zstr_view());
+                            cmd.free();
 
                             ncurses::reset_prog_mode();
                             
@@ -103,7 +102,7 @@ fn void main()
                         {
                             if (catch sys.pchdir(sys.ls[tui.list_cur]))
                             {
-                                app.log(string::new_format("Unable to change directory to %s.",
+                                app.log(string::format(allocator::mem, "Unable to change directory to %s.",
                                                             sys.ls[tui.list_cur].str_view()));
                                 continue;
                             }
@@ -118,7 +117,7 @@ fn void main()
                         if (sys.bookmarks.is_empty()) continue;
                         if (!path::exists(sys.bookmarks[tui.bookmarks_cur]))
                         {
-                            app.log(string::new_format("Attempting to access inexistent '%s' path.",
+                            app.log(string::format(allocator::mem, "Attempting to access inexistent '%s' path.",
                                                         sys.bookmarks[tui.bookmarks_cur].str_view()));
                             continue;
                         }
@@ -133,11 +132,10 @@ fn void main()
                             ncurses::def_prog_mode();
                             ncurses::endwin();
 
-                            ZString cmd = string::new_format_zstr(
-                                "%s %s", cfg.editor, sys.bookmarks[tui.bookmarks_cur]
-                            );
-                            libc::system(cmd);
-                            libc::free(cmd);
+                            DString cmd = dstring::new(allocator::mem);
+                            cmd.appendf("%s %s", cfg.editor, sys.ls[tui.list_cur]);
+                            libc::system(cmd.zstr_view());
+                            cmd.free();
 
                             ncurses::reset_prog_mode();
                             
@@ -151,7 +149,7 @@ fn void main()
                         {
                             if (catch sys.pchdir(sys.bookmarks[tui.bookmarks_cur]))
                             {
-                                app.log(string::new_format("Unable to change directory to %s.",
+                                app.log(string::format(allocator::mem, "Unable to change directory to %s.",
                                                             sys.bookmarks[tui.bookmarks_cur].str_view()));
                                 continue;
                             }
@@ -163,7 +161,7 @@ fn void main()
                             tui.top();
                         }
                     default:
-                        app.log(string::new_format("Unhandled focus case %s.", tui.focus));
+                        app.log(string::format(allocator::mem, "Unhandled focus case %s.", tui.focus));
                         continue;
                 }
 
@@ -215,7 +213,7 @@ fn void main()
                 }
                 if (catch sys.pchdir(p, false))
                 {
-                    app.log(string::new_format("Unable to change directory to %s.", p.str_view()));
+                    app.log(string::format(allocator::mem, "Unable to change directory to %s.", p.str_view()));
                     continue;
                 }
                 tui.top();
@@ -223,7 +221,7 @@ fn void main()
             case 's':
                 if (!enable_action) continue;
 
-                Path? p = sys.ls[tui.list_cur].new_absolute();
+                Path? p = sys.ls[tui.list_cur].absolute(allocator::mem);
                 if (catch p)
                 {
                     app.log("Unable to get absolute path for a new bookmark.");
@@ -253,7 +251,7 @@ fn void main()
 
                     if (catch path::delete(sys.ls[tui.list_cur]))
                     {
-                        app.log(string::new_format("Unable to delete %s.", sys.ls[tui.list_cur]));
+                        app.log(string::format(allocator::mem, "Unable to delete %s.", sys.ls[tui.list_cur]));
                         continue;
                     }
                     sys.ls[tui.list_cur].free();
@@ -272,7 +270,7 @@ fn void main()
                 CInt res = libc::rename(sys.ls[tui.list_cur].as_zstr(), in);
                 if (res)
                 {
-                    app.log(string::new_format("Unable to rename %s into %s", sys.ls[tui.list_cur], in));
+                    app.log(string::format(allocator::mem, "Unable to rename %s into %s", sys.ls[tui.list_cur], in));
                     continue;
                 }
 
@@ -354,7 +352,7 @@ fn void main()
                 if (!in || in.len() == 0) continue;
                 if (catch sys.schdir(in.str_view()))
                 {
-                    app.log(string::new_format("Unable to goto inside %s.", in));
+                    app.log(string::format(allocator::mem, "Unable to goto inside %s.", in));
                     continue;
                 }
 
@@ -376,7 +374,7 @@ fn void main()
 
                 if (catch sys.new_file(in.str_view()))
                 {
-                    app.log(string::new_format("Unable to create new file %s.", in));
+                    app.log(string::format(allocator::mem, "Unable to create new file %s.", in));
                     continue;
                 }
 
@@ -386,9 +384,9 @@ fn void main()
                 ZString in = tui.input("/");
                 if (!in || in.len() == 0) continue;
 
-                if (catch sys.set_apply_filter(in.str_view().zstr_copy()))
+                if (catch sys.set_apply_filter(in.str_view().zstr_copy(allocator::mem)))
                 {
-                    app.log(string::new_format("Unable to apply filter %s.", in));
+                    app.log(string::format(allocator::mem, "Unable to apply filter %s.", in));
                     continue;
                 }
                 tui.top();
@@ -399,9 +397,9 @@ fn void main()
                 ZString in = tui.input("/");
                 if (!in || in.len() == 0) continue;
 
-                if (catch sys.set_apply_filter(in.str_view().zstr_copy(), true))
+                if (catch sys.set_apply_filter(in.str_view().zstr_copy(allocator::mem), true))
                 {
-                    app.log(string::new_format("Unable to apply filter %s.", in));
+                    app.log(string::format(allocator::mem, "Unable to apply filter %s.", in));
                     continue;
                 }
                 tui.top();
