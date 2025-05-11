@@ -42,19 +42,17 @@ fn void? Config.init(&self)
     @pool()
     {
         self.editor = "";
-        String? editor_env = env::get_var("EDITOR");
+        String? editor_env = env::get_var(allocator::mem, "EDITOR");
         if (try editor_env) self.editor = editor_env;
 
-        // TODO: maybe expand this to use the current thread temp allocator.
-        String? home_env = env::get_home_dir();
+        String? home_env = env::get_home_dir(allocator::tmem);
         if (catch home_env) return ERROR_HOME_DIR?;
-        defer home_env.free();
 
         self.load_display_string(home_env);
 
         self.windows.init(allocator::mem);
 
-        self.display_tree_arena.init(1024, allocator::mem);
+        self.display_tree_arena.init(allocator::mem, 1024);
 
         self.display_tree = null;
         self.reload_windows()!;
@@ -76,7 +74,7 @@ fn void? Config.init(&self)
         }
         // --------
 
-        Object *theme_obj = json::temp_parse_string(theme_config_src)!;
+        Object *theme_obj = json::tparse_string(theme_config_src)!;
 
         // Here the result can be safely ignored.
         self.parse_theme(theme_obj)!;
@@ -87,8 +85,8 @@ fn void? Config.init(&self)
 
 fn void Config.free(&self)
 {
-    self.editor.free();
-    self.display_config_src.free();
+    self.editor.free(allocator::mem);
+    self.display_config_src.free(allocator::mem);
 
     self.display_tree_arena.free();
     // No need to free self.display_tree because
@@ -120,7 +118,7 @@ import ncurses;
 
 fn void Config.load_display_string(&self, String home_env)
 {
-    self.display_config_src = defaults::DEFAULT_DISPLAY.copy();
+    self.display_config_src = defaults::DEFAULT_DISPLAY.copy(allocator::mem);
 
     String config_path = home_env.tconcat("/.config/rover/display.json");
 
@@ -131,7 +129,9 @@ fn void Config.load_display_string(&self, String home_env)
         {
             String fsrc = (String) file_src;
             if (!fsrc.len) break DISPLAY_FILE;
-            self.display_config_src = fsrc.copy();
+            // Freeing the copied default memory
+            self.display_config_src.free(allocator::mem);
+            self.display_config_src = fsrc.copy(allocator::mem);
         }
     }
 }
@@ -187,7 +187,7 @@ fn void? Config.parse_color(&self, String name, Object *color)
             // Hex foreground.
             if (fg.starts_with("#"))
             {
-                char[]? rgb = hex::decode_temp((char[]) fg[1..]);
+                char[]? rgb = hex::tdecode((char[]) fg[1..]);
                 if (catch rgb) return INVALID_COLOR_HEX?;
                 if (rgb.len < 3) return INVALID_COLOR_HEX?;
                 CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
@@ -223,7 +223,7 @@ fn void? Config.parse_color(&self, String name, Object *color)
             // Hex background.
             if (bg.starts_with("#"))
             {
-                char[]? rgb = hex::decode_temp((char[]) bg[1..]);
+                char[]? rgb = hex::tdecode((char[]) bg[1..]);
                 if (catch rgb) return INVALID_COLOR_HEX?;
                 if (rgb.len < 3) return INVALID_COLOR_HEX?;
                 CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);

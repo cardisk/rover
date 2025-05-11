@@ -30,51 +30,54 @@ struct System
 
 fn void? System.init(&self)
 {
-    usz tmark = allocator::temp().mark();
+    // usz tmark = allocator::temp().mark();
 
-    String? home_env = env::get_home_dir(allocator::tmem);
-    if (catch home_env) return NO_HOME?;
-
-    Path? home = path::new(allocator::mem, home_env);
-    if (catch home) return NO_HOME?;
-
-    self.home = home;
-
-    Path? cwd = path::cwd(allocator::mem);
-    if (catch cwd) return NO_CWD?;
-    self.cwd = cwd;
-
-    if (!stat::read_stat(self.cwd, &self.cwd_stat)) return NO_STAT?;
-
-    self.history.init(allocator::mem);
-    self.bookmarks.init(allocator::mem);
-
-    String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
-
-    char[]? bookmarks_content = file::load_temp(bookmarks_path);
-    if BOOKMARKS: (try bookmarks_content)
+    @pool()
     {
-        if (bookmarks_content.len == 0) break BOOKMARKS;
+        String? home_env = env::get_home_dir(allocator::tmem);
+        if (catch home_env) return NO_HOME?;
 
-        String[] lines = ((String) bookmarks_content).tsplit("\n", skip_empty: true);
-        foreach (line : lines)
+        Path? home = path::new(allocator::mem, home_env);
+        if (catch home) return NO_HOME?;
+
+        self.home = home;
+
+        Path? cwd = path::cwd(allocator::mem);
+        if (catch cwd) return NO_CWD?;
+        self.cwd = cwd;
+
+        if (!stat::read_stat(self.cwd, &self.cwd_stat)) return NO_STAT?;
+
+        self.history.init(allocator::mem);
+        self.bookmarks.init(allocator::mem);
+
+        String bookmarks_path = self.home.str_view().tconcat("/.config/rover/bookmarks");
+
+        char[]? bookmarks_content = file::load_temp(bookmarks_path);
+        if BOOKMARKS: (try bookmarks_content)
         {
-            Path? p = path::new(allocator::mem, line);
-            if (catch p) continue;
-            if (!path::exists(p)) continue;
-            self.bookmarks.push(p);
+            if (bookmarks_content.len == 0) break BOOKMARKS;
+
+            String[] lines = ((String) bookmarks_content).tsplit("\n", skip_empty: true);
+            foreach (line : lines)
+            {
+                Path? p = path::new(allocator::mem, line);
+                if (catch p) continue;
+                if (!path::exists(p)) continue;
+                self.bookmarks.push(p);
+            }
         }
-    }
 
-    PathList? ls = path::ls(allocator::mem, self.cwd);
-    if (catch ls) return NO_LS?;
-    // No undefined behaviour because self.ls points to
-    // the content of ls.
-    self.ls = ls;
+        PathList? ls = path::ls(allocator::mem, self.cwd);
+        if (catch ls) return NO_LS?;
+        // No undefined behaviour because self.ls points to
+        // the content of ls.
+        self.ls = ls;
 
-    self.filter = null;
+        self.filter = null;
+    };
 
-    allocator::temp().reset(tmark);
+    // allocator::temp().reset(tmark);
 }
 
 fn void? System.set_apply_filter(&self, ZString filter, bool case_sensitive = false)
@@ -176,29 +179,32 @@ fn void System.unmark(&self, usz index)
 
 fn void System.move_marks(&self, usz index)
 {
-    usz tmark = allocator::temp().mark();
-    Path target = self.ls[index];
-    for (usz i = 0; i < self.marked_indexes.len();)
+    // usz tmark = allocator::temp().mark();
+    @pool()
     {
-        Path old = self.ls[self.marked_indexes[i]];
-        
-        DString new;
-        new.tinit();
-        new.append(target.str_view());
-        new.append('/');
-        new.append(old.str_view());
-
-        CInt res = libc::rename(old.as_zstr(), new.zstr_view());
-        if (!res) 
+        Path target = self.ls[index];
+        for (usz i = 0; i < self.marked_indexes.len();)
         {
-            self.marked_indexes.remove_at(i);
-            continue;
+            Path old = self.ls[self.marked_indexes[i]];
+
+            DString new;
+            new.tinit();
+            new.append(target.str_view());
+            new.append('/');
+            new.append(old.str_view());
+
+            CInt res = libc::rename(old.as_zstr(), new.zstr_view());
+            if (!res) 
+            {
+                self.marked_indexes.remove_at(i);
+                continue;
+            }
+
+            i++;
         }
+    };
 
-        i++;
-    }
-
-    allocator::temp().reset(tmark);
+    // allocator::temp().reset(tmark);
 }
 
 fn void System.free(&self)
@@ -209,7 +215,7 @@ fn void System.free(&self)
     {
         String config_path = self.home.str_view().tconcat("/.config/rover");
 
-        Path? dir = path::temp_new(config_path);
+        Path? dir = path::temp(config_path);
         if (catch dir) return;
 
         if (!path::is_dir(dir))
@@ -266,7 +272,7 @@ fn bool is_root(Path p)
 fn void? System.reload_cwd(&self)
 {
     self.cwd.free();
-    Path? cwd = path::new_cwd();
+    Path? cwd = path::cwd(allocator::mem);
     if (catch cwd) return NO_CWD?;
     // No undefined behaviour because the cwd.path_string.ptr
     // is assigned to self.cwd
@@ -275,7 +281,7 @@ fn void? System.reload_cwd(&self)
     if (!stat::read_stat(self.cwd, &self.cwd_stat)) return NO_STAT?;
 
     self.ls.free();
-    PathList? ls = path::new_ls(self.cwd);
+    PathList? ls = path::ls(allocator::mem, self.cwd);
     if (catch ls) return NO_LS?;
     self.ls = ls;
 
@@ -289,8 +295,8 @@ fn void System.apply_filter(&self)
         if (!self.filter) return;
         for (int i = 0; i < self.ls.len();)
         {
-            String lower_current = self.ls[i].str_view().temp_ascii_to_lower();
-            String lower_filter = self.filter.str_view().temp_ascii_to_lower();
+            String lower_current = self.ls[i].str_view().to_lower_tcopy();
+            String lower_filter = self.filter.str_view().to_lower_tcopy();
 
             String current = lower_current;
             String filter  = lower_filter;
