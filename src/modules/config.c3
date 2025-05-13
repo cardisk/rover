@@ -30,6 +30,7 @@ struct Config
 {
     String editor;
     String display_config_src;
+    String theme_config_src;
 
     DynamicArenaAllocator display_tree_arena;
     Component *display_tree;
@@ -48,6 +49,7 @@ fn void? Config.init(&self)
         String? home_env = env::get_home_dir(tmem);
         if (catch home_env) return ERROR_HOME_DIR?;
 
+        self.display_config_src = "";
         self.load_display_string(home_env);
 
         self.windows.init(mem);
@@ -57,27 +59,14 @@ fn void? Config.init(&self)
         self.display_tree = null;
         self.reload_windows()!;
 
-        // TODO: not sure that this will be dangerous.
-        String theme_config_src = defaults::DEFAULT_THEME;
-
-        String theme_path = home_env.tconcat("/.config/rover/theme.json");
-
-        if THEME_FILE: (file::is_file(theme_path))
-        {
-            char[]? file_src = file::load_temp(theme_path);
-            if (try file_src)
-            {
-                String fsrc = (String) file_src;
-                if (!fsrc.len) break THEME_FILE;
-                theme_config_src = fsrc;
-            }
-        }
-        // --------
+        self.theme_config_src = "";
+        self.load_theme_string(home_env);
 
         Object *theme_obj = json::tparse_string(theme_config_src)!;
 
-        // Here the result can be safely ignored.
+        // Here the resulting error can be ignored.
         self.parse_theme(theme_obj)!;
+
         // TODO: maybe this can be also customizable.
         ncurses::init_pair(ERROR_POPUP_BORDER, ncurses::COLOR_RED, ncurses::COLOR_BLACK);
     };
@@ -87,6 +76,7 @@ fn void Config.free(&self)
 {
     self.editor.free(mem);
     self.display_config_src.free(mem);
+    self.theme_config_src.free(mem);
 
     self.display_tree_arena.free();
     // No need to free self.display_tree because
@@ -118,21 +108,39 @@ import ncurses;
 
 fn void Config.load_display_string(&self, String home_env)
 {
-    self.display_config_src = defaults::DEFAULT_DISPLAY.copy(mem);
-
     String config_path = home_env.tconcat("/.config/rover/display.json");
 
-    if DISPLAY_FILE: (file::is_file(config_path))
+    if (file::is_file(config_path))
     {
         char[]? file_src = file::load_temp(config_path);
         if (try file_src)
         {
             String fsrc = (String) file_src;
-            if (!fsrc.len) break DISPLAY_FILE;
-            // Freeing the copied default memory
-            self.display_config_src.free(mem);
             self.display_config_src = fsrc.copy(mem);
         }
+    }
+    else
+    {
+        self.display_config_src = defaults::DEFAULT_DISPLAY.copy(mem);
+    }
+}
+
+fn void Config.load_theme_string(&self, String home_env)
+{
+    String config_path = home_env.tconcat("/.config/rover/theme.json");
+
+    if (file::is_file(config_path))
+    {
+        char[]? file_src = file::load_temp(config_path);
+        if (try file_src)
+        {
+            String fsrc = (String) file_src;
+            self.theme_config_src = fsrc.copy(mem);
+        }
+    }
+    else
+    {
+        self.theme_config_src = defaults::DEFAULT_THEME.copy(mem);
     }
 }
 
