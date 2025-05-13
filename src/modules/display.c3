@@ -181,6 +181,19 @@ macro Display.bottom(&self)
     }
 }
 
+macro Display.goto(&self, index)
+{
+    switch (self.focus)
+    {
+        case LIST:
+            self.list_cur = index;
+        case BOOKMARKS:
+            self.bookmarks_cur = index;
+        case POPUP:
+            self.popup_cur = index;
+    }
+}
+
 fn ZString Display.input(&self, ZString prefix)
 {
     if (!self.prompt) return null;
@@ -592,7 +605,7 @@ fn void? Display.draw_preview(&self)
 
     if (stat::is_dir(sys.ls[self.list_cur]))
     {
-        PathList? ls = path::ls(allocator::tmem, sys.ls[self.list_cur]);
+        PathList? ls = path::ls(tmem, sys.ls[self.list_cur]);
         if (catch ls)
         {
             ncurses::mvwprintw(self.preview, y, x, "<error while loading>");

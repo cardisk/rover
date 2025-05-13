@@ -80,7 +80,7 @@ struct Component
 
 fn Component*? parse_tree(String str)
 {
-    Object *json = json::parse_string(allocator::mem, str)!;
+    Object *json = json::parse_string(mem, str)!;
     defer json.free();
 
     // To make the component fill the entire screen, its size must
@@ -136,7 +136,7 @@ fn Component *new_hbox()
     *hbox = {
         .type  = HBOX,
     };
-    hbox.children.init(allocator::mem);
+    hbox.children.init(mem);
 
     new.box = hbox;
     return new;
@@ -152,7 +152,7 @@ fn Component *new_vbox()
     *vbox = {
         .type  = VBOX,
     };
-    vbox.children.init(allocator::mem);
+    vbox.children.init(mem);
 
     new.box = vbox;
     return new;

@@ -42,17 +42,17 @@ fn void? Config.init(&self)
     @pool()
     {
         self.editor = "";
-        String? editor_env = env::get_var(allocator::mem, "EDITOR");
+        String? editor_env = env::get_var(mem, "EDITOR");
         if (try editor_env) self.editor = editor_env;
 
-        String? home_env = env::get_home_dir(allocator::tmem);
+        String? home_env = env::get_home_dir(tmem);
         if (catch home_env) return ERROR_HOME_DIR?;
 
         self.load_display_string(home_env);
 
-        self.windows.init(allocator::mem);
+        self.windows.init(mem);
 
-        self.display_tree_arena.init(allocator::mem, 1024);
+        self.display_tree_arena.init(mem, 1024);
 
         self.display_tree = null;
         self.reload_windows()!;
@@ -85,8 +85,8 @@ fn void? Config.init(&self)
 
 fn void Config.free(&self)
 {
-    self.editor.free(allocator::mem);
-    self.display_config_src.free(allocator::mem);
+    self.editor.free(mem);
+    self.display_config_src.free(mem);
 
     self.display_tree_arena.free();
     // No need to free self.display_tree because
@@ -118,7 +118,7 @@ import ncurses;
 
 fn void Config.load_display_string(&self, String home_env)
 {
-    self.display_config_src = defaults::DEFAULT_DISPLAY.copy(allocator::mem);
+    self.display_config_src = defaults::DEFAULT_DISPLAY.copy(mem);
 
     String config_path = home_env.tconcat("/.config/rover/display.json");
 
@@ -130,8 +130,8 @@ fn void Config.load_display_string(&self, String home_env)
             String fsrc = (String) file_src;
             if (!fsrc.len) break DISPLAY_FILE;
             // Freeing the copied default memory
-            self.display_config_src.free(allocator::mem);
-            self.display_config_src = fsrc.copy(allocator::mem);
+            self.display_config_src.free(mem);
+            self.display_config_src = fsrc.copy(mem);
         }
     }
 }

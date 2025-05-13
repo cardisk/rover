@@ -30,7 +30,7 @@ fn void? State.init(&self)
     self.old_w = 0;
     self.old_h = 0;
 
-    self.logs.init(allocator::mem);
+    self.logs.init(mem);
 }
 
 macro State.update(&self)
