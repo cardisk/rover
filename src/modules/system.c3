@@ -137,8 +137,10 @@ fn void? System.schdir(&self, String p, bool save_cwd = true)
 
 fn void? System.update(&self)
 {
-    if (stat::is_modified(self.cwd, self.cwd_stat) < 0) return NO_STAT?;
-    if (!stat::is_modified(self.cwd, self.cwd_stat)) return;
+    int is_modified = stat::is_modified(self.cwd, self.cwd_stat);
+
+    if (is_modified < 0) return NO_STAT?;
+    if (!is_modified) return;
 
     self.reload_cwd()!;
 }

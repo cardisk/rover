@@ -502,134 +502,140 @@ fn void Display.draw_list(&self)
         self.list_vbot += 1;
     }
 
-    CInt offset = 0;
-    for (usz i = self.list_vtop; i < self.list_vbot; i++)
+    @pool()
     {
-        if (stat::is_link(sys.ls[i]))
+        CInt offset = 0;
+        for (usz i = self.list_vtop; i < self.list_vbot; i++)
         {
-            self.link(self.list);
+            if (stat::is_link(sys.ls[i]))
+            {
+                self.link(self.list);
+            }
+            else if (stat::is_dir(sys.ls[i])) 
+            {
+                self.dir(self.list);
+            }
+            else if (stat::is_exe(sys.ls[i]))
+            {
+                self.exe(self.list);
+            }
+
+            if (i == self.list_cur) self.select(self.list);
+
+            DString item;
+            item.tinit();
+            if (sys.is_marked(i)) item.append("+ ");
+            item.append(sys.ls[i].str_view().tcopy());
+
+            // Taking in account elements with non-ascii chars.
+            foreach (&c : item)
+            {
+                if (!c.is_print()) *c = '?';
+            }
+
+            if (item.len() > (usz)(w_stop - 1))
+            {
+                item[(usz)(w_stop - 1)] = '\0';
+            }
+
+            // Align text taking in account the first space and one in the middle
+            ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w_stop, item.zstr_view());
+
+            self.reset(self.list);
+            offset++;
         }
-        else if (stat::is_dir(sys.ls[i])) 
-        {
-            self.dir(self.list);
-        }
-        else if (stat::is_exe(sys.ls[i]))
-        {
-            self.exe(self.list);
-        }
-
-        if (i == self.list_cur) self.select(self.list);
-
-        DString item;
-        item.tinit();
-        if (sys.is_marked(i)) item.append("+ ");
-        item.append(sys.ls[i].str_view().tcopy());
-
-        // Taking in account elements with non-ascii chars.
-        foreach (&c : item)
-        {
-            if (!c.is_print()) *c = '?';
-        }
-
-        if (item.len() > (usz)(w_stop - 1))
-        {
-            item[(usz)(w_stop - 1)] = '\0';
-        }
-
-        // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.list, y + offset, x, " %- *s", w_stop, item.zstr_view());
-
-        self.reset(self.list);
-        offset++;
-    }
+    };
 }
 
 fn void? Display.draw_preview(&self)
 {
-    CInt w, h;
-    ncurses::@getmaxyx(self.preview, h, w);
-
-    // Cursor coordinates.
-    CInt x = 2;
-    CInt y = 1;
-
-    CInt w_stop = w - 4;
-    CInt h_stop = h - 3;
-
-    if (sys.ls.is_empty()) return;
-
-    if (path::is_file(sys.ls[self.list_cur]))
+    @pool()
     {
-        switch (stat::is_exe(sys.ls[self.list_cur]))
+        CInt w, h;
+        ncurses::@getmaxyx(self.preview, h, w);
+
+        // Cursor coordinates.
+        CInt x = 2;
+        CInt y = 1;
+
+        CInt w_stop = w - 4;
+        CInt h_stop = h - 3;
+
+        if (sys.ls.is_empty()) return;
+
+        if (path::is_file(sys.ls[self.list_cur]))
         {
-            case 1:
-                ncurses::mvwprintw(self.preview, y, x, "<binary>");
-
-            case 0:
-                char[]? chars = file::load_temp(sys.ls[self.list_cur].str_view());
-                if (catch chars) break;
-
-                String content = (String) chars;
-                if (content.len == 0)
-                {
-                    ncurses::mvwprintw(self.preview, y, x, "<empty>");
-                    break;
-                }
-                if (!is_printable(content))
-                {
-                    ncurses::mvwprintw(self.preview, y, x, "<binary>");
-                    break;
-                }
-                String[] lines = content.tsplit("\n");
-
-                usz stop = (usz) h_stop;
-                if (lines.len < stop) stop = lines.len;
-                
-                for (int i = 0; i < stop; i++)
-                {
-                    DString item;
-                    item.tinit(1024);
-                    item.append(lines[i]);
-                    item.replace("\t", "    ");
-
-                    CInt len = (CInt) item.len();
-                    if (len > w_stop) len = w_stop; 
-
-                    ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item.zstr_view());
-                }
-
-            case -1:
-                return NO_PREVIEW?;
-        }
-    }
-
-    if (stat::is_dir(sys.ls[self.list_cur]))
-    {
-        PathList? ls = path::ls(tmem, sys.ls[self.list_cur]);
-        if (catch ls)
-        {
-            ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
-            return;
-        }
-
-        usz stop = (usz) h_stop;
-        if (ls.len() < stop) stop = ls.len();
-        
-        if (ls.is_empty())
-        {
-            ncurses::mvwprintw(self.preview, y, x, "<empty>");
-        }
-        else
-        {
-            for (int i = 0; i < stop; i++)
+            switch (stat::is_exe(sys.ls[self.list_cur]))
             {
-                ZString item = ls[i].str_view().zstr_tcopy();
-                CInt len = (CInt) item.len();
-                if (len > w_stop) len = w_stop;
-                ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item);
+                case 1:
+                    ncurses::mvwprintw(self.preview, y, x, "<binary>");
+
+                case 0:
+                    char[]? chars = file::load_temp(sys.ls[self.list_cur].str_view());
+                    if (catch chars) break;
+
+                    String content = (String) chars;
+                    if (content.len == 0)
+                    {
+                        ncurses::mvwprintw(self.preview, y, x, "<empty>");
+                        break;
+                    }
+                    if (!is_printable(content))
+                    {
+                        ncurses::mvwprintw(self.preview, y, x, "<binary>");
+                        break;
+                    }
+                    String[] lines = content.tsplit("\n");
+
+                    usz stop = (usz) h_stop;
+                    if (lines.len < stop) stop = lines.len;
+
+                    for (int i = 0; i < stop; i++)
+                    {
+                        DString item;
+                        item.tinit(1024);
+                        item.append(lines[i]);
+                        item.replace("\t", "    ");
+
+                        CInt len = (CInt) item.len();
+                        if (len > w_stop) len = w_stop; 
+
+                        ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item.zstr_view());
+                    }
+
+                case -1:
+                    return NO_PREVIEW?;
             }
         }
-    }
+
+        if (stat::is_dir(sys.ls[self.list_cur]))
+        {
+            PathList? ls = path::ls(tmem, sys.ls[self.list_cur]);
+            if (catch ls)
+            {
+                ncurses::mvwprintw(self.preview, y, x, "<error while loading>");
+                return;
+            }
+
+            usz stop = (usz) h_stop;
+            if (ls.len() < stop) stop = ls.len();
+
+            if (ls.is_empty())
+            {
+                ncurses::mvwprintw(self.preview, y, x, "<empty>");
+            }
+            else
+            {
+                for (int i = 0; i < stop; i++)
+                {
+                    ZString item = ls[i].str_view().zstr_tcopy();
+                    CInt len = (CInt) item.len();
+                    if (len > w_stop) len = w_stop;
+                    ncurses::mvwprintw(self.preview, y + i, x, "%.*s", len, item);
+                }
+            }
+        }
+    };
 }
 
 fn void Display.draw_bookmarks(&self)
@@ -681,106 +687,116 @@ fn void Display.draw_bookmarks(&self)
         self.bookmarks_vbot += 1;
     }
 
-    CInt offset = 0;
-    for (usz i = self.bookmarks_vtop; i < self.bookmarks_vbot; i++)
+    @pool()
     {
-        if (stat::is_link(sys.bookmarks[i]))
+        CInt offset = 0;
+        for (usz i = self.bookmarks_vtop; i < self.bookmarks_vbot; i++)
         {
-            self.link(self.bookmarks);
+            if (stat::is_link(sys.bookmarks[i]))
+            {
+                self.link(self.bookmarks);
+            }
+            else if (stat::is_dir(sys.bookmarks[i])) 
+            {
+                self.dir(self.bookmarks);
+            }
+            else if (stat::is_exe(sys.bookmarks[i]))
+            {
+                self.exe(self.bookmarks);
+            }
+
+            if (i == self.bookmarks_cur) self.select(self.bookmarks);
+
+            String item = sys.bookmarks[i].str_view().tcopy();
+
+            // Taking in account elements with non-ascii chars.
+            foreach (&c : item)
+            {
+                if (!c.is_print()) *c = '?';
+            }
+
+            if (item.len > (usz)(w_stop - 1))
+            {
+                item[(usz)(w_stop - 1)] = '\0';
+            }
+
+            // Align text taking in account the first space and one in the middle
+            ncurses::mvwprintw(self.bookmarks, y + offset, x, " %- *s", w_stop, item);
+
+            self.reset(self.bookmarks);
+            offset++;
         }
-        else if (stat::is_dir(sys.bookmarks[i])) 
-        {
-            self.dir(self.bookmarks);
-        }
-        else if (stat::is_exe(sys.bookmarks[i]))
-        {
-            self.exe(self.bookmarks);
-        }
-
-        if (i == self.bookmarks_cur) self.select(self.bookmarks);
-
-        String item = sys.bookmarks[i].str_view().tcopy();
-
-        // Taking in account elements with non-ascii chars.
-        foreach (&c : item)
-        {
-            if (!c.is_print()) *c = '?';
-        }
-
-        if (item.len > (usz)(w_stop - 1))
-        {
-            item[(usz)(w_stop - 1)] = '\0';
-        }
-
-        // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.bookmarks, y + offset, x, " %- *s", w_stop, item);
-
-        self.reset(self.bookmarks);
-        offset++;
-    }
+    };
 }
 
 fn void? Display.draw_status(&self)
 {
-    CInt x = 2;
-    CInt maxx = ncurses::getmaxx(self.status);
-    CInt y = ncurses::getmaxy(self.status);
-
-    ZString leading, trailing;
-
-    if (sys.ls.is_empty())
+    @pool()
     {
-        leading  = string::tformat_zstr("%s @ %s %s", "----------", "---", "---");
-        trailing = string::tformat_zstr("%dB %d/%d", 0, 0, sys.ls.len());
-    }
-    else
-    {
-        Stat s;
-        if (!stat::read_stat(sys.ls[self.list_cur], &s)) return NO_STATUS?;
+        CInt x = 2;
+        CInt maxx = ncurses::getmaxx(self.status);
+        CInt y = ncurses::getmaxy(self.status);
 
-        // Needed for group name.
-        Group  *group  = rover::getgrgid(s.st_gid);
-        // Needed for user name.
-        Passwd *passwd = rover::getpwuid(s.st_uid);
+        ZString leading, trailing;
 
-        ZString perm = stat::tposix_perm(s).zstr_view();
-
-        if (sys.filter)
+        if (sys.ls.is_empty())
         {
-            leading  = string::tformat_zstr("%s @ %s %s @ %s", perm, passwd.pw_name, group.gr_name, sys.filter);
+            leading  = string::tformat_zstr("%s @ %s %s", "----------", "---", "---");
+            trailing = string::tformat_zstr("%dB %d/%d", 0, 0, sys.ls.len());
         }
         else
         {
-            leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+            Stat s;
+            if (!stat::read_stat(sys.ls[self.list_cur], &s)) return NO_STATUS?;
+
+            // Needed for group name.
+            Group  *group  = rover::getgrgid(s.st_gid);
+            // Needed for user name.
+            Passwd *passwd = rover::getpwuid(s.st_uid);
+
+            ZString perm = stat::tposix_perm(s).zstr_view();
+
+            if (sys.filter)
+            {
+                leading  = string::tformat_zstr("%s @ %s %s @ %s", perm, passwd.pw_name, group.gr_name, sys.filter);
+            }
+            else
+            {
+                leading  = string::tformat_zstr("%s @ %s %s", perm, passwd.pw_name, group.gr_name);
+            }
+
+            trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, sys.ls.len());
         }
 
-        trailing = string::tformat_zstr("%dB %d/%d", s.st_size, self.list_cur + 1, sys.ls.len());
-    }
+        // Avoid printing anything if the terminal width is too short.
+        if ((CInt)(leading.len() + trailing.len()) + 3 > maxx) return;
 
-    // Avoid printing anything if the terminal width is too short.
-    if ((CInt)(leading.len() + trailing.len()) + 3 > maxx) return;
-
-    ncurses::wattron(self.status, ncurses::A_BOLD);
-    ncurses::mvwprintw(self.status, y / 2, x, "%s", leading);
-    ncurses::mvwprintw(self.status, y / 2, maxx - (CInt) trailing.len() - 2, "%s", trailing);
-    ncurses::wattroff(self.status, ncurses::A_BOLD);
+        ncurses::wattron(self.status, ncurses::A_BOLD);
+        ncurses::mvwprintw(self.status, y / 2, x, "%s", leading);
+        ncurses::mvwprintw(self.status, y / 2, maxx - (CInt) trailing.len() - 2, "%s", trailing);
+        ncurses::wattroff(self.status, ncurses::A_BOLD);
+    };
 }
 
 fn void Display.draw_prompt(&self)
 {
     if (app.logs.is_empty()) return;
 
-    CInt x = 2;
-    CInt maxx = ncurses::getmaxx(self.status);
-    CInt y = ncurses::getmaxy(self.status);
+    @pool()
+    {
 
-    // It's safe to assume that at least one element is present 'cause of
-    // the first condition of this function.
-    ZString msg = app.logs.first()!!.zstr_tcopy();
+        CInt x = 2;
+        CInt maxx = ncurses::getmaxx(self.status);
+        CInt y = ncurses::getmaxy(self.status);
 
-    self.err(self.prompt);
-    ncurses::mvwprintw(self.prompt, y / 2, x, "%s", msg);
-    self.reset(self.prompt);
+        // It's safe to assume that at least one element is present 'cause of
+        // the first condition of this function.
+        ZString msg = app.logs.first()!!.zstr_tcopy();
+
+        self.err(self.prompt);
+        ncurses::mvwprintw(self.prompt, y / 2, x, "%s", msg);
+        self.reset(self.prompt);
+    };
 }
 
 fn void Display.draw_popup(&self)
@@ -825,33 +841,36 @@ fn void Display.draw_popup(&self)
         self.popup_vbot += 1;
     }
 
-    CInt offset = 0;
-    for (usz i = self.popup_vtop; i < self.popup_vbot; i++)
+    @pool()
     {
-        if (i == self.popup_cur) self.select(self.popup);
-
-        String item;
-        switch (self.popup_content_type)
+        CInt offset = 0;
+        for (usz i = self.popup_vtop; i < self.popup_vbot; i++)
         {
-            case STRING:
-                List{String} *temp = self.popup_content;
-                item = (*temp)[i].tcopy();
-            case PATH:
-                List{Path} *temp = self.popup_content;
-                item = (*temp)[i].str_view().tcopy();
-            default:
-                unreachable("Programmer's fault...sorry :(");
+            if (i == self.popup_cur) self.select(self.popup);
+
+            String item;
+            switch (self.popup_content_type)
+            {
+                case STRING:
+                    List{String} *temp = self.popup_content;
+                    item = (*temp)[i].tcopy();
+                case PATH:
+                    List{Path} *temp = self.popup_content;
+                    item = (*temp)[i].str_view().tcopy();
+                default:
+                    unreachable("Programmer's fault...sorry :(");
+            }
+
+            if (item.len > (usz)(w_stop - 1))
+            {
+                item[(usz)(w_stop - 1)] = '\0';
+            }
+
+            // Align text taking in account the first space and one in the middle
+            ncurses::mvwprintw(self.popup, y + offset, x, " %- *s", w_stop, item);
+
+            self.reset(self.popup);
+            offset++;
         }
-
-        if (item.len > (usz)(w_stop - 1))
-        {
-            item[(usz)(w_stop - 1)] = '\0';
-        }
-
-        // Align text taking in account the first space and one in the middle
-        ncurses::mvwprintw(self.popup, y + offset, x, " %- *s", w_stop, item);
-
-        self.reset(self.popup);
-        offset++;
-    }
+    };
 }

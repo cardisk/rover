@@ -62,7 +62,7 @@ fn void? Config.init(&self)
         self.theme_config_src = "";
         self.load_theme_string(home_env);
 
-        Object *theme_obj = json::tparse_string(theme_config_src)!;
+        Object *theme_obj = json::tparse_string(self.theme_config_src)!;
 
         // Here the resulting error can be ignored.
         self.parse_theme(theme_obj)!;
