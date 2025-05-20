@@ -1,104 +1,88 @@
 module rover::actions;
 
-bool allow_generic             = true;
-bool allow_bookmarks           = true;
-bool allow_marking             = true;
-bool allow_cursor_navigation   = true;
-bool allow_relative_navigation = true;
-bool allow_focus_changes       = true;
-bool allow_errors              = true;
-bool allow_filtering           = true;
-bool allow_cursor_movements    = true;
+// -- ERRORS
+// clear_errors
+// open_errors
 
-// Generic
-fn void new_file()
-{
-}
+// -- BROWSING
+// browse
+// open_file
+// delete_selection
+// change_focus
 
-fn void rename_selected_item()
-{
-}
+// -- CREATION
+// new_file
+// new_directory
 
-fn void delete_selected_item()
-{
-}
+// -- MATCHING
+// filter
+// clear_filter
+// search
 
-// Bookmarks
-fn void add_entry_as_bookmark()
-{
-}
+// -- CHANGES
+// rename_path
+// mark_path
+// unmark_path
+// move_to_target
 
-fn void remove_entry_as_bookmark()
-{
-}
+// -- POPUPS
+// open_history
+// open_bookmarks
 
-// Marking
-fn void mark_selected_item()
-{
-}
+// -- BOOKMARKS
+// save_bookmark
+// delete_bookmark
 
-fn void unmark_selected_item()
-{
-}
+// Category flags to determine whether they are active or not.
+bool is_errors_active = true;
+bool is_browsing_active = true;
+bool is_creation_active = true;
+bool is_matching_active = true;
+bool is_changes_active = true;
+bool is_popups_active = true;
+bool is_bookmarks_active = true;
 
-fn void target_item()
-{
-}
+// -- ERRORS
 
-// Cursor Navigation
-fn void open_selected_dir()
-{
-}
-
-fn void open_selected_file()
-{
-}
-
-// Relative Navigation
-fn void goto_parent_dir()
-{
-}
-
-fn void goto_home_dir()
-{
-}
-
-fn void goto_previous_dir()
-{
-}
-
-fn void goto_input_dir()
-{
-}
-
-// Focus changes
-fn void change_focus()
-{
-}
-
-fn void show_history()
-{
-}
-
-fn void show_bookmarks()
-{
-}
-
-fn void show_errors()
-{
-}
-
-// Errors
 fn void clear_errors()
 {
 }
 
-// Filtering
-fn void filter_case_insensitive()
+fn void open_errors()
 {
 }
 
-fn void filter_case_sensitive()
+// -- BROWSING
+
+fn void browse()
+{
+}
+
+fn void open_file()
+{
+}
+
+fn void delete_selection()
+{
+}
+
+fn void change_focus()
+{
+}
+
+// -- CREATION
+
+fn void new_file()
+{
+}
+
+fn void new_directory()
+{
+}
+
+// MATCHING
+
+fn void filter()
 {
 }
 
@@ -106,19 +90,45 @@ fn void clear_filter()
 {
 }
 
-// Cursor Movements
-fn void cursor_up()
+fn void search()
 {
 }
 
-fn void cursor_down()
+// -- CHANGES
+
+fn void rename_path()
 {
 }
 
-fn void cursor_top()
+fn void mark_path()
 {
 }
 
-fn void cursor_bottom()
+fn void unmark_path()
 {
 }
+
+fn void move_to_target()
+{
+}
+
+// -- POPUPS
+
+fn void open_history()
+{
+}
+
+fn void open_bookmarks()
+{
+}
+
+// -- BOOKMARKS
+
+fn void save_bookmark()
+{
+}
+
+fn void delete_bookmark()
+{
+}
+
