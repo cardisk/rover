@@ -3,7 +3,7 @@
 - [X] RETHINK MEMORY MANAGEMENT
 
 - [ ] Custom keybindings.
-- [ ] Group actions in categories, so it's easier to allow or not some of them.
+- [X] Group actions in categories, so it's easier to allow or not some of them.
 - [ ] Session tabs that store indipendent application state (cwd, bookmarks ...).
 - [X] Vim-like find file with cursor movement
 

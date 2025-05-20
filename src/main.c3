@@ -1,5 +1,5 @@
 module rover;
-import rover::state, rover::system, rover::display;
+import rover::state, rover::system, rover::display, rover::actions;
 import std::collections::list;
 import std::io;
 import ncurses;
@@ -58,12 +58,11 @@ fn void main()
                 break LOOP;
 
             case '\n':
-                if (!enable_action) continue;
-
                 switch (tui.focus)
                 {
                     case Focus.LIST:
                         if (sys.ls.is_empty()) continue;
+
                         if (!path::exists(sys.ls[tui.list_cur]))
                         {
                             app.log(string::format(mem, "Attempting to access inexistent '%s' path.",
@@ -71,46 +70,18 @@ fn void main()
                             continue;
                         }
 
-                        if (!stat::is_dir(sys.ls[tui.list_cur]))
+                        if (stat::is_dir(sys.ls[tui.list_cur]))
                         {
-                            if (cfg.editor.len == 0)
-                            {
-                                app.log("No editor specified through EDITOR environment variable.");
-                                continue;
-                            }
-                            ncurses::def_prog_mode();
-                            ncurses::endwin();
-
-                            DString cmd = dstring::new(mem);
-                            cmd.appendf("%s %s", cfg.editor, sys.ls[tui.list_cur]);
-                            libc::system(cmd.zstr_view());
-                            cmd.free();
-
-                            ncurses::reset_prog_mode();
-
-                            // this is necessary but redundant because using CTRL-Z
-                            // outside of the main application, will cause ncurses
-                            // to CASUALLY forget about some of the configs set
-                            // during the initialization.
-                            ncurses::endwin();
+                            actions::browse(&sys.ls[tui.list_cur]);
                         }
                         else
                         {
-                            if (catch sys.pchdir(sys.ls[tui.list_cur]))
-                            {
-                                app.log(string::format(mem, "Unable to change directory to %s.",
-                                            sys.ls[tui.list_cur].str_view()));
-                                continue;
-                            }
-                            if (catch sys.clear_filter())
-                            {
-                                app.log("Unable to clear the filter.");
-                                continue;
-                            }
-                            tui.top();
+                            actions::open_file(sys.ls[tui.list_cur]);
                         }
+
                     case Focus.BOOKMARKS:
                         if (sys.bookmarks.is_empty()) continue;
+
                         if (!path::exists(sys.bookmarks[tui.bookmarks_cur]))
                         {
                             app.log(string::format(mem, "Attempting to access inexistent '%s' path.",
@@ -118,338 +89,92 @@ fn void main()
                             continue;
                         }
 
-                        if (!stat::is_dir(sys.bookmarks[tui.bookmarks_cur]))
+                        if (stat::is_dir(sys.bookmarks[tui.bookmarks_cur]))
                         {
-                            if (cfg.editor.len == 0)
-                            {
-                                app.log("No editor specified through EDITOR environment variable.");
-                                continue;
-                            }
-                            ncurses::def_prog_mode();
-                            ncurses::endwin();
-
-                            DString cmd = dstring::new(mem);
-                            cmd.appendf("%s %s", cfg.editor, sys.ls[tui.list_cur]);
-                            libc::system(cmd.zstr_view());
-                            cmd.free();
-
-                            ncurses::reset_prog_mode();
-
-                            // this is necessary but redundant because using CTRL-Z
-                            // outside of the main application, will cause ncurses
-                            // to CASUALLY forget about some of the configs set
-                            // during the initialization.
-                            ncurses::endwin();
+                            actions::browse(&sys.bookmarks[tui.bookmarks_cur]);
                         }
                         else
                         {
-                            if (catch sys.pchdir(sys.bookmarks[tui.bookmarks_cur]))
-                            {
-                                app.log(string::format(mem, "Unable to change directory to %s.",
-                                            sys.bookmarks[tui.bookmarks_cur].str_view()));
-                                continue;
-                            }
-                            if (catch sys.clear_filter())
-                            {
-                                app.log("Unable to clear the filter.");
-                                continue;
-                            }
-                            tui.top();
+                            actions::open_file(sys.bookmarks[tui.bookmarks_cur]);
                         }
+
                     default:
                         app.log(string::format(mem, "Unhandled focus case %s.", tui.focus));
                         continue;
                 }
 
             case '-':
-                if (!enable_action) continue;
-
-                if (catch sys.clear_filter())
-                {
-                    app.log("Unable to clear the filter.");
-                    continue;
-                }
-                if (catch sys.schdir(".."))
-                {
-                    app.log("Unable to change directory to the parent one.");
-                    continue;
-                }
-                tui.top();
+                // NOTE: Taking the address of a temporary string may create errors.
+                // Inside the standard library there is a notion of 'any_make' that
+                // creates an any object from a given pointer. I think that this solution
+                // is more readable, but may cause some problems in the future.
+                actions::browse(&&"..");
 
             case '.':
-                if (!enable_action) continue;
-
-                if (catch sys.clear_filter())
-                {
-                    app.log("Unable to clear the filter.");
-                    continue;
-                }
-                if (catch sys.pchdir(sys.home))
-                {
-                    app.log("Unable to change directory to the home one.");
-                    continue;
-                }
-                tui.top();
+                actions::browse(&sys.home);
 
             case 'b':
-                if (!enable_action) continue;
-
                 if (sys.history.is_empty()) break;
 
-                Path? p = sys.history.pop();
-                if (catch p)
-                {
-                    app.log("Unable to access paths from history.");
-                    continue;
-                }
-                if (catch sys.clear_filter())
-                {
-                    app.log("Unable to clear the filter.");
-                    continue;
-                }
-                if (catch sys.pchdir(p, false))
-                {
-                    app.log(string::format(mem, "Unable to change directory to %s.", p.str_view()));
-                    continue;
-                }
-                tui.top();
+                // Safe to unwrap due to previous check.
+                Path p = sys.history.pop()!!;
+                actions::browse(&p);
 
             case 's':
-                if (!enable_action) continue;
-
-                Path? p = sys.ls[tui.list_cur].absolute(mem);
-                if (catch p)
-                {
-                    app.log("Unable to get absolute path for a new bookmark.");
-                    continue;
-                }
-                sys.bookmarks.push(p);
+                actions::save_bookmark();
 
             case 'd':
-                if (!enable_action) continue;
-                if (tui.focus == Focus.BOOKMARKS)
-                {
-                    if (sys.bookmarks.is_empty()) continue;
-                    sys.bookmarks[tui.bookmarks_cur].free();
-                    sys.bookmarks.remove_at(tui.bookmarks_cur);
-                    tui.up();
-                    continue;
-                }
-                if (tui.focus == Focus.LIST)
-                {
-                    if (sys.ls.is_empty()) continue;
-
-                    @pool()
-                    {
-                        ZString in = tui.input("confirm deletion [y/N] >");
-                        if (!in) continue;
-                        bool confirmation = false;
-                        if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
-                        if (!confirmation) continue;
-
-                        if (catch path::delete(sys.ls[tui.list_cur]))
-                        {
-                            app.log(string::format(mem, "Unable to delete %s.", sys.ls[tui.list_cur]));
-                            continue;
-                        }
-                        sys.ls[tui.list_cur].free();
-                        sys.ls.remove_at(tui.list_cur);
-                        tui.up();
-                        continue;
-                    };
-                }
+                actions::delete_selection();
 
             case 'r':
-                if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
-
-                @pool()
-                {
-                    ZString in = tui.input("rename >");
-                    if (!in || in.len() == 0) continue;
-
-                    CInt res = libc::rename(sys.ls[tui.list_cur].as_zstr(), in);
-                    if (res)
-                    {
-                        app.log(string::format(mem, "Unable to rename %s into %s", sys.ls[tui.list_cur], in));
-                        continue;
-                    }
-                };
+                actions::rename_path(sys.ls[tui.list_cur]);
 
             case 'h':
-                if (sys.history.is_empty()) continue;
-                if (enable_action)
-                {
-                    // Disable every action that cannot be done with the popup.
-                    enable_action = false;
-                    tui.toggle_popup(PATH, &sys.history, sys.history.len());
-                }
-                else
-                {
-                    enable_action = true;
-                    tui.toggle_focus();
-                }
+                actions::open_history();
 
             case 'B':
-                if (sys.bookmarks.is_empty()) continue;
-                if (enable_action)
-                {
-                    // Disable every action that cannot be done with the popup.
-                    enable_action = false;
-                    tui.toggle_popup(PATH, &sys.bookmarks, sys.bookmarks.len());
-                }
-                else
-                {
-                    enable_action = true;
-                    tui.toggle_focus();
-                }
+                actions::open_bookmarks();
 
             case 'e':
-                if (app.logs.is_empty()) continue;
-                if (enable_action)
-                {
-                    // Disable every action that cannot be done with error popup.
-                    enable_action = false;
-                    tui.toggle_popup(STRING, &app.logs, app.logs.len());
-                }
-                else
-                {
-                    enable_action = true;
-                    tui.toggle_focus();
-                }
+                actions::open_errors();
 
             case 'm':
-                if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
-                if (sys.ls.is_empty()) continue;
-                sys.mark(tui.list_cur);
-                tui.down();
+                actions::mark_path(tui.list_cur);
 
             case 'M':
-                if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
-                if (sys.ls.is_empty()) continue;
-                sys.unmark(tui.list_cur);
-                tui.up();
+                actions::unmark_path(tui.list_cur);
 
             case 't':
-                if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
-                if (!path::is_dir(sys.ls[tui.list_cur]))
-                {
-                    app.log("Target is not a directory");
-                    continue;
-                }
-                if (sys.is_marked(tui.list_cur))
-                {
-                    app.log("Target cannot be marked");
-                    continue;
-                }
-                sys.move_marks(tui.list_cur);
-                tui.top();
+                actions::move_to_target(tui.list_cur);
 
             case 'g':
-                if (!enable_action) continue;
-
-                @pool()
-                {
-                    ZString in = tui.input("goto >");
-                    if (!in || in.len() == 0) continue;
-                    if (catch sys.schdir(in.str_view()))
-                    {
-                        app.log(string::format(mem, "Unable to goto inside %s.", in));
-                        continue;
-                    }
-                };
-
+                actions::goto();
 
             case 'D':
-                if (app.logs.is_empty()) continue;
-                app.clear_logs();
-                if (!enable_action)
-                {
-                    enable_action = true;
-                    tui.toggle_focus();
-                }
+                actions::clear_errors();
 
             case 'n':
-                if (!enable_action) continue;
-
-                @pool()
-                {
-                    ZString in = tui.input("filename >");
-                    if (!in || in.len() == 0) continue;
-
-                    if (catch sys.new_file(in.str_view()))
-                    {
-                        app.log(string::format(mem, "Unable to create new file %s.", in));
-                        continue;
-                    }
-                };
+                actions::new_file();
 
             case '/':
-                if (!enable_action) continue;
-
-                @pool()
-                {
-                    ZString in = tui.input("/");
-                    if (!in || in.len() == 0) continue;
-
-                    isz match_index = sys.search_item(in);
-
-                    if (match_index < 0) 
-                    {
-                        app.log("No match...");
-                        continue;
-                    }
-
-                    tui.goto(match_index);
-                };
+                actions::search();
 
             case 'f':
-                if (!enable_action) continue;
+                actions::filter(false);
 
-                @pool()
-                {
-                    ZString in = tui.input("/");
-                    if (!in || in.len() == 0) continue;
-
-                    if (catch sys.set_apply_filter(in.str_view().zstr_copy(mem)))
-                    {
-                        app.log(string::format(mem, "Unable to apply filter %s.", in));
-                        continue;
-                    }
-                    tui.top();
-                };
 
             case 'F':
-                if (!enable_action) continue;
-
-                @pool()
-                {
-                    ZString in = tui.input("/");
-                    if (!in || in.len() == 0) continue;
-
-                    if (catch sys.set_apply_filter(in.str_view().zstr_copy(mem), true))
-                    {
-                        app.log(string::format(mem, "Unable to apply filter %s.", in));
-                        continue;
-                    }
-                    tui.top();
-                };
+                actions::filter(true);
 
             case '\\':
-                if (!enable_action) continue;
-
-                if (catch sys.clear_filter())
-                {
-                    app.log("Unable to clear the filter.");
-                    continue;
-                }
+                actions::clear_filter();
 
             case '\t':
-                enable_action = true;
-                tui.toggle_focus();
+                actions::change_focus();
 
             case ncurses::KEY_UP:
                 tui.up();
