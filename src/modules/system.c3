@@ -148,7 +148,7 @@ fn void? System.update(&self)
 fn void System.save_cwd(&self)
 {
     // Assuming that creating a new path from an existing one will never fail.
-    Path p = path::new(mem, self.cwd.as_zstr().copy(tmem))!!;
+    Path p = path::new(mem, self.cwd.str_view())!!;
     self.history.push(p);
 }
 

@@ -200,6 +200,7 @@ fn ZString Display.input(&self, ZString prefix)
 
     ncurses::werase(self.prompt);
     
+    // Horrible way to repaint the borders.
     foreach (item : cfg.windows)
     {
         if (item.win.type != PROMPT) continue;

@@ -1,6 +1,6 @@
 # Big features
 
-- [ ] RETHINK MEMORY MANAGEMENT
+- [X] RETHINK MEMORY MANAGEMENT
 
 - [ ] Custom keybindings.
 - [ ] Group actions in categories, so it's easier to allow or not some of them.

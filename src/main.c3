@@ -199,7 +199,7 @@ fn void main()
                 Path? p = sys.history.pop();
                 if (catch p)
                 {
-                    app.log("Unable to create a new path from the history.");
+                    app.log("Unable to access paths from history.");
                     continue;
                 }
                 if (catch sys.clear_filter())
@@ -239,36 +239,42 @@ fn void main()
                 {
                     if (sys.ls.is_empty()) continue;
 
-                    ZString in = tui.input("confirm deletion [y/N] >");
-                    if (!in) continue;
-                    bool confirmation = false;
-                    if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
-                    if (!confirmation) continue;
-
-                    if (catch path::delete(sys.ls[tui.list_cur]))
+                    @pool()
                     {
-                        app.log(string::format(mem, "Unable to delete %s.", sys.ls[tui.list_cur]));
+                        ZString in = tui.input("confirm deletion [y/N] >");
+                        if (!in) continue;
+                        bool confirmation = false;
+                        if (in.len() != 0 && (in[0] == 'y' || in[0] == 'Y')) confirmation = true;
+                        if (!confirmation) continue;
+
+                        if (catch path::delete(sys.ls[tui.list_cur]))
+                        {
+                            app.log(string::format(mem, "Unable to delete %s.", sys.ls[tui.list_cur]));
+                            continue;
+                        }
+                        sys.ls[tui.list_cur].free();
+                        sys.ls.remove_at(tui.list_cur);
+                        tui.up();
                         continue;
-                    }
-                    sys.ls[tui.list_cur].free();
-                    sys.ls.remove_at(tui.list_cur);
-                    tui.up();
-                    continue;
+                    };
                 }
 
             case 'r':
                 if (!enable_action) continue;
                 if (tui.focus != Focus.LIST) continue;
 
-                ZString in = tui.input("rename >");
-                if (!in || in.len() == 0) continue;
-
-                CInt res = libc::rename(sys.ls[tui.list_cur].as_zstr(), in);
-                if (res)
+                @pool()
                 {
-                    app.log(string::format(mem, "Unable to rename %s into %s", sys.ls[tui.list_cur], in));
-                    continue;
-                }
+                    ZString in = tui.input("rename >");
+                    if (!in || in.len() == 0) continue;
+
+                    CInt res = libc::rename(sys.ls[tui.list_cur].as_zstr(), in);
+                    if (res)
+                    {
+                        app.log(string::format(mem, "Unable to rename %s into %s", sys.ls[tui.list_cur], in));
+                        continue;
+                    }
+                };
 
             case 'h':
                 if (sys.history.is_empty()) continue;
@@ -344,18 +350,22 @@ fn void main()
 
             case 'g':
                 if (!enable_action) continue;
-                ZString in = tui.input("goto >");
-                if (!in || in.len() == 0) continue;
-                if (catch sys.schdir(in.str_view()))
+
+                @pool()
                 {
-                    app.log(string::format(mem, "Unable to goto inside %s.", in));
-                    continue;
-                }
+                    ZString in = tui.input("goto >");
+                    if (!in || in.len() == 0) continue;
+                    if (catch sys.schdir(in.str_view()))
+                    {
+                        app.log(string::format(mem, "Unable to goto inside %s.", in));
+                        continue;
+                    }
+                };
 
 
             case 'D':
                 if (app.logs.is_empty()) continue;
-                app.logs.clear();
+                app.clear_logs();
                 if (!enable_action)
                 {
                     enable_action = true;
@@ -365,56 +375,68 @@ fn void main()
             case 'n':
                 if (!enable_action) continue;
 
-                ZString in = tui.input("filename >");
-                if (!in || in.len() == 0) continue;
-
-                if (catch sys.new_file(in.str_view()))
+                @pool()
                 {
-                    app.log(string::format(mem, "Unable to create new file %s.", in));
-                    continue;
-                }
+                    ZString in = tui.input("filename >");
+                    if (!in || in.len() == 0) continue;
+
+                    if (catch sys.new_file(in.str_view()))
+                    {
+                        app.log(string::format(mem, "Unable to create new file %s.", in));
+                        continue;
+                    }
+                };
 
             case '/':
                 if (!enable_action) continue;
 
-                ZString in = tui.input("/");
-                if (!in || in.len() == 0) continue;
-
-                isz match_index = sys.search_item(in);
-
-                if (match_index < 0) 
+                @pool()
                 {
-                    app.log("No match...");
-                    continue;
-                }
+                    ZString in = tui.input("/");
+                    if (!in || in.len() == 0) continue;
 
-                tui.goto(match_index);
+                    isz match_index = sys.search_item(in);
+
+                    if (match_index < 0) 
+                    {
+                        app.log("No match...");
+                        continue;
+                    }
+
+                    tui.goto(match_index);
+                };
 
             case 'f':
                 if (!enable_action) continue;
 
-                ZString in = tui.input("/");
-                if (!in || in.len() == 0) continue;
-
-                if (catch sys.set_apply_filter(in.str_view().zstr_copy(mem)))
+                @pool()
                 {
-                    app.log(string::format(mem, "Unable to apply filter %s.", in));
-                    continue;
-                }
-                tui.top();
+                    ZString in = tui.input("/");
+                    if (!in || in.len() == 0) continue;
+
+                    if (catch sys.set_apply_filter(in.str_view().zstr_copy(mem)))
+                    {
+                        app.log(string::format(mem, "Unable to apply filter %s.", in));
+                        continue;
+                    }
+                    tui.top();
+                };
 
             case 'F':
                 if (!enable_action) continue;
 
-                ZString in = tui.input("/");
-                if (!in || in.len() == 0) continue;
-
-                if (catch sys.set_apply_filter(in.str_view().zstr_copy(mem), true))
+                @pool()
                 {
-                    app.log(string::format(mem, "Unable to apply filter %s.", in));
-                    continue;
-                }
-                tui.top();
+                    ZString in = tui.input("/");
+                    if (!in || in.len() == 0) continue;
+
+                    if (catch sys.set_apply_filter(in.str_view().zstr_copy(mem), true))
+                    {
+                        app.log(string::format(mem, "Unable to apply filter %s.", in));
+                        continue;
+                    }
+                    tui.top();
+                };
 
             case '\\':
                 if (!enable_action) continue;
@@ -438,8 +460,6 @@ fn void main()
     }
 
     ncurses::endwin();
-
-    app.show_logs();
 
     cfg.free();
     app.free();
