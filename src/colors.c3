@@ -66,17 +66,6 @@ fn void init()
     // ---
 }
 
-fn Color? from_escape_sequence(String seq)
-{
-    if (seq[0] != '\e') return INVALID_ESCAPE_SEQUENCE?;
-    if (seq[1] != '[') return INVALID_ESCAPE_SEQUENCE?;
-
-    // TODO: ^[[38;2;156;101;0m
-    //       ^[[38;2;{r};{g};{b}m
-
-    return {};
-}
-
 fn Color? from_hex(char[] hex)
 {
     @pool()
@@ -146,29 +135,29 @@ fn CShort? get_pair(ColorPair p)
 }
 
 // Rover color pairs
-const CShort DIRECTORY          = 0;
-const CShort EXECUTABLE         = 1;
-const CShort LINK               = 2;
-const CShort PWD                = 3;
-const CShort HOST               = 4;
-const CShort ERROR              = 5;
-const CShort ERROR_POPUP_BORDER = 6;
+CShort directory;
+CShort executable;
+CShort link;
+CShort pwd;
+CShort host;
+CShort error;
+CShort error_popup_border;
 
 // Placeholder for the default color.
 // Its index should always result into -1.
-const Color DEFAULT = {};
+const Color DEFAULT = { .r = -1, .g = -1, .b = -1};
 
 // These colors are placeholders for ncurses ones.
 // Getting the indexes of these should result into obtaining
 // the indexes of the ncurses ones.
-const Color BLACK   = {};
-const Color RED     = {};
-const Color GREEN   = {};
-const Color YELLOW  = {};
-const Color BLUE    = {};
-const Color MAGENTA = {};
-const Color CYAN    = {};
-const Color WHITE   = {};
+const Color BLACK   = { .r = 0, .g = 0, .b = 0};
+const Color RED     = { .r = 1, .g = 1, .b = 1};
+const Color GREEN   = { .r = 2, .g = 2, .b = 2};
+const Color YELLOW  = { .r = 3, .g = 3, .b = 3};
+const Color BLUE    = { .r = 4, .g = 4, .b = 4};
+const Color MAGENTA = { .r = 5, .g = 5, .b = 5};
+const Color CYAN    = { .r = 6, .g = 6, .b = 6};
+const Color WHITE   = { .r = 7, .g = 7, .b = 7};
 
 module rover::colors @private;
 import std::collections::map;
@@ -177,6 +166,8 @@ HashMap{Color, CShort}     registered_colors;
 HashMap{ColorPair, CShort} registered_pairs;
 
 // Ncurses has 0-7 registered, starting from the first free.
+// -1 is the default one, active only when use_default_colors has
+// been called.
 CShort color_index = -1;
 
 // NOTE: Config module has to register the theme before

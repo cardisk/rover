@@ -7,19 +7,8 @@ import std::encoding::json;
 import std::os::env;
 import ncurses;
 
-const CShort DIRECTORY_COLOR    = 1;
-const CShort EXECUTABLE_COLOR   = 2;
-const CShort LINK_COLOR         = 3;
-const CShort PWD_COLOR          = 4;
-const CShort HOST_COLOR         = 5;
-const CShort ERROR_COLOR        = 6;
-const CShort ERROR_POPUP_BORDER = 7;
-
-CShort color_index = 8;
-
 faultdef
     ERROR_HOME_DIR,
-    INVALID_COLOR_HEX,
     INVALID_COLOR_FOREGROUND,
     INVALID_COLOR_BACKGROUND,
     MISSING_COLOR_PAIR,
@@ -166,104 +155,81 @@ fn CInt map(CInt x, CInt in_min, CInt in_max, CInt out_min, CInt out_max)
 
 fn void? Config.parse_color(&self, String name, Object *color)
 {
-    CShort foreground;
-    CShort background;
+    Color foreground;
+    Color background;
 
     String? fg = color.get_string("fg");
-    if (catch fg) return MISSING_COLOR_FOREGROUND?;
+    if (catch fg) foreground = colors::DEFAULT;
     String? bg = color.get_string("bg");
-    if (catch bg) return MISSING_COLOR_BACKGROUND?;
+    if (catch bg) background = colors::DEFAULT;
 
     switch (fg)
     {
         case "black":
-            foreground = ncurses::COLOR_BLACK;
+            foreground = colors::BLACK;
         case "red":
-            foreground = ncurses::COLOR_RED;
+            foreground = colors::RED;
         case "green":
-            foreground = ncurses::COLOR_GREEN;
+            foreground = colors::GREEN;
         case "yellow":
-            foreground = ncurses::COLOR_YELLOW;
+            foreground = colors::YELLOW;
         case "blue":
-            foreground = ncurses::COLOR_BLUE;
+            foreground = colors::BLUE;
         case "magenta":
-            foreground = ncurses::COLOR_MAGENTA;
+            foreground = colors::MAGENTA;
         case "cyan":
-            foreground = ncurses::COLOR_CYAN;
+            foreground = colors::CYAN;
         case "white":
-            foreground = ncurses::COLOR_WHITE;
+            foreground = colors::WHITE;
         default:
             // Hex foreground.
-            if (fg.starts_with("#"))
-            {
-                char[]? rgb = hex::tdecode((char[]) fg[1..]);
-                if (catch rgb) return INVALID_COLOR_HEX?;
-                if (rgb.len < 3) return INVALID_COLOR_HEX?;
-                CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
-                CShort g = (CShort) map(rgb[1], 0, 255, 0, 1000);
-                CShort b = (CShort) map(rgb[2], 0, 255, 0, 1000);
-                ncurses::init_color(color_index, r, g, b);
-                foreground = color_index;
-                color_index++;
-                break;
-            }
-            return INVALID_COLOR_FOREGROUND?;
+            if (!fg.starts_with("#")) return INVALID_COLOR_FOREGROUND?;
+            foreground = colors::from_hex((char[]) fg[1..])!;
+            // colors::register is redundant because register_pair does the same.
     }
 
     switch (bg)
     {
         case "black":
-            background = ncurses::COLOR_BLACK;
+            background = colors::BLACK;
         case "red":
-            background = ncurses::COLOR_RED;
+            background = colors::RED;
         case "green":
-            background = ncurses::COLOR_GREEN;
+            background = colors::GREEN;
         case "yellow":
-            background = ncurses::COLOR_YELLOW;
+            background = colors::YELLOW;
         case "blue":
-            background = ncurses::COLOR_BLUE;
+            background = colors::BLUE;
         case "magenta":
-            background = ncurses::COLOR_MAGENTA;
+            background = colors::MAGENTA;
         case "cyan":
-            background = ncurses::COLOR_CYAN;
+            background = colors::CYAN;
         case "white":
-            background = ncurses::COLOR_WHITE;
+            background = colors::WHITE;
         default:
             // Hex background.
-            if (bg.starts_with("#"))
-            {
-                char[]? rgb = hex::tdecode((char[]) bg[1..]);
-                if (catch rgb) return INVALID_COLOR_HEX?;
-                if (rgb.len < 3) return INVALID_COLOR_HEX?;
-                CShort r = (CShort) map(rgb[0], 0, 255, 0, 1000);
-                CShort g = (CShort) map(rgb[1], 0, 255, 0, 1000);
-                CShort b = (CShort) map(rgb[2], 0, 255, 0, 1000);
-                ncurses::init_color(color_index, r, g, b);
-                background = color_index;
-                color_index++;
-                break;
-            }
-            return INVALID_COLOR_BACKGROUND?;
+            if (!fg.starts_with("#")) return INVALID_COLOR_BACKGROUND?;
+            background = colors::from_hex((char[]) fg[1..])!;
+            // colors::register is redundant because register_pair does the same.
     }
 
-    CShort pair;
+    CShort pair = colors::register_pair(foreground, background);
+
     switch (name)
     {
         case "directory": 
-            pair = DIRECTORY_COLOR;
+            colors::directory = pair;
         case "executable":
-            pair = EXECUTABLE_COLOR;
+            colors::executable = pair;
         case "link":
-            pair = LINK_COLOR;
+            colors::link = pair;
         case "pwd":
-            pair = PWD_COLOR;
+            colors::pwd = pair;
         case "host":
-            pair = HOST_COLOR;
+            colors::host = pair;
         case "error":
-            pair = ERROR_COLOR;
+            colors::error = pair;
     }
-
-    ncurses::init_pair(pair, foreground, background);
 }
 
 fn void? Config.parse_theme(&self, Object *json)
