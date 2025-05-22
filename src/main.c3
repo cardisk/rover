@@ -1,5 +1,5 @@
 module rover;
-import rover::state, rover::system, rover::display, rover::actions;
+import rover::state, rover::system, rover::display, rover::actions, rover::colors;
 import std::collections::list;
 import std::io;
 import ncurses;
@@ -25,13 +25,16 @@ fn void main()
 {
     // Doing the initalization here so the modules will load up correctly.
     ncurses::initscr();
-    if (!ncurses::has_colors())
+    if (!ncurses::has_colors() || !ncurses::can_change_color())
     {
         ncurses::endwin();
         io::eprintn("Your terminal emulator does not support colors.");
         libc::exit(1);
     }
     ncurses::start_color();
+    ncurses::use_default_colors();
+
+    colors::init();
 
     if (catch e = cfg.init()) crash(e);
     if (catch e = app.init()) crash(e);

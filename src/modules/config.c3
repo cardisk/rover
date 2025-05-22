@@ -98,6 +98,7 @@ fn void? Config.reload_windows(&self)
 }
 
 module rover::config @private;
+import rover::colors;
 import std::collections::object;
 import std::encoding::hex;
 import std::core::array;
