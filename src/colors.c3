@@ -54,6 +54,7 @@ fn void init()
 
     // NOTE: do not change the order of these, they are placeholder
     // for ncurses ones.
+    // Also the unwrap is safe because they are the first ones to be registered.
     register(DEFAULT, false);
     register(BLACK  , false);
     register(RED    , false);
@@ -83,7 +84,7 @@ fn Color? from_hex(char[] hex)
 
 fn CShort register(Color c, bool register_into_ncurses = true)
 {
-    if (try registered_colors[c]) return;
+    if (try registered_colors[c]) return registered_colors[c]!!;
 
     if (register_into_ncurses)
     {
@@ -103,7 +104,7 @@ fn CShort register_pair(Color c1, Color c2, bool register_into_ncurses = true)
         .bg = c2,
     };
 
-    if (try registered_pairs[pair]) return;
+    if (try registered_pairs[pair]) return registered_pairs[pair]!!;
 
     // NOTE: this is redundant because before calling this function
     // maybe is better to call register separately.
@@ -172,7 +173,8 @@ CShort color_index = -1;
 
 // NOTE: Config module has to register the theme before
 // anything else can be registered.
-CShort pair_index = 0;
+// IMPORTANT: pair index must start from index 1
+CShort pair_index = 1;
 
 fn CInt map(CInt x, CInt in_min, CInt in_max, CInt out_min, CInt out_max)
 {

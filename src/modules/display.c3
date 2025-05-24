@@ -306,6 +306,7 @@ fn void? Display.update(&self)
 }
 
 module rover::display @private;
+import rover::colors;
 import std::io::path, std::io::file;
 import rover::config, rover::stat;
 import std::collections::list;
@@ -315,37 +316,37 @@ import libc;
 fn void Display.dir(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::DIRECTORY_COLOR));
+    ncurses::wattron(win, ncurses::color_pair(colors::directory));
 }
 
 fn void Display.exe(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
+    ncurses::wattron(win, ncurses::color_pair(colors::executable));
 }
 
 fn void Display.link(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::LINK_COLOR));
+    ncurses::wattron(win, ncurses::color_pair(colors::link));
 }
 
 fn void Display.pwd(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::PWD_COLOR));
+    ncurses::wattron(win, ncurses::color_pair(colors::pwd));
 }
 
 fn void Display.host(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::HOST_COLOR));
+    ncurses::wattron(win, ncurses::color_pair(colors::host));
 }
 
 fn void Display.err(&self, Window *win)
 {
     ncurses::wattron(win, ncurses::A_BOLD);
-    ncurses::wattron(win, ncurses::color_pair(config::ERROR_COLOR));
+    ncurses::wattron(win, ncurses::color_pair(colors::error));
 }
 
 macro Display.select(&self, Window *win)
@@ -358,12 +359,12 @@ fn void Display.reset(&self, Window *win)
 {
     ncurses::wattroff(win, ncurses::A_BOLD);
     ncurses::wattroff(win, ncurses::A_REVERSE);
-    ncurses::wattroff(win, ncurses::color_pair(config::DIRECTORY_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::EXECUTABLE_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::LINK_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::PWD_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::HOST_COLOR));
-    ncurses::wattroff(win, ncurses::color_pair(config::ERROR_COLOR));
+    ncurses::wattroff(win, ncurses::color_pair(colors::directory));
+    ncurses::wattroff(win, ncurses::color_pair(colors::executable));
+    ncurses::wattroff(win, ncurses::color_pair(colors::link));
+    ncurses::wattroff(win, ncurses::color_pair(colors::pwd));
+    ncurses::wattroff(win, ncurses::color_pair(colors::host));
+    ncurses::wattroff(win, ncurses::color_pair(colors::error));
 }
 
 fn bool is_printable(String str)

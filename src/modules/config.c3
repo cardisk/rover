@@ -1,5 +1,5 @@
 module rover::config;
-import rover::defaults, rover::layout;
+import rover::defaults, rover::layout, rover::colors;
 import std::io::path, std::io::file;
 import std::collections::object;
 import std::collections::list;
@@ -55,9 +55,6 @@ fn void? Config.init(&self)
 
         // Here the resulting error can be ignored.
         self.parse_theme(theme_obj)!;
-
-        // TODO: maybe this can be also customizable.
-        ncurses::init_pair(ERROR_POPUP_BORDER, ncurses::COLOR_RED, ncurses::COLOR_BLACK);
     };
 }
 
@@ -159,58 +156,70 @@ fn void? Config.parse_color(&self, String name, Object *color)
     Color background;
 
     String? fg = color.get_string("fg");
-    if (catch fg) foreground = colors::DEFAULT;
     String? bg = color.get_string("bg");
-    if (catch bg) background = colors::DEFAULT;
 
-    switch (fg)
+    if (try fg)
     {
-        case "black":
-            foreground = colors::BLACK;
-        case "red":
-            foreground = colors::RED;
-        case "green":
-            foreground = colors::GREEN;
-        case "yellow":
-            foreground = colors::YELLOW;
-        case "blue":
-            foreground = colors::BLUE;
-        case "magenta":
-            foreground = colors::MAGENTA;
-        case "cyan":
-            foreground = colors::CYAN;
-        case "white":
-            foreground = colors::WHITE;
-        default:
-            // Hex foreground.
-            if (!fg.starts_with("#")) return INVALID_COLOR_FOREGROUND?;
-            foreground = colors::from_hex((char[]) fg[1..])!;
-            // colors::register is redundant because register_pair does the same.
+        switch (fg)
+        {
+            case "black":
+                foreground = colors::BLACK;
+            case "red":
+                foreground = colors::RED;
+            case "green":
+                foreground = colors::GREEN;
+            case "yellow":
+                foreground = colors::YELLOW;
+            case "blue":
+                foreground = colors::BLUE;
+            case "magenta":
+                foreground = colors::MAGENTA;
+            case "cyan":
+                foreground = colors::CYAN;
+            case "white":
+                foreground = colors::WHITE;
+            default:
+                // Hex foreground.
+                if (!fg.starts_with("#")) return INVALID_COLOR_FOREGROUND?;
+                foreground = colors::from_hex((char[]) fg[1..])!;
+                // colors::register is redundant because register_pair does the same.
+        }
+    }
+    else
+    {
+        foreground = colors::DEFAULT;
     }
 
-    switch (bg)
+    if (try bg)
     {
-        case "black":
-            background = colors::BLACK;
-        case "red":
-            background = colors::RED;
-        case "green":
-            background = colors::GREEN;
-        case "yellow":
-            background = colors::YELLOW;
-        case "blue":
-            background = colors::BLUE;
-        case "magenta":
-            background = colors::MAGENTA;
-        case "cyan":
-            background = colors::CYAN;
-        case "white":
-            background = colors::WHITE;
-        default:
-            // Hex background.
-            if (!fg.starts_with("#")) return INVALID_COLOR_BACKGROUND?;
-            background = colors::from_hex((char[]) fg[1..])!;
-            // colors::register is redundant because register_pair does the same.
+        switch (bg)
+        {
+            case "black":
+                background = colors::BLACK;
+            case "red":
+                background = colors::RED;
+            case "green":
+                background = colors::GREEN;
+            case "yellow":
+                background = colors::YELLOW;
+            case "blue":
+                background = colors::BLUE;
+            case "magenta":
+                background = colors::MAGENTA;
+            case "cyan":
+                background = colors::CYAN;
+            case "white":
+                background = colors::WHITE;
+            default:
+                // Hex background.
+                if (!bg.starts_with("#")) return INVALID_COLOR_BACKGROUND?;
+                background = colors::from_hex((char[]) bg[1..])!;
+                // colors::register is redundant because register_pair does the same.
+        }
+    }
+    else
+    {
+        background = colors::DEFAULT;
     }
 
     CShort pair = colors::register_pair(foreground, background);
@@ -249,4 +258,7 @@ fn void? Config.parse_theme(&self, Object *json)
         if (catch color) return MISSING_COLOR_PAIR?;
         self.parse_color(k, color)!;
     }
+
+    // TODO: maybe this can be also customizable.
+    colors::error_popup_border = colors::register_pair(colors::RED, colors::BLACK);
 }
